@@ -14,7 +14,6 @@ opts = dict((k,v) for k,v in args.iteritems() if k.startswith("GMX_"))
 
 env_cmd = "true"
 build_cmd = "make"
-test_cmd = "ctest -DExperimentalTest -V"
 call_opts = {}
 opts_list = ""
     
@@ -51,8 +50,10 @@ if "host" in args and args["host"].lower().find("win")>-1:
     env_cmd = "SetEnv /Release"
     build_cmd = "msbuild /m:2 /p:Configuration=MinSizeRel All_Build.vcxproj"
     opts_list += '-G "Visual Studio 10 Win64" '
+    test_cmd = "ctest -DExperimentalTest -C MinSizeRel -V"
 else:
    call_opts = {"executable":"/bin/bash"}
+   test_cmd = "ctest -D ExperimentalMemCheck -L GTest -V  && ctest -D ExperimentalTest -LE GTest -V"
 
 #construct string for all "GMX_" variables
 opts_list += " ".join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
