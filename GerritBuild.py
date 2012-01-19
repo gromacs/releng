@@ -1,6 +1,9 @@
 import sys,subprocess
 from os import environ as env
 
+def cmake_istrue(s):
+   return not (s.upper() in ("FALSE", "OFF", "NO") or s.upper().endswith("-NOTFOUND"))
+
 # if jenkins issue 12438 is resolved: args=env
 # until then none of the OPTIONS key or values (including the host name)
 # are allowed to contain + or -.
@@ -34,6 +37,15 @@ if "GMX_EXTERNAL" in opts.keys():
     opts["GMX_EXTERNAL_LAPACK"] = v
     opts["GMX_EXTERNAL_BLAS"] = v
     env["CMAKE_LIBRARY_PATH"] = "/usr/lib/atlas-base"
+
+if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
+   if "CompilerVersion" in args:
+      env["OMPI_CC"] =env["CC"]
+      env["OMPI_CXX"]=env["CXX"]
+      env["OMPI_FC"] =env["FC"]
+   env["CC"] ="mpicc"
+   env["CXX"]="mpic++"
+   env["FC"] ="mpif90"
 
 if "host" in args and args["host"].lower().find("win")>-1:
     env_cmd = "SetEnv /Release"
