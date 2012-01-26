@@ -10,7 +10,7 @@ args = dict(map(lambda x: x.split("-"), env["OPTIONS"].split("+")))
 opts = dict((k,v) for k,v in args.iteritems() if k.startswith("GMX_"))
 
 env_cmd = "true"
-build_cmd = "make"
+build_cmd = "make -j2"
 test_cmd = "ctest -DExperimentalTest -V"
 call_opts = {}
 opts_list = ""
