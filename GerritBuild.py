@@ -18,7 +18,7 @@ opts_list = ""
 if "CMakeVersion" in args:
    env["PATH"] =  "%s/tools/cmake-%s/bin:%s" % (env["HOME"],args["CMakeVersion"],env["PATH"])
 
-if "CompilerVersion" in args:
+if "Compiler" in args and args['Compiler']=="gcc" and "CompilerVersion" in args:
    env["CC"]  = "gcc-"      + args["CompilerVersion"]
    env["CXX"] = "g++-"      + args["CompilerVersion"]
    env["FC"]  = "gfortran-" + args["CompilerVersion"] 
