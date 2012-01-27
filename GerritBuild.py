@@ -1,6 +1,9 @@
 import sys,subprocess
 from os import environ as env
 
+def cmake_istrue(s):
+   return not (s.upper() in ("FALSE", "OFF", "NO") or s.upper().endswith("-NOTFOUND"))
+
 # if jenkins issue 12438 is resolved, options would be directly passed as args=env
 # until then none of the OPTIONS key or values (including the host name)
 # are allowed to contain space or = characters.
@@ -27,13 +30,16 @@ if "Compiler" in args and args['Compiler']=="icc":
    env["CC"]  = "icc"
    env["CXX"] = "icpc"
    env_cmd = ". /opt/intel/bin/iccvars.sh intel64"
-   opts_list += '-DGMX_FFT_LIBRARY=mkl  -DMKL_LIBRARIES="${MKLROOT}/lib/intel64/libmkl_intel_lp64.so;${MKLROOT}/lib/intel64/libmkl_sequential.so;${MKLROOT}/lib/intel64/libmkl_core.so" -DMKL_INCLUDE_DIR=${MKLROOT}/include'
 
 if "GMX_EXTERNAL" in opts.keys():
     v = opts.pop("GMX_EXTERNAL")
     opts["GMX_EXTERNAL_LAPACK"] = v
     opts["GMX_EXTERNAL_BLAS"] = v
-    env["CMAKE_LIBRARY_PATH"] = "/usr/lib/atlas-base"
+    if cmake_istrue(v):
+       if "Compiler" in args and args['Compiler']=="icc":
+          opts_list += '-DGMX_FFT_LIBRARY=mkl  -DMKL_LIBRARIES="${MKLROOT}/lib/intel64/libmkl_intel_lp64.so;${MKLROOT}/lib/intel64/libmkl_sequential.so;${MKLROOT}/lib/intel64/libmkl_core.so" -DMKL_INCLUDE_DIR=${MKLROOT}/include '
+       else:
+          env["CMAKE_LIBRARY_PATH"] = "/usr/lib/atlas-base"
 
 if "host" in args and args["host"].lower().find("win")>-1:
     env_cmd = "SetEnv /Release"
