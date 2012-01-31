@@ -8,6 +8,11 @@ def error(s):
    print(s)
    exit(1)
 
+if env['GERRIT_PROJECT']=='releng':
+   releng_dir=".."
+else:
+   releng_dir="releng"
+
 # if jenkins issue 12438 is resolved, options would be directly passed as args=env
 # until then none of the OPTIONS key or values (including the host name)
 # are allowed to contain space or = characters.
@@ -20,9 +25,11 @@ env_cmd = "true"
 build_cmd = "make -j2"
 call_opts = {}
 opts_list = ""
+ctest = "ctest"
     
 if "CMakeVersion" in args:
    env["PATH"] =  "%s/tools/cmake-%s/bin:%s" % (env["HOME"],args["CMakeVersion"],env["PATH"])
+   ctest = "/usr/bin/ctest"  #problem with older versions
 
 if not 'Compiler' in args or not 'CompilerVersion' in args or not 'host' in args:
    error("Compiler, CompilerVersion and host needs to be specified")
@@ -77,19 +84,24 @@ if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
 
 if not args["host"].lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
-   test_cmd = "ctest -D ExperimentalMemCheck -L GTest -V  && ctest -D ExperimentalTest -LE GTest -V"
+   test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
+                "%s -D ExperimentalMemCheck -L GTest -V"%(ctest,),
+                "xsltproc -o Testing/Temporary/valgrind_unit.xml %s/ctest_valgrind_to_junit.xsl  Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml"%(releng_dir,)]
 else:
-   test_cmd = "ctest -D ExperimentalTest -C MinSizeRel -V"
+   test_cmds = ["ctest -D ExperimentalTest -C MinSizeRel -V"]
 
 #construct string for all "GMX_" variables
 opts_list += " ".join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
 opts_list += " -DGMX_DEFAULT_SUFFIX=off -DCMAKE_BUILD_TYPE=Debug ."
 
-cmd = "%s && cmake --version && cmake %s && %s && %s" % (env_cmd,opts_list,build_cmd,test_cmd)
+cmd = "cmake --version && cmake %s && %s" % (opts_list,build_cmd)
 
-print "Running " + cmd
+ret = 0
 
-ret = subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+for i in [cmd]+test_cmds:
+   print "Running " + i
+   ret |= subprocess.call("%s && %s"%(env_cmd,i), stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+
 sys.exit(ret)
 
 
