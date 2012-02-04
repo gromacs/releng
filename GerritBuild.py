@@ -36,8 +36,8 @@ if args['Compiler']=="gcc":
 if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" && "c:\\Program Files (x86)\\Intel\\Composer XE\\bin\\compilervars.bat" ia32 vs2008shell'
-      opts_list += '-G "NMake Makefiles" '
-      build_cmd = "nmake"
+      opts_list += '-G "NMake Makefiles JOM" '
+      build_cmd = "jom -j2"
       env["CC"]  = "icl"
       env["CXX"] = "icl"
    else:
