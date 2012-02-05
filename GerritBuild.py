@@ -67,6 +67,10 @@ if "GMX_EXTERNAL" in opts.keys():
        else:
           env["CMAKE_LIBRARY_PATH"] = "/usr/lib/atlas-base"
 
+#forcing to use OpenMPI because FindMPI in 4.5 has a bug with MPICH
+if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
+    opts_list += '-DMPI_COMPILER=`which mpicc.openmpi` '  
+
 if not args["host"].lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
 
