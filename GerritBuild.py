@@ -37,7 +37,7 @@ if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" && "c:\\Program Files (x86)\\Intel\\Composer XE\\bin\\compilervars.bat" ia32 vs2008shell'
       opts_list += '-G "NMake Makefiles JOM" '
-      build_cmd = "jom -j2"
+      build_cmd = "jom -j4"
       env["CC"]  = "icl"
       env["CXX"] = "icl"
    else:
@@ -53,7 +53,7 @@ if args['Compiler']=="msvc":
    elif args['CompilerVersion']=='2010':
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" amd64'
       opts_list += '-G "Visual Studio 10 Win64" '
-      build_cmd = "msbuild /m:2 /p:Configuration=MinSizeRel All_Build.vcxproj"
+      build_cmd = "msbuild /m:4 /p:Configuration=MinSizeRel All_Build.vcxproj"
    else:
       error("MSVC only version 2008 and 2010 supported")
 
