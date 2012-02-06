@@ -20,7 +20,6 @@ env_cmd = "true"
 build_cmd = "make -j2"
 call_opts = {}
 opts_list = ""
-generator = None
     
 if "CMakeVersion" in args:
    env["PATH"] =  "%s/tools/cmake-%s/bin:%s" % (env["HOME"],args["CMakeVersion"],env["PATH"])
@@ -35,8 +34,9 @@ if args['Compiler']=="gcc":
 
 if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
-      env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" amd64 && "c:\\Program Files (x86)\\Intel\\Composer XE\\bin\\compilervars.bat" intel64 vs2010shell'
-      generator = 'Visual Studio 10 Win64'
+      env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" && "c:\\Program Files (x86)\\Intel\\Composer XE\\bin\\compilervars.bat" ia32 vs2008shell'
+      opts_list += '-G "NMake Makefiles JOM" '
+      build_cmd = "jom -j2"
       env["CC"]  = "icl"
       env["CXX"] = "icl"
    else:
@@ -47,21 +47,14 @@ if args['Compiler']=="icc":
 if args['Compiler']=="msvc":
    if args['CompilerVersion']=='2008':
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" x86'
-      generator = "Visual Studio 9 2008"
+      opts_list += '-G "Visual Studio 9 2008" '
+      build_cmd = "devenv ALL_BUILD.vcproj /build MinSizeRel /project All_Build"
    elif args['CompilerVersion']=='2010':
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" amd64'
-      generator = 'Visual Studio 10 Win64'
+      opts_list += '-G "Visual Studio 10 Win64" '
+      build_cmd = "msbuild /m:2 /p:Configuration=MinSizeRel All_Build.vcxproj"
    else:
       error("MSVC only version 2008 and 2010 supported")
-
-if generator != None:
-   opts_list += '-G "%s" ' % (generator,)
-   if generator=='Visual Studio 10 Win64':
-      build_cmd = "msbuild /m:2 /p:Configuration=MinSizeRel All_Build.vcxproj"
-   elif generator=="Visual Studio 9 2008":
-      build_cmd = "devenv ALL_BUILD.vcproj /build MinSizeRel /project All_Build"      
-   else:
-      error("Generator %s not supported%(generator,)")
 
 if "GMX_EXTERNAL" in opts.keys():
     v = opts.pop("GMX_EXTERNAL")
