@@ -96,12 +96,15 @@ opts_list += " -DGMX_DEFAULT_SUFFIX=off -DCMAKE_BUILD_TYPE=Debug ."
 
 cmd = "cmake --version && cmake %s && %s" % (opts_list,build_cmd)
 
-ret = 0
 print "Enviroment: " + env_cmd 
 
-for i in [cmd]+test_cmds:
+print "Running: " + cmd
+ret = subprocess.call("%s && %s"%(env_cmd,cmd), stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+
+for i in test_cmds:
    print "Running: " + i
-   ret |= subprocess.call("%s && %s"%(env_cmd,i), stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+   if subprocess.call("%s && %s"%(env_cmd,i), stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts) != 0:
+      print "+++ TEST FAILED +++" #used with TextFinder
 
 sys.exit(ret)
 
