@@ -31,7 +31,11 @@ if not 'Compiler' in args or not 'CompilerVersion' in args or not 'host' in args
 if args['Compiler']=="gcc":
    env["CC"]  = "gcc-"      + args["CompilerVersion"]
    env["CXX"] = "g++-"      + args["CompilerVersion"]
-   env["FC"]  = "gfortran-" + args["CompilerVersion"] 
+   env["FC"]  = "gfortran-" + args["CompilerVersion"]
+
+if args['Compiler']=="clang":
+   env["CC"]  = "clang"
+   env["CXX"] = "clang++"
 
 if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
