@@ -94,6 +94,9 @@ if not args["host"].lower().find("win")>-1:
 else:
    test_cmds = ["ctest -D ExperimentalTest -C MinSizeRel -V"]
 
+if args["host"].lower().find("mac")>-1:
+   env["CMAKE_PREFIX_PATH"] = "/opt/local"
+
 #construct string for all "GMX_" variables
 opts_list += " ".join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
 opts_list += " -DGMX_DEFAULT_SUFFIX=off -DCMAKE_BUILD_TYPE=Debug ."
