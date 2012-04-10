@@ -113,6 +113,15 @@ for i in test_cmds:
    if subprocess.call("%s && %s"%(env_cmd,i), stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts) != 0:
       print "+++ TEST FAILED +++" #used with TextFinder
 
+
+if not args["host"].lower().find("win")>-1:
+   cmd = 'mkdir regressiontests; cd regressiontests && git init && git fetch git://git.gromacs.org/regressiontests.git master && git checkout -q -f FETCH_HEAD && git clean -fd && export PATH=`pwd`/../src/programs/gmxcheck:`pwd`/../src/programs/pdb2gmx:`pwd`/../src/programs/mdrun:`pwd`/../src/programs/grompp:`pwd`/../src/tools:$PATH; %s && ./gmxtest.pl -mpirun mpirun -noverbose -nosuffix all' % (env_cmd,)
+   if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
+      cmd += ' -np 2'
+   if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
+      cmd += ' -double'
+   ret |= subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+
 sys.exit(ret)
 
 
