@@ -95,6 +95,15 @@ cmd = "%s && cmake --version && cmake %s && %s && %s" % (env_cmd,opts_list,build
 print "Running " + cmd
 
 ret = subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+
+if not args["host"].lower().find("win")>-1:
+   cmd = 'mkdir regressiontests; cd regressiontests && git init && git fetch git://git.gromacs.org/regressiontests.git master && git checkout -q -f FETCH_HEAD && git clean -fd && export PATH=`pwd`/../src/kernel:`pwd`/../src/tools:$PATH; %s && ./gmxtest.pl -mpirun mpirun -noverbose -nosuffix all' % (env_cmd,)
+   if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
+      cmd += ' -np 2'
+   if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
+      cmd += ' -double'
+   ret |= subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+
 sys.exit(ret)
 
 
