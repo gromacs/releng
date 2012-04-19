@@ -45,7 +45,7 @@ if args['Compiler']=="clang":
 
 if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
-      env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" && "c:\\Program Files (x86)\\Intel\\Composer XE\\bin\\compilervars.bat" ia32 vs2008shell'
+      env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" amd64 && "c:\\Program Files (x86)\\Intel\\Composer XE\\bin\\compilervars.bat" intel64 vs2008shell'
       opts_list += '-G "NMake Makefiles JOM" '
       build_cmd = "jom -j4"
       env["CC"]  = "icl"
