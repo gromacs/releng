@@ -90,6 +90,8 @@ if args["host"].lower().find("mac")>-1:
 opts_list += " ".join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
 opts_list += " -DGMX_DEFAULT_SUFFIX=off -DCMAKE_BUILD_TYPE=Debug ."
 
+subprocess.call("git gc", stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+
 cmd = "%s && cmake --version && cmake %s && %s && %s" % (env_cmd,opts_list,build_cmd,test_cmd)
 
 print "Running " + cmd
