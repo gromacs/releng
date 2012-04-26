@@ -1,5 +1,6 @@
 import sys,subprocess
 from os import environ as env
+import os
 
 def cmake_istrue(s):
    return not (s.upper() in ("FALSE", "OFF", "NO") or s.upper().endswith("-NOTFOUND"))
@@ -40,8 +41,6 @@ if args['Compiler']=="clang":
 if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" amd64 && "c:\\Program Files (x86)\\Intel\\Composer XE\\bin\\compilervars.bat" intel64 vs2008shell'
-      opts_list += '-G "NMake Makefiles JOM" '
-      build_cmd = "jom -j4"
       env["CC"]  = "icl"
       env["CXX"] = "icl"
    else:
@@ -52,12 +51,8 @@ if args['Compiler']=="icc":
 if args['Compiler']=="msvc":
    if args['CompilerVersion']=='2008':
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" x86'
-      opts_list += '-G "Visual Studio 9 2008" '
-      build_cmd = "devenv ALL_BUILD.vcproj /build MinSizeRel /project All_Build"
    elif args['CompilerVersion']=='2010':
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" amd64'
-      opts_list += '-G "Visual Studio 10 Win64" '
-      build_cmd = "msbuild /m:4 /p:Configuration=MinSizeRel All_Build.vcxproj"
    else:
       error("MSVC only version 2008 and 2010 supported")
 
@@ -82,6 +77,9 @@ if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
 
 if not args["host"].lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
+else:
+   opts_list += '-G "NMake Makefiles JOM" '
+   build_cmd = "jom -j4"
 
 if args["host"].lower().find("mac")>-1:
    env["CMAKE_PREFIX_PATH"] = "/opt/local"
@@ -98,13 +96,21 @@ print "Running " + cmd
 
 ret = subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
 
-if not args["host"].lower().find("win")>-1:
-   cmd = 'mkdir regressiontests; cd regressiontests && git init && git fetch git://git.gromacs.org/regressiontests.git master && git checkout -q -f FETCH_HEAD && git clean -fd && export PATH=`pwd`/../src/kernel:`pwd`/../src/tools:$PATH; %s && ./gmxtest.pl -mpirun mpirun -noverbose -nosuffix all' % (env_cmd,)
-   if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
-      cmd += ' -np 2'
-   if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
-      cmd += ' -double'
-   ret |= subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+if not os.path.exists("regressiontests"): os.makedirs("regressiontests")
+os.chdir("regressiontests")
+cmd = 'git init && git fetch git://git.gromacs.org/regressiontests.git master && git checkout -q -f FETCH_HEAD && git clean -fd'
+ret |= subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+
+
+cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
+if args["host"].lower().find("win")>-1: 
+   env['PATH']+=';C:\\MinGW\\msys\\1.0\\bin'
+env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../src/kernel","../src/tools"]))
+if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
+   cmd += ' -np 2'
+if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
+   cmd += ' -double'
+ret |= subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
 
 sys.exit(ret)
 
