@@ -92,7 +92,7 @@ def call_cmd(cmd):
 if env['GERRIT_PROJECT']=='releng':
    if 'GROMACS_REFSPEC' in env: gromacs_refspec = env['GROMACS_REFSPEC']
    else: gromacs_refspec = 'refs/heads/release-4-5-patches'
-   cmd = 'git init && git fetch git://git.gromacs.org/gromacs.git %s && git checkout -q -f FETCH_HEAD && git clean -fd'%(gromacs_refspec,)
+   cmd = 'git init && git fetch git://git.gromacs.org/gromacs.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(gromacs_refspec,)
    ret |= call_cmd(cmd)
 
 call_cmd("git gc")
@@ -107,7 +107,7 @@ os.chdir("regressiontests")
 if 'REGRESSIONTESTS_REFSPEC' in env: regression_refspec = env['REGRESSIONTESTS_REFSPEC']
 else: regression_refspec = 'refs/heads/release-4-5'
 
-cmd = 'git init && git fetch git://git.gromacs.org/regressiontests.git %s && git checkout -q -f FETCH_HEAD && git clean -fd'%(regression_refspec,)
+cmd = 'git init && git fetch git://git.gromacs.org/regressiontests.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(regression_refspec,)
 print "Running " + cmd
 ret |= call_cmd(cmd)
 
