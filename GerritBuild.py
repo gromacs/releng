@@ -83,18 +83,33 @@ if args["host"].lower().find("mac")>-1:
 opts_list += " ".join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
 opts_list += " -DGMX_DEFAULT_SUFFIX=off -DCMAKE_BUILD_TYPE=Debug ."
 
-subprocess.call("git gc", stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+ret = 0
+
+def call_cmd(cmd):
+   print "Running " + cmd
+   return subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+
+if env['GERRIT_PROJECT']=='releng':
+   if 'GROMACS_REFSPEC' in env: gromacs_refspec = env['GROMACS_REFSPEC']
+   else: gromacs_refspec = 'refs/heads/release-4-5-patches'
+   cmd = 'git init && git fetch git://git.gromacs.org/gromacs.git %s && git checkout -q -f FETCH_HEAD && git clean -fd'%(gromacs_refspec,)
+   ret |= call_cmd(cmd)
+
+call_cmd("git gc")
 
 cmd = "%s && cmake --version && cmake %s && %s && %s" % (env_cmd,opts_list,build_cmd,test_cmd)
 
-print "Running " + cmd
-
-ret = subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+ret |= call_cmd(cmd)
 
 if not os.path.exists("regressiontests"): os.makedirs("regressiontests")
+
 os.chdir("regressiontests")
-cmd = 'git init && git fetch git://git.gromacs.org/regressiontests.git master && git checkout -q -f FETCH_HEAD && git clean -fd'
-ret |= subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+if 'REGRESSIONTESTS_REFSPEC' in env: regression_refspec = env['REGRESSIONTESTS_REFSPEC']
+else: regression_refspec = 'refs/heads/release-4-5'
+
+cmd = 'git init && git fetch git://git.gromacs.org/regressiontests.git %s && git checkout -q -f FETCH_HEAD && git clean -fd'%(regression_refspec,)
+print "Running " + cmd
+ret |= call_cmd(cmd)
 
 
 cmd = '%s && perl gmxtest.pl -mpirun mpirun.openmpi -xml -nosuffix all' % (env_cmd,)
@@ -105,7 +120,7 @@ if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    cmd += ' -np 2'
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
    cmd += ' -double'
-ret |= subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
+ret |= call_cmd(cmd)
 
 sys.exit(ret)
 
