@@ -81,7 +81,12 @@ if args["host"].lower().find("mac")>-1:
 
 #construct string for all "GMX_" variables
 opts_list += " ".join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
-opts_list += " -DGMX_DEFAULT_SUFFIX=off -DCMAKE_BUILD_TYPE=Debug ."
+opts_list += " -DGMX_DEFAULT_SUFFIX=off ."
+
+if "CMAKE_BUILD_TYPE" in args:
+   opts_list += " -DCMAKE_BUILD_TYPE=" + args["CMAKE_BUILD_TYPE"]
+else:
+   opts_list += " -DCMAKE_BUILD_TYPE=Debug"
 
 ret = 0
 
