@@ -35,8 +35,12 @@ if args['Compiler']=="gcc":
    env["FC"]  = "gfortran-" + args["CompilerVersion"]
 
 if args['Compiler']=="clang":
-   env["CC"]  = "clang"
-   env["CXX"] = "clang++"
+   env["CC"]  = "clang-"    + args["CompilerVersion"]
+   env["CXX"] = "clang++-"  + args["CompilerVersion"]
+   if args["CompilerVersion"]=="3.1":
+      #bit ugly to hard code this here but way to long to pass all from Jenkins
+      opts_list += '-DCMAKE_C_FLAGS_DEBUG="-g -faddress-sanitizer" -DCMAKE_CXX_FLAGS_DEBUG="-g -faddress-sanitizer" -DCMAKE_EXE_LINKER_FLAGS_DEBUG=-faddress-sanitizer '
+      opts_list += '-DBUILD_SHARED_LIBS=no ' #http://code.google.com/p/address-sanitizer/issues/detail?id=38
 
 if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
