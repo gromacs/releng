@@ -41,8 +41,12 @@ if args['Compiler']=="gcc":
    env["FC"]  = "gfortran-" + args["CompilerVersion"]
 
 if args['Compiler']=="clang":
-   env["CC"]  = "clang"
-   env["CXX"] = "clang++"
+   env["CC"]  = "clang-"    + args["CompilerVersion"]
+   env["CXX"] = "clang++-"  + args["CompilerVersion"]
+   if args["CompilerVersion"]=="3.1":
+      #bit ugly to hard code this here but way to long to pass all from Jenkins
+      opts_list += '-DCMAKE_C_FLAGS_DEBUG="-g -faddress-sanitizer" -DCMAKE_CXX_FLAGS_DEBUG="-g -faddress-sanitizer" -DCMAKE_EXE_LINKER_FLAGS_DEBUG=-faddress-sanitizer '
+      opts_list += '-DBUILD_SHARED_LIBS=no ' #http://code.google.com/p/address-sanitizer/issues/detail?id=38
 
 if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
@@ -96,7 +100,12 @@ if args["host"].lower().find("mac")>-1:
 
 #construct string for all "GMX_" variables
 opts_list += " ".join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
-opts_list += " -DGMX_DEFAULT_SUFFIX=off -DCMAKE_BUILD_TYPE=Debug ."
+opts_list += " -DGMX_DEFAULT_SUFFIX=off ."
+
+if "CMAKE_BUILD_TYPE" in args:
+   opts_list += " -DCMAKE_BUILD_TYPE=" + args["CMAKE_BUILD_TYPE"]
+else:
+   opts_list += " -DCMAKE_BUILD_TYPE=Debug"
 
 ret = 0
 
