@@ -87,13 +87,17 @@ if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
 
 if not args["host"].lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
+else:
+   opts_list += '-G "NMake Makefiles JOM" '
+   build_cmd = "jom -j4"
+
+#Disable valgrind for Windows (not supported), Mac+ICC (not many false positives), Clang 3.1 (santizer is used instead)
+if not args["host"].lower().find("win")>-1 and not (args["host"].lower().find("mac")>-1 and args['Compiler']=="icc") and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.1"):
    test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
                 "%s -D ExperimentalMemCheck -L GTest -V"%(ctest,),
                 "xsltproc -o Testing/Temporary/valgrind_unit.xml %s/ctest_valgrind_to_junit.xsl  Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml"%(releng_dir,)]
 else:
-   opts_list += '-G "NMake Makefiles JOM" '
-   build_cmd = "jom -j4"
-   test_cmds = ["ctest -D ExperimentalTest -C MinSizeRel -V"]
+   test_cmds = ["ctest -D ExperimentalTest -V"]
 
 if args["host"].lower().find("mac")>-1:
    env["CMAKE_PREFIX_PATH"] = "/opt/local"
