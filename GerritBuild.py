@@ -80,6 +80,9 @@ if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    env["CXX"]="mpic++"
    env["FC"] ="mpif90"
 
+if "CUDA" in args:
+   opts_list += '-D CUDA_TOOLKIT_ROOT_DIR="/opt/cuda_%s" '%(args["CUDA"],)
+
 if not args["host"].lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
 else:
