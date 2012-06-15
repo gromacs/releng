@@ -74,7 +74,8 @@ if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    if "CompilerVersion" in args:
       env["OMPI_CC"] =env["CC"]
       env["OMPI_CXX"]=env["CXX"]
-      env["OMPI_FC"] =env["FC"]
+      if "FC" in env:
+         env["OMPI_FC"] =env["FC"]
    env["CC"] ="mpicc"
    env["CXX"]="mpic++"
    env["FC"] ="mpif90"
