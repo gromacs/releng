@@ -129,13 +129,16 @@ cmd = 'git init && git fetch git://git.gromacs.org/regressiontests.git %s && git
 print "Running " + cmd
 ret |= call_cmd(cmd)
 
-
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
 if args["host"].lower().find("win")>-1: 
    env['PATH']+=';C:\\MinGW\\msys\\1.0\\bin'
 env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../src/kernel","../src/tools"]))
 if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    cmd += ' -np 2'
+   env['GMX_GPU_ID']="00"
+elif not ("GMX_THREAD_MPI" in opts.keys() and cmake_istrue(opts["GMX_THREAD_MPI"])):
+   if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]):
+      cmd += ' -mdparam "-nt 1"'      
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
    cmd += ' -double'
 ret |= call_cmd(cmd)
