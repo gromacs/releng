@@ -136,7 +136,7 @@ env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../src/kernel","
 if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    cmd += ' -np 2'
    env['GMX_GPU_ID']="00"
-elif not ("GMX_THREAD_MPI" in opts.keys() and cmake_istrue(opts["GMX_THREAD_MPI"])):
+elif not "GMX_THREAD_MPI" in opts.keys() or cmake_istrue(opts["GMX_THREAD_MPI"]):
    if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]):
       cmd += ' -mdparam "-nt 1"'      
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
