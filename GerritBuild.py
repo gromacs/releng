@@ -50,9 +50,11 @@ if args['Compiler']=="clang":
 
 if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
-      env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" amd64 && "c:\\Program Files (x86)\\Intel\\Composer XE\\bin\\compilervars.bat" intel64 vs2008shell'
+      env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" amd64 && "c:\\Program Files (x86)\\Intel\\Composer XE\\bin\\compilervars.bat" intel64 vs2010'
       env["CC"]  = "icl"
       env["CXX"] = "icl"
+      #remove incremental which is added by cmake to avoid warning
+      opts_list += '-DCMAKE_EXE_LINKER_FLAGS="/STACK:10000000 /machine:x64" ' 
    else:
       env_cmd = ". /opt/intel/bin/iccvars.sh intel64"
       env["CC"]  = "icc"
