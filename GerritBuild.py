@@ -150,7 +150,7 @@ ret |= call_cmd(cmd)
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
 if args["host"].lower().find("win")>-1: 
    env['PATH']+=';C:\\MinGW\\msys\\1.0\\bin'
-env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../src/programs/gmxcheck","../src/programs/pdb2gmx","../src/programs/mdrun","../src/programs/grompp","../src/tools"]))
+env['PATH']=os.pathsep.join([env['PATH'],os.path.abspath("../bin")])
 if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    cmd += ' -np 2'
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
