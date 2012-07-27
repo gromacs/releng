@@ -43,9 +43,9 @@ if args['Compiler']=="gcc":
 if args['Compiler']=="clang":
    env["CC"]  = "clang-"    + args["CompilerVersion"]
    env["CXX"] = "clang++-"  + args["CompilerVersion"]
-   if args["CompilerVersion"]=="3.1":
+   if args["CompilerVersion"]=="3.2":
       #bit ugly to hard code this here but way to long to pass all from Jenkins
-      opts_list += '-DCMAKE_C_FLAGS_DEBUG="-g -O1 -faddress-sanitizer" -DCMAKE_CXX_FLAGS_DEBUG="-g -O1" -DCMAKE_EXE_LINKER_FLAGS_DEBUG=-faddress-sanitizer -DCUDA_PROPAGATE_HOST_FLAGS=no '
+      opts_list += '-DCMAKE_C_FLAGS_DEBUG="-g -O1 -faddress-sanitizer" -DCMAKE_CXX_FLAGS_DEBUG="-g -O1 -faddress-sanitizer" -DCMAKE_EXE_LINKER_FLAGS_DEBUG=-faddress-sanitizer -DCUDA_PROPAGATE_HOST_FLAGS=no '
       opts_list += '-DBUILD_SHARED_LIBS=no ' #http://code.google.com/p/address-sanitizer/issues/detail?id=38
 
 if args['Compiler']=="icc":
@@ -94,8 +94,8 @@ else:
    opts_list += '-G "NMake Makefiles JOM" '
    build_cmd = "jom -j4"
 
-#Disable valgrind for Windows (not supported), Mac+ICC (not many false positives), Clang 3.1 (santizer is used instead)
-if not args["host"].lower().find("win")>-1 and not (args["host"].lower().find("mac")>-1 and args['Compiler']=="icc") and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.1"):
+#Disable valgrind for Windows (not supported), Mac+ICC (not many false positives), Clang 3.2 (santizer is used instead)
+if not args["host"].lower().find("win")>-1 and not (args["host"].lower().find("mac")>-1 and args['Compiler']=="icc") and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.2"):
    test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
                 "%s -D ExperimentalMemCheck -L GTest -V"%(ctest,),
                 "xsltproc -o Testing/Temporary/valgrind_unit.xml %s/ctest_valgrind_to_junit.xsl  Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml"%(releng_dir,)]
