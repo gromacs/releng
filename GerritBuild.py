@@ -120,7 +120,7 @@ checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
 
 cmd = '%s && perl gmxtest.pl -mpirun mpirun.openmpi -xml -nosuffix all' % (env_cmd,)
 if args["host"].lower().find("win")>-1: 
-   env['PATH']+=';C:\\MinGW\\msys\\1.0\\bin'
+   env['PATH']+=';C:\\strawberry\\perl\\bin'
 env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../gromacs/src/kernel","../gromacs/src/tools"]))
 if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    cmd += ' -np 2'
