@@ -98,33 +98,30 @@ def call_cmd(cmd):
    print "Running " + cmd
    return subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
 
-if env['GERRIT_PROJECT']=='releng':
-   if 'GROMACS_REFSPEC' in env: gromacs_refspec = env['GROMACS_REFSPEC']
-   else: gromacs_refspec = 'refs/heads/release-4-5-patches'
-   cmd = 'git init && git fetch git://git.gromacs.org/gromacs.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(gromacs_refspec,)
-   ret |= call_cmd(cmd)
+def checkout_project(project,refname):
+   global ret
+   if not os.path.exists(project): os.makedirs(project)
+   os.chdir(project)
+   if env['GERRIT_PROJECT']!=project:
+      cmd = 'git init && git fetch git://git.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(project,env[refname])
+      print "Running " + cmd
+      ret |= call_cmd(cmd)
+      call_cmd("git gc")
 
-call_cmd("git gc")
-
+checkout_project("gromacs",'GROMACS_REFSPEC')
+   
 cmd = "%s && cmake --version && cmake %s && %s && %s" % (env_cmd,opts_list,build_cmd,test_cmd)
 
 ret |= call_cmd(cmd)
 
-if not os.path.exists("regressiontests"): os.makedirs("regressiontests")
-
-os.chdir("regressiontests")
-if 'REGRESSIONTESTS_REFSPEC' in env: regression_refspec = env['REGRESSIONTESTS_REFSPEC']
-else: regression_refspec = 'refs/heads/release-4-5'
-
-cmd = 'git init && git fetch git://git.gromacs.org/regressiontests.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(regression_refspec,)
-print "Running " + cmd
-ret |= call_cmd(cmd)
+os.chdir("..")
+checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
 
 
 cmd = '%s && perl gmxtest.pl -mpirun mpirun.openmpi -xml -nosuffix all' % (env_cmd,)
 if args["host"].lower().find("win")>-1: 
    env['PATH']+=';C:\\MinGW\\msys\\1.0\\bin'
-env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../src/kernel","../src/tools"]))
+env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../gromacs/src/kernel","../gromacs/src/tools"]))
 if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    cmd += ' -np 2'
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
