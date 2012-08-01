@@ -9,11 +9,6 @@ def error(s):
    print(s)
    exit(1)
 
-if env['GERRIT_PROJECT']=='releng':
-   releng_dir=".."
-else:
-   releng_dir="releng"
-
 # if jenkins issue 12438 is resolved, options would be directly passed as args=env
 # until then none of the OPTIONS key or values (including the host name)
 # are allowed to contain space or = characters.
@@ -98,7 +93,7 @@ else:
 if not args["host"].lower().find("win")>-1 and not (args["host"].lower().find("mac")>-1 and args['Compiler']=="icc") and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.2"):
    test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
                 "%s -D ExperimentalMemCheck -L GTest -V"%(ctest,),
-                "xsltproc -o Testing/Temporary/valgrind_unit.xml %s/ctest_valgrind_to_junit.xsl  Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml"%(releng_dir,)]
+                "xsltproc -o Testing/Temporary/valgrind_unit.xml ../releng/ctest_valgrind_to_junit.xsl  Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml"]
 else:
    test_cmds = ["ctest -D ExperimentalTest -V"]
 
@@ -120,15 +115,20 @@ def call_cmd(cmd):
    print "Running " + cmd
    return subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
 
-if env['GERRIT_PROJECT']=='releng':
-   if 'GROMACS_REFSPEC' in env: gromacs_refspec = env['GROMACS_REFSPEC']
-   else: gromacs_refspec = 'refs/heads/master'
-   cmd = 'git init && git fetch git://git.gromacs.org/gromacs.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(gromacs_refspec,)
-   ret |= call_cmd(cmd)
+def checkout_project(project,refname):
+   global ret
+   if not os.path.exists(project): os.makedirs(project)
+   os.chdir(project)
+   if env['GERRIT_PROJECT']!=project:
+      cmd = 'git init && git fetch git://git.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(project,env[refname])
+      print "Running " + cmd
+      ret |= call_cmd(cmd)
+      call_cmd("git gc")
 
-call_cmd("git gc")
+checkout_project("gromacs",'GROMACS_REFSPEC')
 
 cmd = "%s && cmake --version && cmake %s && %s" % (env_cmd,opts_list,build_cmd)
+   
 
 ret |= call_cmd(cmd)
 
@@ -136,21 +136,13 @@ for i in test_cmds:
    if call_cmd("%s && %s"%(env_cmd,i)) != 0:
       print "+++ TEST FAILED +++" #used with TextFinder
 
-if not os.path.exists("regressiontests"): os.makedirs("regressiontests")
-
-os.chdir("regressiontests")
-if 'REGRESSIONTESTS_REFSPEC' in env: regression_refspec = env['REGRESSIONTESTS_REFSPEC']
-else: regression_refspec = 'refs/heads/master'
-
-cmd = 'git init && git fetch git://git.gromacs.org/regressiontests.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(regression_refspec,)
-print "Running " + cmd
-ret |= call_cmd(cmd)
-
+os.chdir("..")
+checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
 
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
 if args["host"].lower().find("win")>-1: 
    env['PATH']+=';C:\\strawberry\\perl\\bin'
-env['PATH']=os.pathsep.join([env['PATH'],os.path.abspath("../bin")])
+env['PATH']=os.pathsep.join([env['PATH'],os.path.abspath("../gromacs/bin")])
 if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    cmd += ' -np 2'
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
