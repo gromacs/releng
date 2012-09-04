@@ -92,27 +92,26 @@ if "CMAKE_BUILD_TYPE" in args:
 else:
    opts_list += " -DCMAKE_BUILD_TYPE=Debug"
 
-ret = 0
-
 def call_cmd(cmd):
    print "Running " + cmd
    return subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
 
 def checkout_project(project,refname):
-   global ret
    if not os.path.exists(project): os.makedirs(project)
    os.chdir(project)
    if env['GERRIT_PROJECT']!=project:
       cmd = 'git init && git fetch git://git.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(project,env[refname])
       print "Running " + cmd
-      ret |= call_cmd(cmd)
+      if call_cmd(cmd)!=0:
+         sys.exit("Download FAILED")
       call_cmd("git gc")
 
 checkout_project("gromacs",'GROMACS_REFSPEC')
    
 cmd = "%s && cmake --version && cmake %s && %s && %s" % (env_cmd,opts_list,build_cmd,test_cmd)
 
-ret |= call_cmd(cmd)
+if call_cmd(cmd)!=0:
+   sys.exit("Build FAILED")
 
 os.chdir("..")
 checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
@@ -126,8 +125,7 @@ if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    cmd += ' -np 2'
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
    cmd += ' -double'
-ret |= call_cmd(cmd)
-
-sys.exit(ret)
+if call_cmd(cmd)!=0:
+   sys.exit("Regression tests failed")
 
 
