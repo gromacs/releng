@@ -1,4 +1,4 @@
-import sys,subprocess
+import sys,subprocess,platform
 from os import environ as env
 import os
 
@@ -81,9 +81,22 @@ if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    env["CC"] ="mpicc"
    env["CXX"]="mpic++"
    env["FC"] ="mpif90"
+   # set the nvcc host compiler; normally CXX should be used, but nvcc <=v5.0
+   # does not recognize icpc, only icc. To avoid a lot of if-else code here, as
+   # a C compiler works just fine, we'll use CC
+   # if we happen to be using a non-supported compiler (e.g with clang address-
+   # sanitizer builds, we'll just use the default compiler)
+   if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]) and (args['Compiler']=="icc" or args['Compiler']=="gcc") and not "win" in platform.platform().lower():
+      # this will only work on *NIX, but for now that's good enough
+      p = subprocess.Popen(["which", env["OMPI_CC"]],stdout=subprocess.PIPE)
+      stdout =  p.communicate()[0]
+      ompi_cc_full = stdout.rstrip()
+      opts_list += ' -DCUDA_NVCC_HOST_COMPILER=%s ' % ompi_cc_full
+      if p.returncode != 0:
+         sys.exit("Could not determine the full path to the compiler (%s)" % env["OMPI_CC"])
 
 if "CUDA" in args:
-   opts_list += '-D CUDA_TOOLKIT_ROOT_DIR="/opt/cuda_%s" '%(args["CUDA"],)
+   opts_list += ' -DCUDA_TOOLKIT_ROOT_DIR="/opt/cuda_%s" '%(args["CUDA"],)
 
 if not args["host"].lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
@@ -134,8 +147,6 @@ env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../gromacs/src/k
 if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    cmd += ' -np 2'
    env['GMX_GPU_ID']="00"
-   if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]):
-      opts_list += " -DCUDA_NVCC_HOST_COMPILER=" + "gcc-" + args["CompilerVersion"];
 elif not "GMX_THREAD_MPI" in opts.keys() or cmake_istrue(opts["GMX_THREAD_MPI"]):
    if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]):
       cmd += ' -mdparam "-nt 1"'      
