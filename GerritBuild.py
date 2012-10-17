@@ -134,6 +134,8 @@ env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../gromacs/src/k
 if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    cmd += ' -np 2'
    env['GMX_GPU_ID']="00"
+   if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]):
+      opts_list += " -DCUDA_NVCC_HOST_COMPILER=" + "gcc-" + args["CompilerVersion"];
 elif not "GMX_THREAD_MPI" in opts.keys() or cmake_istrue(opts["GMX_THREAD_MPI"]):
    if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]):
       cmd += ' -mdparam "-nt 1"'      
