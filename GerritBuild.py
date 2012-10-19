@@ -94,8 +94,11 @@ else:
    opts_list += '-G "NMake Makefiles JOM" '
    build_cmd = "jom -j4"
 
-#Disable valgrind for Windows (not supported), Mac+ICC (not many false positives), Clang 3.2 (santizer is used instead)
-if not args["host"].lower().find("win")>-1 and not (args["host"].lower().find("mac")>-1 and args['Compiler']=="icc") and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.2"):
+#Disable valgrind for Windows (not supported), Mac+ICC (too many false positives), Clang 3.2 (santizer is used instead), Release
+use_valgrind = not args["host"].lower().find("win")>-1 and not (args["host"].lower().find("mac")>-1 and args['Compiler']=="icc")
+use_valgrind = use_valgrind and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.2")
+use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"]=="Release")
+if use_valgrind:
    test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
                 "%s -D ExperimentalMemCheck -L GTest -V"%(ctest,),
                 "xsltproc -o Testing/Temporary/valgrind_unit.xml ../releng/ctest_valgrind_to_junit.xsl  Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml"]
