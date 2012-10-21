@@ -22,6 +22,7 @@ build_cmd = "make -j2"
 test_cmd = "ctest -DExperimentalTest -V"
 call_opts = {}
 opts_list = ""
+use_asan = False
     
 if "CMakeVersion" in args:
    env["PATH"] =  "%s/tools/cmake-%s/bin:%s" % (env["HOME"],args["CMakeVersion"],env["PATH"])
@@ -41,6 +42,7 @@ if args['Compiler']=="clang":
       #bit ugly to hard code this here but way to long to pass all from Jenkins
       opts_list += '-DCMAKE_C_FLAGS_DEBUG="-g -O1 -faddress-sanitizer -fno-omit-frame-pointer" -DCMAKE_CXX_FLAGS_DEBUG="-g -O1 -faddress-sanitizer -fno-omit-frame-pointer" -DCMAKE_EXE_LINKER_FLAGS_DEBUG=-faddress-sanitizer -DCUDA_PROPAGATE_HOST_FLAGS=no '
       opts_list += '-DBUILD_SHARED_LIBS=no ' #http://code.google.com/p/address-sanitizer/issues/detail?id=38
+      use_asan = True
 
 if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
@@ -149,6 +151,8 @@ os.chdir("..")
 checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
 
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
+if use_asan:
+   cmd+=' -parse asan_symbolize.py'
 
 # setting this stuff below is just a temporary solution,
 # it should all be passed as a proper the runconf from outside
