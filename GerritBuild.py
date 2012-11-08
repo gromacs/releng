@@ -157,21 +157,23 @@ cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
 if "GMX_OPENMP" in opts.keys() and cmake_istrue(opts["GMX_OPENMP"]):
    cmd += " -ntomp 2"
 
+mdparam=""
 if use_gpu:
-   if use_mpi:
-      cmd += ' -mdparam "-gpu_id 12"'  # for (T)MPI use the two GT 640-s
-   elif use_tmpi:
-      cmd += ' -mdparam "-gpu_id 12 -ntmpi 2"'
+   if use_mpi or use_tmpi:
+      mdparam+=" -gpu_id 12"  # for (T)MPI use the two GT 640-s
    else:
-      cmd += ' -mdparam "-gpu_id 0"' # use GPU #0 by default
+      mdparam+=" -gpu_id 0"   # use GPU #0 by default
 
 if args["host"].lower().find("win")>-1:
    env['PATH']+=';C:\\strawberry\\perl\\bin'
 env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../gromacs/src/kernel","../gromacs/src/tools"]))
 if use_mpi:
    cmd += ' -np 2'
+elif use_tmpi:
+   mdparam += ' -ntmpi 2'
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
    cmd += ' -double'
+cmd += ' -mdparam "%s"'%(mdparam,)
 if call_cmd(cmd)!=0:
    sys.exit("Regression tests failed")
 
