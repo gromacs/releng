@@ -22,6 +22,7 @@ build_cmd = "make -j2"
 call_opts = {}
 opts_list = ""
 ctest = "ctest"
+use_asan = False
     
 if "CMakeVersion" in args:
    env["PATH"] =  "%s/tools/cmake-%s/bin:%s" % (env["HOME"],args["CMakeVersion"],env["PATH"])
@@ -40,8 +41,9 @@ if args['Compiler']=="clang":
    env["CXX"] = "clang++-"  + args["CompilerVersion"]
    if args["CompilerVersion"]=="3.2":
       #bit ugly to hard code this here but way to long to pass all from Jenkins
-      opts_list += '-DCMAKE_C_FLAGS_DEBUG="-g -O1 -faddress-sanitizer" -DCMAKE_CXX_FLAGS_DEBUG="-g -O1 -faddress-sanitizer" -DCMAKE_EXE_LINKER_FLAGS_DEBUG=-faddress-sanitizer -DCUDA_PROPAGATE_HOST_FLAGS=no '
+      opts_list += '-DCMAKE_C_FLAGS_DEBUG="-g -O1 -faddress-sanitizer -fno-omit-frame-pointer" -DCMAKE_CXX_FLAGS_DEBUG="-g -O1 -faddress-sanitizer -fno-omit-frame-pointer" -DCMAKE_EXE_LINKER_FLAGS_DEBUG=-faddress-sanitizer -DCUDA_PROPAGATE_HOST_FLAGS=no '
       opts_list += '-DBUILD_SHARED_LIBS=no ' #http://code.google.com/p/address-sanitizer/issues/detail?id=38
+      use_asan = True
 
 if args['Compiler']=="icc":
    if args["host"].lower().find("win")>-1:
@@ -73,7 +75,15 @@ if "GMX_EXTERNAL" in opts.keys():
        else:
           env["CMAKE_LIBRARY_PATH"] = "/usr/lib/atlas-base"
 
+use_gpu = use_mpi = use_tmpi = False
+if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]):
+   use_gpu = True
 if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
+   use_mpi = True
+if not use_mpi and (not "GMX_THREAD_MPI" in opts.keys() or cmake_istrue(opts["GMX_THREAD_MPI"])):
+   use_tmpi = True
+
+if use_mpi:
    if "CompilerVersion" in args:
       env["OMPI_CC"] =env["CC"]
       env["OMPI_CXX"]=env["CXX"]
@@ -87,7 +97,7 @@ if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    # a C compiler works just fine, we'll use CC
    # if we happen to be using a non-supported compiler (e.g with clang address-
    # sanitizer builds, we'll just use the default compiler)
-   if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]) and (args['Compiler']=="icc" or args['Compiler']=="gcc") and not "win" in platform.platform().lower():
+   if use_gpu and (args['Compiler']=="icc" or args['Compiler']=="gcc") and not "win" in platform.platform().lower():
       # this will only work on *NIX, but for now that's good enough
       p = subprocess.Popen(["which", env["OMPI_CC"]],stdout=subprocess.PIPE)
       stdout =  p.communicate()[0]
@@ -160,13 +170,33 @@ os.chdir("..")
 checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
 
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
-if args["host"].lower().find("win")>-1: 
+if use_asan:
+   cmd+=' -parse asan_symbolize.py'
+
+# setting this stuff below is just a temporary solution,
+# it should all be passed as a proper the runconf from outside
+
+# OpenMP should always work when compiled in!
+if "GMX_OPENMP" in opts.keys() and cmake_istrue(opts["GMX_OPENMP"]):
+   cmd += " -ntomp 2"
+
+mdparam=""
+if use_gpu:
+   if use_mpi or use_tmpi:
+      mdparam+=" -gpu_id 12"  # for (T)MPI use the two GT 640-s
+   else:
+      mdparam+=" -gpu_id 0"   # use GPU #0 by default
+
+if args["host"].lower().find("win")>-1:
    env['PATH']+=';C:\\strawberry\\perl\\bin'
 env['PATH']=os.pathsep.join([env['PATH'],os.path.abspath("../gromacs/bin")])
-if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
+if use_mpi:
    cmd += ' -np 2'
+elif use_tmpi:
+   mdparam += ' -ntmpi 2'
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
    cmd += ' -double'
+cmd += ' -mdparam "%s"'%(mdparam,)
 if call_cmd(cmd)!=0:
    sys.exit("Regression tests failed")
 
