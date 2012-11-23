@@ -161,7 +161,10 @@ if use_asan:
 if "GMX_OPENMP" in opts.keys() and cmake_istrue(opts["GMX_OPENMP"]):
    cmd += " -ntomp 2"
 
-mdparam=""
+# We never want to pin threads, multiple mdrun-s can overlap during regression
+# testing and will slow down the execution. 4.5 doesn't support the option,
+# but it doesn't check options anyway.
+mdparam="-nopin"
 if use_gpu:
    if use_mpi or use_tmpi:
       mdparam+=" -gpu_id 12"  # for (T)MPI use the two GT 640-s
