@@ -111,7 +111,7 @@ if "CUDA" in args:
 if not args["host"].lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
 else:
-   opts_list += '-G "NMake Makefiles JOM" '
+   opts_list += '-G "NMake Makefiles JOM" -DBUILD_SHARED_LIBS=on '
    build_cmd = "jom -j4"
 
 if args["host"].lower().find("mac")>-1:
@@ -148,6 +148,8 @@ def checkout_project(project,refname):
 
 checkout_project("gromacs",'GROMACS_REFSPEC')
 checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
+
+env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["gromacs/src/kernel","gromacs/src/tools","gromacs/src/mdlib","gromacs/src/gmxlib"]))
 
 print "-----------------------------------------------------------"
 print "Building using versions:"
@@ -187,7 +189,7 @@ if use_gpu:
 
 if args["host"].lower().find("win")>-1:
    env['PATH']+=';C:\\strawberry\\perl\\bin'
-env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["../gromacs/src/kernel","../gromacs/src/tools"]))
+
 if use_mpi:
    cmd += ' -np 2'
 elif use_tmpi:
