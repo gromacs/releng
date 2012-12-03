@@ -130,6 +130,17 @@ def call_cmd(cmd):
    print "Running " + cmd
    return subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
 
+refspecs={"gromacs": env['GROMACS_REFSPEC'],
+          "regressiontests": env['REGRESSIONTESTS_REFSPEC'],
+          "releng": "refs/heads/4.6.0"}
+refspecs[env['GERRIT_PROJECT']]=env['GERRIT_REFSPEC']
+
+print "---------------------------------------------------------"
+print "Building using versions:"
+for repo in sorted(refspecs.keys()):
+   print "%-20s %s"%(repo + ":", refspecs[repo])
+print "---------------------------------------------------------"
+
 def checkout_project(project,refname):
    if not os.path.exists(project): os.makedirs(project)
    os.chdir(project)
