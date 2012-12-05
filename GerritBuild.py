@@ -101,7 +101,7 @@ if use_mpi:
       p = subprocess.Popen(["which", env["OMPI_CC"]],stdout=subprocess.PIPE)
       stdout =  p.communicate()[0]
       ompi_cc_full = stdout.rstrip()
-      opts_list += ' -DCUDA_NVCC_HOST_COMPILER=%s ' % ompi_cc_full
+      opts_list += ' -DCUDA_HOST_COMPILER=%s ' % ompi_cc_full
       if p.returncode != 0:
          sys.exit("Could not determine the full path to the compiler (%s)" % env["OMPI_CC"])
 
