@@ -39,7 +39,7 @@ if args['Compiler']=="gcc":
 if args['Compiler']=="clang":
    env["CC"]  = "clang-"    + args["CompilerVersion"]
    env["CXX"] = "clang++-"  + args["CompilerVersion"]
-   if args["CompilerVersion"]=="3.2":
+   if 'CompilerFlags' in args and args["CompilerFlags"]=="ASAN":
       #bit ugly to hard code this here but way to long to pass all from Jenkins
       opts_list += '-DCMAKE_C_FLAGS_DEBUG="-g -O1 -faddress-sanitizer -fno-omit-frame-pointer" -DCMAKE_CXX_FLAGS_DEBUG="-g -O1 -faddress-sanitizer -fno-omit-frame-pointer" -DCMAKE_EXE_LINKER_FLAGS_DEBUG=-faddress-sanitizer -DCUDA_PROPAGATE_HOST_FLAGS=no '
       opts_list += '-DBUILD_SHARED_LIBS=no ' #http://code.google.com/p/address-sanitizer/issues/detail?id=38
@@ -102,7 +102,7 @@ if use_mpi:
       p = subprocess.Popen(["which", env["OMPI_CC"]],stdout=subprocess.PIPE)
       stdout =  p.communicate()[0]
       ompi_cc_full = stdout.rstrip()
-      opts_list += ' -DCUDA_NVCC_HOST_COMPILER=%s ' % ompi_cc_full
+      opts_list += ' -DCUDA_HOST_COMPILER=%s ' % ompi_cc_full
       if p.returncode != 0:
          sys.exit("Could not determine the full path to the compiler (%s)" % env["OMPI_CC"])
 
@@ -144,6 +144,17 @@ def call_cmd(cmd):
    print "Running " + cmd
    return subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
 
+refspecs={"gromacs": env['GROMACS_REFSPEC'],
+          "regressiontests": env['REGRESSIONTESTS_REFSPEC'],
+          "releng": "refs/heads/4.6.0"}
+refspecs[env['GERRIT_PROJECT']]=env['GERRIT_REFSPEC']
+
+print "---------------------------------------------------------"
+print "Building using versions:"
+for repo in sorted(refspecs.keys()):
+   print "%-20s %s"%(repo + ":", refspecs[repo])
+print "---------------------------------------------------------"
+
 def checkout_project(project,refname):
    if not os.path.exists(project): os.makedirs(project)
    os.chdir(project)
@@ -180,7 +191,10 @@ if use_asan:
 if "GMX_OPENMP" in opts.keys() and cmake_istrue(opts["GMX_OPENMP"]):
    cmd += " -ntomp 2"
 
-mdparam=""
+# We never want to pin threads, multiple mdrun-s can overlap during regression
+# testing and will slow down the execution. 4.5 doesn't support the option,
+# but it doesn't check options anyway.
+mdparam="-nopin"
 if use_gpu:
    if use_mpi or use_tmpi:
       mdparam+=" -gpu_id 12"  # for (T)MPI use the two GT 640-s
