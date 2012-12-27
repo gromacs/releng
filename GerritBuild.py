@@ -135,32 +135,35 @@ refspecs={"gromacs": env['GROMACS_REFSPEC'],
           "releng": "refs/heads/4.6.0"}
 refspecs[env['GERRIT_PROJECT']]=env['GERRIT_REFSPEC']
 
-print "---------------------------------------------------------"
-print "Building using versions:"
-for repo in sorted(refspecs.keys()):
-   print "%-20s %s"%(repo + ":", refspecs[repo])
-print "---------------------------------------------------------"
-
 def checkout_project(project,refname):
    if not os.path.exists(project): os.makedirs(project)
-   os.chdir(project)
    if env['GERRIT_PROJECT']!=project:
+      os.chdir(project)
       cmd = 'git init && git fetch git://git.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(project,env[refname])
       print "Running " + cmd
       if call_cmd(cmd)!=0:
          sys.exit("Download FAILED")
       call_cmd("git gc")
+      os.chdir("..")
 
 checkout_project("gromacs",'GROMACS_REFSPEC')
-   
+checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
+
+print "-----------------------------------------------------------"
+print "Building using versions:"
+for repo in sorted(refspecs.keys()):
+   p = subprocess.Popen("git rev-parse --short HEAD",stdout=subprocess.PIPE,shell=True,cwd=repo)
+   head_version = p.communicate()[0].strip()
+   print "%-20s %-30s %s"%(repo + ":", refspecs[repo],head_version)
+print "-----------------------------------------------------------"
+
+os.chdir("gromacs")   
 cmd = "%s && cmake --version && cmake %s && %s && %s" % (env_cmd,opts_list,build_cmd,test_cmd)
 
 if call_cmd(cmd)!=0:
    sys.exit("Build FAILED")
 
-os.chdir("..")
-checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
-
+os.chdir("../regressiontests")
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
 if use_asan:
    cmd+=' -parse asan_symbolize.py'
