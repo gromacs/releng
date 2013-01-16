@@ -149,26 +149,33 @@ refspecs={"gromacs": env['GROMACS_REFSPEC'],
           "releng": "refs/heads/4.6.0"}
 refspecs[env['GERRIT_PROJECT']]=env['GERRIT_REFSPEC']
 
-print "---------------------------------------------------------"
-print "Building using versions:"
-for repo in sorted(refspecs.keys()):
-   print "%-20s %s"%(repo + ":", refspecs[repo])
-print "---------------------------------------------------------"
-
 def checkout_project(project,refname):
    if not os.path.exists(project): os.makedirs(project)
-   os.chdir(project)
    if env['GERRIT_PROJECT']!=project:
+      os.chdir(project)
       cmd = 'git init && git fetch git://git.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(project,env[refname])
       print "Running " + cmd
       if call_cmd(cmd)!=0:
          sys.exit("Download FAILED")
       call_cmd("git gc")
+      os.chdir("..")
 
 checkout_project("gromacs",'GROMACS_REFSPEC')
+checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
+
+env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["gromacs/bin"]))
 
 cmd = "%s && cmake --version && cmake %s && %s" % (env_cmd,opts_list,build_cmd)
    
+print "-----------------------------------------------------------"
+print "Building using versions:"
+for repo in sorted(refspecs.keys()):
+   p = subprocess.Popen("git rev-parse --short HEAD",stdout=subprocess.PIPE,shell=True,cwd=repo)
+   head_version = p.communicate()[0].strip()
+   print "%-20s %-30s %s"%(repo + ":", refspecs[repo],head_version)
+print "-----------------------------------------------------------"
+
+os.chdir("gromacs")   
 
 if call_cmd(cmd)!=0:
    sys.exit("Build FAILED")
@@ -177,9 +184,7 @@ for i in test_cmds:
    if call_cmd("%s && %s"%(env_cmd,i)) != 0:
       print "+++ TEST FAILED +++" #used with TextFinder
 
-os.chdir("..")
-checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
-
+os.chdir("../regressiontests")
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
 if use_asan:
    cmd+=' -parse asan_symbolize.py'
@@ -203,7 +208,7 @@ if use_gpu:
 
 if args["host"].lower().find("win")>-1:
    env['PATH']+=';C:\\strawberry\\perl\\bin'
-env['PATH']=os.pathsep.join([env['PATH'],os.path.abspath("../gromacs/bin")])
+
 if use_mpi:
    cmd += ' -np 2'
 elif use_tmpi:
