@@ -147,7 +147,7 @@ def call_cmd(cmd):
 
 refspecs={"gromacs": env['GROMACS_REFSPEC'],
           "regressiontests": env['REGRESSIONTESTS_REFSPEC'],
-          "releng": "refs/heads/4.6.0"}
+          "releng": "refs/heads/5.0.0"}
 refspecs[env['GERRIT_PROJECT']]=env['GERRIT_REFSPEC']
 
 def checkout_project(project,refname):
@@ -155,7 +155,6 @@ def checkout_project(project,refname):
    if env['GERRIT_PROJECT']!=project:
       os.chdir(project)
       cmd = 'git init && git fetch git://git.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(project,env[refname])
-      print "Running " + cmd
       if call_cmd(cmd)!=0:
          sys.exit("Download FAILED")
       call_cmd("git gc")
