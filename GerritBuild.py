@@ -145,38 +145,69 @@ def call_cmd(cmd):
    print "Running " + cmd
    return subprocess.call(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, **call_opts)
 
+# Set up a dictionary to map repositories to the refspec we want from
+# them.
 refspecs={"gromacs": env['GROMACS_REFSPEC'],
           "regressiontests": env['REGRESSIONTESTS_REFSPEC'],
           "releng": "refs/heads/5.0.0"}
+# Over-ride the refspec for the project that we're actually testing
+# with the refspec we want to test from it.
 refspecs[env['GERRIT_PROJECT']]=env['GERRIT_REFSPEC']
+# Prepare to set up a dictionary that will hold the correct SHA for
+# each refspec in its remote repo, so we can check we're testing the
+# right combination of refspecs.
+correct_sha={}
 
-def checkout_project(project,refname):
+# Make a directory into which we can check out the desired refspec.
+def checkout_project(project):
    if not os.path.exists(project): os.makedirs(project)
-   if env['GERRIT_PROJECT']!=project:
-      os.chdir(project)
-      cmd = 'git init && git fetch git://git.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(project,env[refname])
-      if call_cmd(cmd)!=0:
-         sys.exit("Download FAILED")
-      call_cmd("git gc")
-      os.chdir("..")
+   os.chdir(project)
+   cmd = 'git init && git fetch ssh://jenkins@gerrit.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq' % (project,refspecs[project])
+   if call_cmd(cmd)!=0:
+      sys.exit("Download FAILED")
+   call_cmd("git gc")
+   os.chdir("..")
 
-checkout_project("gromacs",'GROMACS_REFSPEC')
-checkout_project("regressiontests", 'REGRESSIONTESTS_REFSPEC')
+for project in sorted(refspecs.keys()):
+   # Check out the project(s) that are not currently under test
+   if env['GERRIT_PROJECT']!=project and 'releng'!=project:
+      checkout_project(project)
+
+   # Query the remote repo for the SHA that should be used for this test
+   cmd = 'git ls-remote ssh://jenkins@gerrit.gromacs.org/%s.git %s' % (project,refspecs[project])
+   p = subprocess.Popen(cmd,stdout=subprocess.PIPE,shell=True,cwd=project)
+   correct_sha[project] = p.communicate()[0].strip()
+   if p.returncode != 0:
+      sys.exit("The subprocess that ran '%s' failed. This means the SHA of that HEAD is unknown, so we cannot be sure the previous checkout was of the correct content for this test." % cmd)
 
 env['PATH']=os.pathsep.join([env['PATH']]+map(os.path.abspath,["gromacs/bin"]))
 
-cmd = "%s && cmake --version && cmake %s && %s" % (env_cmd,opts_list,build_cmd)
-   
 print "-----------------------------------------------------------"
 print "Building using versions:"
-for repo in sorted(refspecs.keys()):
-   p = subprocess.Popen("git rev-parse --short HEAD",stdout=subprocess.PIPE,shell=True,cwd=repo)
+wrong_version=0
+for project in sorted(refspecs.keys()):
+   # What version of this project is checked out?
+   cmd = "git rev-parse HEAD"
+   p = subprocess.Popen(cmd,stdout=subprocess.PIPE,shell=True,cwd=project)
    head_version = p.communicate()[0].strip()
-   print "%-20s %-30s %s"%(repo + ":", refspecs[repo],head_version)
+   if p.returncode != 0:
+      sys.exit("The subprocess that ran '%s' failed. So we cannot determine the SHA of this HEAD!" % cmd)
+
+   # Tell the user what we're doing with this project
+   print "%-20s %-30s %s"%(project + ":", refspecs[project],head_version)
+
+   # Is the version checked out OK?
+   if not correct_sha[project].startswith(head_version):
+      print "Checkout of refspec %s from project %s did not succeed. In the remote repo it is %7s, but somehow the local repo is %7s." % (refspecs[project], project, correct_sha[project], head_version)
+      wrong_version += 1
 print "-----------------------------------------------------------"
+
+if 0 < wrong_version:
+   sys.exit("Failed to check out correct project(s)")
 
 os.chdir("gromacs")   
 
+cmd = "%s && cmake --version && cmake %s && %s" % (env_cmd,opts_list,build_cmd)
 if call_cmd(cmd)!=0:
    sys.exit("Build FAILED")
 
