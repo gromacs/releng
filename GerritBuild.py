@@ -148,7 +148,7 @@ correct_sha={}
 def checkout_project(project):
    if not os.path.exists(project): os.makedirs(project)
    os.chdir(project)
-   cmd = 'git init && git fetch git://git.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq' % (project,refspecs[project])
+   cmd = 'git init && git fetch ssh://jenkins@gerrit.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq' % (project,refspecs[project])
    if call_cmd(cmd)!=0:
       sys.exit("Download FAILED")
    call_cmd("git gc")
@@ -160,7 +160,7 @@ for project in sorted(refspecs.keys()):
       checkout_project(project)
 
    # Query the remote repo for the SHA that should be used for this test
-   cmd = 'git ls-remote git://git.gromacs.org/%s.git %s' % (project,refspecs[project])
+   cmd = 'git ls-remote ssh://jenkins@gerrit.gromacs.org/%s.git %s' % (project,refspecs[project])
    p = subprocess.Popen(cmd,stdout=subprocess.PIPE,shell=True,cwd=project)
    correct_sha[project] = p.communicate()[0].strip()
    if p.returncode != 0:
