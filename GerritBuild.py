@@ -100,7 +100,7 @@ def checkout_project(project,refname):
    if not os.path.exists(project): os.makedirs(project)
    os.chdir(project)
    if env['GERRIT_PROJECT']!=project:
-      cmd = 'git init && git fetch git://git.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(project,env[refname])
+      cmd = 'git init && git fetch ssh://jenkins@gerrit.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq'%(project,env[refname])
       print "Running " + cmd
       if call_cmd(cmd)!=0:
          sys.exit("Download FAILED")
