@@ -82,6 +82,14 @@ if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
 if not use_mpi and (not "GMX_THREAD_MPI" in opts.keys() or cmake_istrue(opts["GMX_THREAD_MPI"])):
    use_tmpi = True
 
+if "NRANKS" in args.keys():
+   nranks = args["NRANKS"]
+else:
+   nranks = 2
+if "NTOMP" in args.keys():
+   ntomp = args["NTOMP"]
+else:
+   ntomp = 2
 
 if use_mpi:
    if "CompilerVersion" in args:
@@ -207,7 +215,7 @@ if use_asan:
 
 # OpenMP should always work when compiled in!
 if "GMX_OPENMP" in opts.keys() and cmake_istrue(opts["GMX_OPENMP"]):
-   cmd += " -ntomp 2"
+   cmd += " -ntomp %s" % ntomp
 
 mdparam = ""
 if use_gpu:
@@ -220,9 +228,9 @@ if args["host"].lower().find("win")>-1:
    env['PATH']+=';C:\\strawberry\\perl\\bin'
 
 if use_mpi:
-   cmd += ' -np 2'
+   cmd += ' -np %s' % nranks
 elif use_tmpi:
-   mdparam += ' -ntmpi 2'
+   mdparam += ' -ntmpi %s' % nranks
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
    cmd += ' -double'
 cmd += ' -mdparam "%s"'%(mdparam,)
