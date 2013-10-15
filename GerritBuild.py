@@ -162,7 +162,7 @@ correct_sha={}
 def checkout_project(project):
    if not os.path.exists(project): os.makedirs(project)
    os.chdir(project)
-   cmd = 'git init && git fetch ssh://jenkins@gerrit.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -fdxq' % (project,refspecs[project])
+   cmd = 'git init && git fetch ssh://jenkins@gerrit.gromacs.org/%s.git %s && git checkout -q -f FETCH_HEAD && git clean -ffdxq' % (project,refspecs[project])
    if call_cmd(cmd)!=0:
       sys.exit("Download FAILED")
    call_cmd("git gc")
