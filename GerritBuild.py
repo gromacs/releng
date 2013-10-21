@@ -122,8 +122,10 @@ else:
 use_valgrind = not args["host"].lower().find("win")>-1 and not (args["host"].lower().find("mac")>-1 and args['Compiler']=="icc")
 use_valgrind = use_valgrind and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.2")
 use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"]=="Release")
+# Need at least valgrind 3.8 to get AVX support; Ubuntu 12.04
+# packages only 3.7.0
 if use_valgrind:
-   test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
+   test_cmds = ["ctest -DMEMORYCHECK_COMMAND=/usr/local/bin/valgrind -D ExperimentalTest -LE GTest -V",
                 "%s -D ExperimentalMemCheck -L GTest -V"%(ctest,),
                 "xsltproc -o Testing/Temporary/valgrind_unit.xml ../releng/ctest_valgrind_to_junit.xsl  Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml"]
 else:
