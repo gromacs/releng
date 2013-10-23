@@ -28,8 +28,13 @@ if "CMakeVersion" in args:
    env["PATH"] =  "%s/tools/cmake-%s/bin:%s" % (env["HOME"],args["CMakeVersion"],env["PATH"])
    ctest = "/usr/bin/ctest"  #problem with older versions
 
-if not 'Compiler' in args or not 'CompilerVersion' in args or not 'host' in args:
-   error("Compiler, CompilerVersion and host needs to be specified")
+if not 'Compiler' in args or not 'CompilerVersion' in args:
+   error("Compiler and CompilerVersion needs to be specified")
+
+if not os.getenv("NODE_NAME"):
+   error("Jenkins did not set NODE_NAME environment variable")
+else:
+   print "Node name: " + os.getenv("NODE_NAME")
 
 if args['Compiler']=="gcc":
    env["CC"]  = "gcc-"      + args["CompilerVersion"]
@@ -46,7 +51,7 @@ if args['Compiler']=="clang":
       use_asan = True
 
 if args['Compiler']=="icc":
-   if args["host"].lower().find("win")>-1:
+   if os.getenv("NODE_NAME").lower().find("win")>-1:
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" amd64 && "c:\\Program Files (x86)\\Intel\\Composer XE\\bin\\compilervars.bat" intel64 vs2010'
       env["CC"]  = "icl"
       env["CXX"] = "icl"
@@ -112,14 +117,14 @@ if "CUDA" in args:
    if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]) and args['Compiler']=="gcc" and args["CompilerVersion"]!="4.7":
       opts_list += '-DCUDA_NVCC_HOST_COMPILER="/usr/bin/%s" '%(env["OMPI_CXX"],) 
 
-if not args["host"].lower().find("win")>-1:
+if not os.getenv("NODE_NAME").lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
 else:
    opts_list += '-G "NMake Makefiles JOM" '
    build_cmd = "jom -j4"
 
 #Disable valgrind for Windows (not supported), Mac+ICC (too many false positives), Clang 3.2 (santizer is used instead), Release
-use_valgrind = not args["host"].lower().find("win")>-1 and not (args["host"].lower().find("mac")>-1 and args['Compiler']=="icc")
+use_valgrind = not os.getenv("NODE_NAME").lower().find("win")>-1 and not (os.getenv("NODE_NAME").lower().find("mac")>-1 and args['Compiler']=="icc")
 use_valgrind = use_valgrind and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.2")
 use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"]=="Release")
 # Need at least valgrind 3.8 to get AVX support; Ubuntu 12.04
@@ -131,7 +136,7 @@ if use_valgrind:
 else:
    test_cmds = ["ctest -D ExperimentalTest -V"]
 
-if args["host"].lower().find("mac")>-1:
+if os.getenv("NODE_NAME").lower().find("mac")>-1:
    env["CMAKE_PREFIX_PATH"] = "/opt/local"
 
 #construct string for all "GMX_" variables
@@ -236,7 +241,7 @@ if use_gpu:
    else:
       mdparam+=" -gpu_id 0"   # use GPU #0 by default
 
-if args["host"].lower().find("win")>-1:
+if os.getenv("NODE_NAME").lower().find("win")>-1:
    env['PATH']+=';C:\\strawberry\\perl\\bin'
 
 if use_mpi:
