@@ -245,7 +245,7 @@ if os.getenv("NODE_NAME").lower().find("win")>-1:
 if use_mpi:
    cmd += ' -np 2'
 elif use_tmpi:
-   mdparam += ' -ntmpi 2'
+   cmd += ' -nt 2'
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
    cmd += ' -double'
 cmd += ' -mdparam "%s"'%(mdparam,)
