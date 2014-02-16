@@ -234,10 +234,15 @@ if "GMX_OPENMP" in opts.keys() and cmake_istrue(opts["GMX_OPENMP"]):
 
 mdparam = ""
 if use_gpu:
+   # We used to pass -gpu_id in gmxtest.pl -mdparam to add to the
+   # mdrun command line, but this does not interact well with the
+   # gmxtest.pl test harness needing to handle test cases that must
+   # run with only one rank.
    if use_mpi or use_tmpi:
-      mdparam+=" -gpu_id 12"  # for (T)MPI use the two GT 640-s
+      gpu_id = "12" # for (T)MPI use the two GT 640-s
    else:
-      mdparam+=" -gpu_id 0"   # use GPU #0 by default
+      gpu_id = "0" # use GPU #0 by default
+   cmd += ' -gpu_id %s' % (gpu_id)
 
 if os.getenv("NODE_NAME").lower().find("win")>-1:
    env['PATH']+=';C:\\strawberry\\perl\\bin'
