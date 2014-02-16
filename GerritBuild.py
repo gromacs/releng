@@ -123,6 +123,10 @@ else:
    opts_list += '-G "NMake Makefiles JOM" '
    build_cmd = "jom -j4"
 
+# If we are doing an mdrun-only build, then we cannot run the
+# regression tests at all, so set up a flag to do the right thing
+do_regressiontests = not ("GMX_BUILD_MDRUN_ONLY" in args and args["GMX_BUILD_MDRUN_ONLY"]=="ON")
+
 #Disable valgrind for Windows (not supported), Mac+ICC (too many false positives), Clang 3.2 (santizer is used instead), Release
 use_valgrind = not os.getenv("NODE_NAME").lower().find("win")>-1 and not (os.getenv("NODE_NAME").lower().find("mac")>-1 and args['Compiler']=="icc")
 use_valgrind = use_valgrind and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.2")
@@ -249,7 +253,6 @@ elif use_tmpi:
 if "GMX_DOUBLE" in opts.keys() and cmake_istrue(opts["GMX_DOUBLE"]):
    cmd += ' -double'
 cmd += ' -mdparam "%s"'%(mdparam,)
-if call_cmd(cmd)!=0:
-   sys.exit("Regression tests failed")
-
-
+if do_regressiontests:
+   if call_cmd(cmd)!=0:
+      sys.exit("Regression tests failed")
