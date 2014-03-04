@@ -80,14 +80,15 @@ if "GMX_EXTERNAL" in opts.keys():
        else:
           env["CMAKE_LIBRARY_PATH"] = "/usr/lib/atlas-base"
 
-use_gpu = use_mpi = use_tmpi = False
+use_gpu = use_mpi = use_tmpi = use_separate_pme_nodes = False
 if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]):
    use_gpu = True
 if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
    use_mpi = True
 if not use_mpi and (not "GMX_THREAD_MPI" in opts.keys() or cmake_istrue(opts["GMX_THREAD_MPI"])):
    use_tmpi = True
-
+if "GMX_TEST_NPME" in opts.keys() and (use_mpi or use_tmpi):
+   use_separate_pme_nodes = True
 
 if use_mpi:
    if "CompilerVersion" in args:
@@ -251,7 +252,16 @@ if use_gpu:
 if os.getenv("NODE_NAME").lower().find("win")>-1:
    env['PATH']+=';C:\\strawberry\\perl\\bin'
 
-if use_mpi:
+if use_separate_pme_nodes:
+   # mdrun -npme only works with > 2 ranks
+   if use_mpi:
+      cmd += ' -np 3'
+   if use_tmpi:
+      cmd += ' -nt 3'
+   if use_gpu:
+      gpu_id = "121" # gmxtest.pl trims this if there is a separate PME node actually in use
+   cmd += ' -npme 1'
+elif use_mpi:
    cmd += ' -np 2'
 elif use_tmpi:
    cmd += ' -nt 2'
