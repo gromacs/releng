@@ -130,7 +130,7 @@ do_regressiontests = not ("GMX_BUILD_MDRUN_ONLY" in args and args["GMX_BUILD_MDR
 #Disable valgrind for Windows (not supported), Mac+ICC (too many false positives), Clang 3.2 (santizer is used instead), Release
 use_valgrind = not os.getenv("NODE_NAME").lower().find("win")>-1 and not (os.getenv("NODE_NAME").lower().find("mac")>-1 and args['Compiler']=="icc")
 use_valgrind = use_valgrind and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.2")
-use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"]=="Release")
+use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"].startswith("Rel"))
 if use_valgrind:
    test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
                 "%s -D ExperimentalMemCheck -L GTest -V"%(ctest,),
