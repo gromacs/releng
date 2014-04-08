@@ -115,8 +115,6 @@ if use_mpi:
 
 if "CUDA" in args:
    opts_list += ' -DCUDA_TOOLKIT_ROOT_DIR="/opt/cuda_%s" '%(args["CUDA"],)
-   if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]) and args['Compiler']=="gcc" and args["CompilerVersion"]!="4.7":
-      opts_list += '-DCUDA_NVCC_HOST_COMPILER="/usr/bin/%s" '%(env["OMPI_CXX"],) 
 
 if not os.getenv("NODE_NAME").lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
