@@ -40,6 +40,8 @@ if args['Compiler']=="gcc":
    env["CC"]  = "gcc-"      + args["CompilerVersion"]
    env["CXX"] = "g++-"      + args["CompilerVersion"]
    env["FC"]  = "gfortran-" + args["CompilerVersion"]
+   if 'CMAKE_BUILD_TYPE' in args and args["CMAKE_BUILD_TYPE"]=="THREADSANITIZER":
+      env["LD_LIBRARY_PATH"] =  "%s/tools/gcc-nofutex/lib64" % env["HOME"]
 
 if args['Compiler']=="clang":
    env["CC"]  = "clang-"    + args["CompilerVersion"]
@@ -118,6 +120,7 @@ if "CUDA" in args:
 
 if not os.getenv("NODE_NAME").lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
+   env['PATH']+=":%s/bin"%env['HOME']
 else:
    opts_list += '-G "NMake Makefiles JOM" '
    build_cmd = "jom -j4"
@@ -126,10 +129,10 @@ else:
 # regression tests at all, so set up a flag to do the right thing
 do_regressiontests = not ("GMX_BUILD_MDRUN_ONLY" in args and args["GMX_BUILD_MDRUN_ONLY"]=="ON")
 
-#Disable valgrind for Windows (not supported), Mac+ICC (too many false positives), Clang 3.2 (santizer is used instead), Release
+#Disable valgrind for Windows (not supported), Mac+ICC (too many false positives), ASAN, TSAN, Release
 use_valgrind = not os.getenv("NODE_NAME").lower().find("win")>-1 and not (os.getenv("NODE_NAME").lower().find("mac")>-1 and args['Compiler']=="icc")
-use_valgrind = use_valgrind and not (args['Compiler']=="clang" and args["CompilerVersion"]=="3.2")
-use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"].startswith("Rel"))
+use_valgrind = use_valgrind and not use_asan
+use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"]!="Debug")
 if use_valgrind:
    test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
                 "%s -D ExperimentalMemCheck -L GTest -V"%(ctest,),
