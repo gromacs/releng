@@ -22,7 +22,6 @@ build_cmd = "make -j2"
 call_opts = {}
 opts_list = ""
 ctest = "ctest"
-use_asan = False
     
 if "CMakeVersion" in args:
    env["PATH"] =  "%s/tools/cmake-%s/bin:%s" % (env["HOME"],args["CMakeVersion"],env["PATH"])
@@ -40,17 +39,12 @@ if args['Compiler']=="gcc":
    env["CC"]  = "gcc-"      + args["CompilerVersion"]
    env["CXX"] = "g++-"      + args["CompilerVersion"]
    env["FC"]  = "gfortran-" + args["CompilerVersion"]
-   if 'CMAKE_BUILD_TYPE' in args and args["CMAKE_BUILD_TYPE"]=="THREADSANITIZER":
+   if 'CMAKE_BUILD_TYPE' in args and args["CMAKE_BUILD_TYPE"]=="TSAN":
       env["LD_LIBRARY_PATH"] =  "%s/tools/gcc-nofutex/lib64" % env["HOME"]
 
 if args['Compiler']=="clang":
    env["CC"]  = "clang-"    + args["CompilerVersion"]
    env["CXX"] = "clang++-"  + args["CompilerVersion"]
-   if 'CompilerFlags' in args and args["CompilerFlags"]=="ASAN":
-      #bit ugly to hard code this here but way to long to pass all from Jenkins
-      opts_list += '-DCMAKE_C_FLAGS_DEBUG="-g -O1 -fsanitize=address -fno-omit-frame-pointer" -DCMAKE_CXX_FLAGS_DEBUG="-g -O1 -fsanitize=address -fno-omit-frame-pointer" -DCMAKE_EXE_LINKER_FLAGS_DEBUG=-fsanitize=address -DCUDA_PROPAGATE_HOST_FLAGS=no '
-      opts_list += '-DBUILD_SHARED_LIBS=no ' #http://code.google.com/p/address-sanitizer/issues/detail?id=38
-      use_asan = True
 
 if args['Compiler']=="icc":
    if os.getenv("NODE_NAME").lower().find("win")>-1:
@@ -131,7 +125,6 @@ do_regressiontests = not ("GMX_BUILD_MDRUN_ONLY" in args and args["GMX_BUILD_MDR
 
 #Disable valgrind for Windows (not supported), Mac+ICC (too many false positives), ASAN, TSAN, Release
 use_valgrind = not os.getenv("NODE_NAME").lower().find("win")>-1 and not (os.getenv("NODE_NAME").lower().find("mac")>-1 and args['Compiler']=="icc")
-use_valgrind = use_valgrind and not use_asan
 use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"]!="Debug")
 if use_valgrind:
    test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
@@ -228,7 +221,7 @@ for i in test_cmds:
 
 os.chdir("../regressiontests")
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
-if use_asan:
+if args["CMAKE_BUILD_TYPE"]=="ASAN" and args['Compiler']=="clang":
    cmd+=' -parse asan_symbolize.py'
 
 # setting this stuff below is just a temporary solution,
