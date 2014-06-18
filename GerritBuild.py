@@ -221,7 +221,7 @@ for i in test_cmds:
 
 os.chdir("../regressiontests")
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
-if args["CMAKE_BUILD_TYPE"]=="ASAN" and args['Compiler']=="clang":
+if 'CMAKE_BUILD_TYPE' in args and args["CMAKE_BUILD_TYPE"]=="ASAN" and args['Compiler']=="clang":
    cmd+=' -parse asan_symbolize.py'
 
 # setting this stuff below is just a temporary solution,
