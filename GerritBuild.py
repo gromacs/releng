@@ -86,6 +86,9 @@ if not use_mpi and (not "GMX_THREAD_MPI" in opts.keys() or cmake_istrue(opts["GM
 if "GMX_TEST_NPME" in opts.keys() and (use_mpi or use_tmpi):
    use_separate_pme_nodes = True
 
+if args.get("Platform")=="Phi":
+   opts_list = "-DCMAKE_TOOLCHAIN_FILE=Platform/XeonPhi -DCMAKE_PREFIX_PATH=%s/utils/libxml2 "%env['HOME']
+
 if use_mpi:
    if "CompilerVersion" in args:
       env["OMPI_CC"] =env["CC"]
@@ -123,10 +126,12 @@ else:
 # regression tests at all, so set up a flag to do the right thing
 do_regressiontests = not ("GMX_BUILD_MDRUN_ONLY" in args and args["GMX_BUILD_MDRUN_ONLY"]=="ON")
 
-#Disable valgrind for Windows (not supported), Mac+ICC (too many false positives), ASAN, TSAN, Release
-use_valgrind = not os.getenv("NODE_NAME").lower().find("win")>-1 and not (os.getenv("NODE_NAME").lower().find("mac")>-1 and args['Compiler']=="icc")
-use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"]!="Debug")
+#Disable valgrind for Windows (not supported), ICC (too many false positives), ASAN, TSAN, Release
+use_valgrind = not os.getenv("NODE_NAME").lower().find("win")>-1 and not args['Compiler']=="icc"
+use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"]!="Debug") 
+
 if use_valgrind:
+
    test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
                 "%s -D ExperimentalMemCheck -L GTest -V"%(ctest,),
                 "xsltproc -o Testing/Temporary/valgrind_unit.xml ../releng/ctest_valgrind_to_junit.xsl  Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml"]
@@ -228,9 +233,12 @@ if 'CMAKE_BUILD_TYPE' in args and args["CMAKE_BUILD_TYPE"]=="ASAN" and args['Com
 # setting this stuff below is just a temporary solution,
 # it should all be passed as a proper the runconf from outside
 
-# OpenMP should always work when compiled in!
-if "GMX_OPENMP" in opts.keys() and cmake_istrue(opts["GMX_OPENMP"]):
-   cmd += " -ntomp 2"
+if not args.get("Platform")=="Phi":
+   # OpenMP should always work when compiled in! Currently not set if not eplicitly set
+   if "GMX_OPENMP" in opts.keys() and cmake_istrue(opts["GMX_OPENMP"]):
+      cmd += " -ntomp 2"
+else:
+   cmd += " -ntomp 28"
 
 mdparam = ""
 if use_gpu:
