@@ -116,8 +116,8 @@ if not os.getenv("NODE_NAME").lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
    env['PATH']+=":%s/bin"%env['HOME']
 else:
-   opts_list += '-G Ninja '
-   build_cmd = "ninja -j 4"
+   opts_list += '-G "NMake Makefiles JOM" '
+   build_cmd = "jom -j4"
 
 # If we are doing an mdrun-only build, then we cannot run the
 # regression tests at all, so set up a flag to do the right thing
