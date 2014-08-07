@@ -211,7 +211,7 @@ if 0 < wrong_version:
 
 os.chdir("gromacs")   
 
-cmd = "%s && cmake --version && cmake %s && %s" % (env_cmd,opts_list,build_cmd)
+cmd = "%s && cmake --version && cmake %s && %s && %s tests" % (env_cmd,opts_list,build_cmd,build_cmd)
 if call_cmd(cmd)!=0:
    sys.exit("Build FAILED")
 
