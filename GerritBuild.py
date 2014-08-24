@@ -210,6 +210,7 @@ if 0 < wrong_version:
    sys.exit("Failed to check out correct project(s)")
 
 os.chdir("gromacs")   
+os.environ["GMX_NO_TERM"]="1" #disable Term signal handler. Helps Jenkins aborts jobs.
 
 cmd = "%s && cmake --version && cmake %s && %s && %s tests" % (env_cmd,opts_list,build_cmd,build_cmd)
 if call_cmd(cmd)!=0:
