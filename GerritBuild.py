@@ -89,6 +89,10 @@ if "GMX_TEST_NPME" in opts.keys() and (use_mpi or use_tmpi):
 if args.get("Platform")=="Phi":
    opts_list = "-DCMAKE_TOOLCHAIN_FILE=Platform/XeonPhi -DCMAKE_PREFIX_PATH=%s/utils/libxml2 "%env['HOME']
 
+#Produce core dump on Linux and Mac
+if os.getenv("NODE_NAME").lower().find("win")==-1:
+   env_cmd += '; ulimit -c unlimited'
+
 if use_mpi:
    if "CompilerVersion" in args:
       env["OMPI_CC"] =env["CC"]
