@@ -23,6 +23,12 @@ call_opts = {}
 opts_list = ""
 ctest = "ctest"
     
+# Default to doing a Debug build, and ensure that
+# args["CMAKE_BUILD_TYPE"] is always defined.
+if not "CMAKE_BUILD_TYPE" in args:
+   args["CMAKE_BUILD_TYPE"] = "Debug"
+opts_list += " -DCMAKE_BUILD_TYPE=%s" % args["CMAKE_BUILD_TYPE"]
+
 if "CMakeVersion" in args:
    env["PATH"] =  "%s/tools/cmake-%s/bin:%s" % (env["HOME"],args["CMakeVersion"],env["PATH"])
    ctest = "/usr/bin/ctest"  #problem with older versions
@@ -52,7 +58,7 @@ if args['Compiler']=="icc":
       env["CC"]  = "icl"
       env["CXX"] = "icl"
       #remove incremental which is added by cmake to avoid warning
-      opts_list += '-DCMAKE_EXE_LINKER_FLAGS="/STACK:10000000 /machine:x64" ' 
+      opts_list += ' -DCMAKE_EXE_LINKER_FLAGS="/STACK:10000000 /machine:x64"'
    else:
       env_cmd = ". /opt/intel/bin/iccvars.sh intel64"
       env["CC"]  = "icc"
@@ -72,7 +78,7 @@ if "GMX_EXTERNAL" in opts.keys():
     opts["GMX_EXTERNAL_BLAS"] = v
     if cmake_istrue(v):
        if "Compiler" in args and args['Compiler']=="icc":
-          opts_list += '-DGMX_FFT_LIBRARY=mkl  -DMKL_LIBRARIES="${MKLROOT}/lib/intel64/libmkl_intel_lp64.so;${MKLROOT}/lib/intel64/libmkl_sequential.so;${MKLROOT}/lib/intel64/libmkl_core.so" -DMKL_INCLUDE_DIR=${MKLROOT}/include '
+          opts_list += ' -DGMX_FFT_LIBRARY=mkl  -DMKL_LIBRARIES="${MKLROOT}/lib/intel64/libmkl_intel_lp64.so;${MKLROOT}/lib/intel64/libmkl_sequential.so;${MKLROOT}/lib/intel64/libmkl_core.so" -DMKL_INCLUDE_DIR=${MKLROOT}/include'
        else:
           env["CMAKE_LIBRARY_PATH"] = "/usr/lib/atlas-base"
 
@@ -87,7 +93,7 @@ if "GMX_TEST_NPME" in opts.keys() and (use_mpi or use_tmpi):
    use_separate_pme_nodes = True
 
 if args.get("Platform")=="Phi":
-   opts_list = "-DCMAKE_TOOLCHAIN_FILE=Platform/XeonPhi -DCMAKE_PREFIX_PATH=%s/utils/libxml2 "%env['HOME']
+   opts_list = " -DCMAKE_TOOLCHAIN_FILE=Platform/XeonPhi -DCMAKE_PREFIX_PATH=%s/utils/libxml2" % env['HOME']
 
 #Produce core dump on Linux and Mac
 if os.getenv("NODE_NAME").lower().find("win")==-1:
@@ -112,27 +118,37 @@ if use_mpi:
       p = subprocess.Popen(["which", env["OMPI_CC"]],stdout=subprocess.PIPE)
       stdout =  p.communicate()[0]
       ompi_cc_full = stdout.rstrip()
-      opts_list += ' -DCUDA_HOST_COMPILER=%s ' % ompi_cc_full
+      opts_list += ' -DCUDA_HOST_COMPILER=%s' % ompi_cc_full
       if p.returncode != 0:
          sys.exit("Could not determine the full path to the compiler (%s)" % env["OMPI_CC"])
 
 if "CUDA" in args:
-   opts_list += ' -DCUDA_TOOLKIT_ROOT_DIR="/opt/cuda_%s" '%(args["CUDA"],)
+   opts_list += ' -DCUDA_TOOLKIT_ROOT_DIR="/opt/cuda_%s"' % (args["CUDA"],)
 
 if not os.getenv("NODE_NAME").lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
    env['PATH']+=":%s/bin"%env['HOME']
 else:
-   opts_list += '-G "NMake Makefiles JOM" '
+   opts_list += ' -G "NMake Makefiles JOM"'
    build_cmd = "jom -j4"
 
 # If we are doing an mdrun-only build, then we cannot run the
 # regression tests at all, so set up a flag to do the right thing
 do_regressiontests = not ("GMX_BUILD_MDRUN_ONLY" in args and args["GMX_BUILD_MDRUN_ONLY"]=="ON")
 
-#Disable valgrind for Windows (not supported), ICC (too many false positives), ASAN, TSAN, Release
-use_valgrind = not os.getenv("NODE_NAME").lower().find("win")>-1 and not args['Compiler']=="icc"
-use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"]!="Debug") 
+# Run valgrind automatically for debug-mode builds. Definitely don't
+# run it for ASAN, MSAN, TSAN, Release.
+
+is_debug_build_type = args["CMAKE_BUILD_TYPE"]=="Debug"
+# Disable valgrind for Windows (not supported)
+is_windows = os.getenv("NODE_NAME").lower().find("win") > -1
+# Disable valgrind for icc (too many false positives)
+is_icc = 'Compiler' in args and args['Compiler']=="icc"
+# Disable valgrind for gcc 5+ (stdlibc++-6 reports leaks of unknown
+# validity, and ctest hard-codes the use of leak checking)
+is_gcc_5_or_later = 'Compiler' in args and args['Compiler']=="gcc" and 'CompilerVersion' in args and args['CompilerVersion'] >= 5
+
+use_valgrind = is_debug_build_type and not is_windows and not is_icc and not is_gcc_5_or_later
 
 if use_valgrind:
 
@@ -146,13 +162,9 @@ if os.getenv("NODE_NAME").lower().find("mac")>-1:
    env["CMAKE_PREFIX_PATH"] = "/opt/local"
 
 #construct string for all "GMX_" variables
-opts_list += " ".join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
+extra_options = " " . join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
+opts_list += " %s" % extra_options
 opts_list += " -DGMX_DEFAULT_SUFFIX=off ."
-
-if "CMAKE_BUILD_TYPE" in args:
-   opts_list += " -DCMAKE_BUILD_TYPE=" + args["CMAKE_BUILD_TYPE"]
-else:
-   opts_list += " -DCMAKE_BUILD_TYPE=Debug"
 
 def call_cmd(cmd):
    print "Running " + cmd
@@ -231,7 +243,7 @@ for i in test_cmds:
 
 os.chdir("../regressiontests")
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
-if 'CMAKE_BUILD_TYPE' in args and args["CMAKE_BUILD_TYPE"]=="ASAN" and args['Compiler']=="clang":
+if args["CMAKE_BUILD_TYPE"]=="ASAN" and args['Compiler']=="clang":
    cmd+=' -parse asan_symbolize.py'
 
 # setting this stuff below is just a temporary solution,
