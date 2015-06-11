@@ -144,11 +144,17 @@ is_debug_build_type = args["CMAKE_BUILD_TYPE"]=="Debug"
 is_windows = os.getenv("NODE_NAME").lower().find("win") > -1
 # Disable valgrind for icc (too many false positives)
 is_icc = 'Compiler' in args and args['Compiler']=="icc"
-# Disable valgrind for gcc 5+ (stdlibc++-6 reports leaks of unknown
-# validity, and ctest hard-codes the use of leak checking)
+# Disable valgrind for gcc 5+ and all clang (stdlibc++-6 reports leaks
+# of the memory allocator pool, and ctest hard-codes the use of leak
+# checking). See http://valgrind.org/docs/manual/faq.html#faq.reports
+# and
+# https://gcc.gnu.org/onlinedocs/libstdc++/manual/debug.html#debug.memory.
+# If we need to re-instate this, then there are ways to force
+# deallocation, but it would be slower than not doing so.
 is_gcc_5_or_later = 'Compiler' in args and args['Compiler']=="gcc" and 'CompilerVersion' in args and args['CompilerVersion'] >= 5
+is_clang = 'Compiler' in args and args['Compiler']=="clang"
 
-use_valgrind = is_debug_build_type and not is_windows and not is_icc and not is_gcc_5_or_later
+use_valgrind = is_debug_build_type and not is_windows and not is_icc and not is_gcc_5_or_later and not is_clang
 
 if use_valgrind:
 
