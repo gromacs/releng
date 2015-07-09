@@ -12,7 +12,7 @@ def error(s):
 # if jenkins issue 12438 is resolved, options would be directly passed as args=env
 # until then none of the OPTIONS key or values (including the host name)
 # are allowed to contain space or = characters.
-args = dict(map(lambda x: x.split("="), env["OPTIONS"].split(" ")))
+args = dict(map(lambda x: x.split("="), env["OPTIONS"].split()))
 
 #get all "GMX_" variables
 opts = dict((k,v) for k,v in args.iteritems() if k.startswith("GMX_"))
