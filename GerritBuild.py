@@ -64,6 +64,9 @@ if args['Compiler']=="icc":
       env["CC"]  = "icc"
       env["CXX"] = "icpc"
 
+if args['Compiler']=='clang' and os.getenv("NODE_NAME") in ("bs_centos63", "bs_mic"):
+   env["CFLAGS"]=env["CXXFLAGS"]="--gcc-toolchain=/opt/rh/devtoolset-1.1/root/usr"
+
 if args['Compiler']=="msvc":
    if args['CompilerVersion']=='2008':
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" x86'
