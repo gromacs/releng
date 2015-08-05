@@ -72,8 +72,12 @@ if args['Compiler']=="msvc":
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" x86'
    elif args['CompilerVersion']=='2010':
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" amd64'
+   elif args['CompilerVersion']=='2013':
+      env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\VC\\vcvarsall.bat" amd64'
+   elif args['CompilerVersion']=='2015':
+      env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat" amd64'
    else:
-      error("MSVC only version 2008 and 2010 supported")
+      error("Only MSVC versions 2008, 2010, 2013, and 2015 are supported")
 
 if "GMX_EXTERNAL" in opts.keys():
     v = opts.pop("GMX_EXTERNAL")
