@@ -12,7 +12,7 @@ def error(s):
 # if jenkins issue 12438 is resolved, options would be directly passed as args=env
 # until then none of the OPTIONS key or values (including the host name)
 # are allowed to contain space or = characters.
-args = dict(map(lambda x: x.split("="), env["OPTIONS"].split(" ")))
+args = dict(map(lambda x: x.split("="), env["OPTIONS"].split()))
 
 #get all "GMX_" variables
 opts = dict((k,v) for k,v in args.iteritems() if k.startswith("GMX_"))
@@ -23,6 +23,12 @@ call_opts = {}
 opts_list = ""
 ctest = "ctest"
     
+# Default to doing a Debug build, and ensure that
+# args["CMAKE_BUILD_TYPE"] is always defined.
+if not "CMAKE_BUILD_TYPE" in args:
+   args["CMAKE_BUILD_TYPE"] = "Debug"
+opts_list += " -DCMAKE_BUILD_TYPE=%s" % args["CMAKE_BUILD_TYPE"]
+
 if "CMakeVersion" in args:
    env["PATH"] =  "%s/tools/cmake-%s/bin:%s" % (env["HOME"],args["CMakeVersion"],env["PATH"])
    ctest = "/usr/bin/ctest"  #problem with older versions
@@ -52,19 +58,26 @@ if args['Compiler']=="icc":
       env["CC"]  = "icl"
       env["CXX"] = "icl"
       #remove incremental which is added by cmake to avoid warning
-      opts_list += '-DCMAKE_EXE_LINKER_FLAGS="/STACK:10000000 /machine:x64" ' 
+      opts_list += ' -DCMAKE_EXE_LINKER_FLAGS="/STACK:10000000 /machine:x64"'
    else:
       env_cmd = ". /opt/intel/bin/iccvars.sh intel64"
       env["CC"]  = "icc"
       env["CXX"] = "icpc"
+
+if args['Compiler']=='clang' and os.getenv("NODE_NAME") in ("bs_centos63", "bs_mic"):
+   env["CFLAGS"]=env["CXXFLAGS"]="--gcc-toolchain=/opt/rh/devtoolset-1.1/root/usr"
 
 if args['Compiler']=="msvc":
    if args['CompilerVersion']=='2008':
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 9.0\\VC\\vcvarsall.bat" x86'
    elif args['CompilerVersion']=='2010':
       env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" amd64'
+   elif args['CompilerVersion']=='2013':
+      env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\VC\\vcvarsall.bat" amd64'
+   elif args['CompilerVersion']=='2015':
+      env_cmd = '"c:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat" amd64'
    else:
-      error("MSVC only version 2008 and 2010 supported")
+      error("Only MSVC versions 2008, 2010, 2013, and 2015 are supported")
 
 if "GMX_EXTERNAL" in opts.keys():
     v = opts.pop("GMX_EXTERNAL")
@@ -72,7 +85,7 @@ if "GMX_EXTERNAL" in opts.keys():
     opts["GMX_EXTERNAL_BLAS"] = v
     if cmake_istrue(v):
        if "Compiler" in args and args['Compiler']=="icc":
-          opts_list += '-DGMX_FFT_LIBRARY=mkl  -DMKL_LIBRARIES="${MKLROOT}/lib/intel64/libmkl_intel_lp64.so;${MKLROOT}/lib/intel64/libmkl_sequential.so;${MKLROOT}/lib/intel64/libmkl_core.so" -DMKL_INCLUDE_DIR=${MKLROOT}/include '
+          opts_list += ' -DGMX_FFT_LIBRARY=mkl  -DMKL_LIBRARIES="${MKLROOT}/lib/intel64/libmkl_intel_lp64.so;${MKLROOT}/lib/intel64/libmkl_sequential.so;${MKLROOT}/lib/intel64/libmkl_core.so" -DMKL_INCLUDE_DIR=${MKLROOT}/include'
        else:
           env["CMAKE_LIBRARY_PATH"] = "/usr/lib/atlas-base"
 
@@ -85,6 +98,13 @@ if not use_mpi and (not "GMX_THREAD_MPI" in opts.keys() or cmake_istrue(opts["GM
    use_tmpi = True
 if "GMX_TEST_NPME" in opts.keys() and (use_mpi or use_tmpi):
    use_separate_pme_nodes = True
+
+if args.get("Platform")=="Phi":
+   opts_list = " -DCMAKE_TOOLCHAIN_FILE=Platform/XeonPhi -DCMAKE_PREFIX_PATH=%s/utils/libxml2" % env['HOME']
+
+#Produce core dump on Linux and Mac
+if os.getenv("NODE_NAME").lower().find("win")==-1:
+   env_cmd += '; ulimit -c unlimited'
 
 if use_mpi:
    if "CompilerVersion" in args:
@@ -105,28 +125,46 @@ if use_mpi:
       p = subprocess.Popen(["which", env["OMPI_CC"]],stdout=subprocess.PIPE)
       stdout =  p.communicate()[0]
       ompi_cc_full = stdout.rstrip()
-      opts_list += ' -DCUDA_HOST_COMPILER=%s ' % ompi_cc_full
+      opts_list += ' -DCUDA_HOST_COMPILER=%s' % ompi_cc_full
       if p.returncode != 0:
          sys.exit("Could not determine the full path to the compiler (%s)" % env["OMPI_CC"])
 
 if "CUDA" in args:
-   opts_list += ' -DCUDA_TOOLKIT_ROOT_DIR="/opt/cuda_%s" '%(args["CUDA"],)
+   opts_list += ' -DCUDA_TOOLKIT_ROOT_DIR="/opt/cuda_%s"' % (args["CUDA"],)
 
 if not os.getenv("NODE_NAME").lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
    env['PATH']+=":%s/bin"%env['HOME']
 else:
-   opts_list += '-G "NMake Makefiles JOM" '
+   opts_list += ' -G "NMake Makefiles JOM"'
    build_cmd = "jom -j4"
 
 # If we are doing an mdrun-only build, then we cannot run the
 # regression tests at all, so set up a flag to do the right thing
 do_regressiontests = not ("GMX_BUILD_MDRUN_ONLY" in args and args["GMX_BUILD_MDRUN_ONLY"]=="ON")
 
-#Disable valgrind for Windows (not supported), Mac+ICC (too many false positives), ASAN, TSAN, Release
-use_valgrind = not os.getenv("NODE_NAME").lower().find("win")>-1 and not (os.getenv("NODE_NAME").lower().find("mac")>-1 and args['Compiler']=="icc")
-use_valgrind = use_valgrind and not ("CMAKE_BUILD_TYPE" in args and args["CMAKE_BUILD_TYPE"]!="Debug")
+# Run valgrind automatically for debug-mode builds. Definitely don't
+# run it for ASAN, MSAN, TSAN, Release.
+
+is_debug_build_type = args["CMAKE_BUILD_TYPE"]=="Debug"
+# Disable valgrind for Windows (not supported)
+is_windows = os.getenv("NODE_NAME").lower().find("win") > -1
+# Disable valgrind for icc (too many false positives)
+is_icc = 'Compiler' in args and args['Compiler']=="icc"
+# Disable valgrind for gcc 5+ and all clang (stdlibc++-6 reports leaks
+# of the memory allocator pool, and ctest hard-codes the use of leak
+# checking). See http://valgrind.org/docs/manual/faq.html#faq.reports
+# and
+# https://gcc.gnu.org/onlinedocs/libstdc++/manual/debug.html#debug.memory.
+# If we need to re-instate this, then there are ways to force
+# deallocation, but it would be slower than not doing so.
+is_gcc_5_or_later = 'Compiler' in args and args['Compiler']=="gcc" and 'CompilerVersion' in args and args['CompilerVersion'] >= 5
+is_clang = 'Compiler' in args and args['Compiler']=="clang"
+
+use_valgrind = is_debug_build_type and not is_windows and not is_icc and not is_gcc_5_or_later and not is_clang
+
 if use_valgrind:
+
    test_cmds = ["ctest -D ExperimentalTest -LE GTest -V",
                 "%s -D ExperimentalMemCheck -L GTest -V"%(ctest,),
                 "xsltproc -o Testing/Temporary/valgrind_unit.xml ../releng/ctest_valgrind_to_junit.xsl  Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml"]
@@ -137,13 +175,9 @@ if os.getenv("NODE_NAME").lower().find("mac")>-1:
    env["CMAKE_PREFIX_PATH"] = "/opt/local"
 
 #construct string for all "GMX_" variables
-opts_list += " ".join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
+extra_options = " " . join(["-D%s=%s"%(k,v) for k,v in opts.iteritems()])
+opts_list += " %s" % extra_options
 opts_list += " -DGMX_DEFAULT_SUFFIX=off ."
-
-if "CMAKE_BUILD_TYPE" in args:
-   opts_list += " -DCMAKE_BUILD_TYPE=" + args["CMAKE_BUILD_TYPE"]
-else:
-   opts_list += " -DCMAKE_BUILD_TYPE=Debug"
 
 def call_cmd(cmd):
    print "Running " + cmd
@@ -210,8 +244,9 @@ if 0 < wrong_version:
    sys.exit("Failed to check out correct project(s)")
 
 os.chdir("gromacs")   
+os.environ["GMX_NO_TERM"]="1" #disable Term signal handler. Helps Jenkins aborts jobs.
 
-cmd = "%s && cmake --version && cmake %s && %s" % (env_cmd,opts_list,build_cmd)
+cmd = "%s && cmake --version && cmake %s && %s && %s tests" % (env_cmd,opts_list,build_cmd,build_cmd)
 if call_cmd(cmd)!=0:
    sys.exit("Build FAILED")
 
@@ -221,15 +256,18 @@ for i in test_cmds:
 
 os.chdir("../regressiontests")
 cmd = '%s && perl gmxtest.pl -mpirun mpirun -xml -nosuffix all' % (env_cmd,)
-if 'CMAKE_BUILD_TYPE' in args and args["CMAKE_BUILD_TYPE"]=="ASAN" and args['Compiler']=="clang":
+if args["CMAKE_BUILD_TYPE"]=="ASAN" and args['Compiler']=="clang":
    cmd+=' -parse asan_symbolize.py'
 
 # setting this stuff below is just a temporary solution,
 # it should all be passed as a proper the runconf from outside
 
-# OpenMP should always work when compiled in!
-if "GMX_OPENMP" in opts.keys() and cmake_istrue(opts["GMX_OPENMP"]):
-   cmd += " -ntomp 2"
+if not args.get("Platform")=="Phi":
+   # OpenMP should always work when compiled in! Currently not set if not eplicitly set
+   if "GMX_OPENMP" in opts.keys() and cmake_istrue(opts["GMX_OPENMP"]):
+      cmd += " -ntomp 2"
+else:
+   cmd += " -ntomp 28"
 
 mdparam = ""
 if use_gpu:
