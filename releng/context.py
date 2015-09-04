@@ -228,16 +228,20 @@ class BuildContext(object):
         self.run_cmd_with_env(cmake_args,
                 failure_message='CMake configuration failed')
 
-    def build_target(self, target=None, parallel=True, target_descr=None,
-            failure_string=None, continue_on_failure=False):
+    # TODO: Pass keep_going = True from builds where it makes most sense (in
+    # particular, gromacs.py), and make the default False.
+    def build_target(self, target=None, parallel=True, keep_going=True,
+            target_descr=None, failure_string=None, continue_on_failure=False):
         """Builds a given target.
 
         run_cmake() must have been called to generate the build system.
 
         Args:
-            target (str or None): Name of the target to build.
+            target (Optional[str]): Name of the target to build.
                 If ``None``, the default (all) target is built.
             parallel (Optional[bool]): Whether parallel building is supported.
+            keep_going (Optional[bool]): Whether to continue building after
+                first error.
             target_descr (str or None): If given, customizes the error message
                 when the target fails to build.  Should fit the initial part of
                 the sentence "... failed to build".
@@ -252,10 +256,10 @@ class BuildContext(object):
             BuildError: If the target fails to build, and
                 ``continue_on_failure`` is not specified.
         """
-        cmd = self.env._get_build_cmd(target=target, parallel=parallel)
+        cmd = self.env._get_build_cmd(target=target, parallel=parallel, keep_going=keep_going)
         try:
             self.run_cmd_with_env(cmd)
-        except subprocess.CalledProcessError:
+        except BuildError:
             if failure_string is None:
                 if target_descr is not None:
                     what = target_descr
@@ -287,7 +291,7 @@ class BuildContext(object):
         cmd.extend(args)
         try:
             self.run_cmd_with_env(cmd)
-        except subprocess.CalledProcessError:
+        except BuildError:
             if failure_string is None:
                 failure_string = 'failed test: ' + self._cmd_to_string(cmd, shell=False)
             mark_unstable(failure_string)

@@ -93,7 +93,7 @@ class BuildEnvironment(object):
         """Returns path to the uncrustify executable."""
         return os.path.expanduser('~/bin/uncrustify')
 
-    def _get_build_cmd(self, target=None, parallel=True):
+    def _get_build_cmd(self, target=None, parallel=True, keep_going=False):
         cmd = []
         if self._build_prefix_cmd is not None:
             cmd.extend(self._build_prefix_cmd)
@@ -102,6 +102,8 @@ class BuildEnvironment(object):
             cmd.extend(['--target', target])
         jobs = self._build_jobs if parallel else 1
         cmd.extend(['--', '-j{0}'.format(jobs)])
+        if keep_going:
+            cmd.append('-k')
         return cmd
 
     def _add_env_var(self, variable, value):
