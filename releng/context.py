@@ -294,7 +294,7 @@ class BuildContext(object):
         except BuildError:
             if failure_string is None:
                 failure_string = 'failed test: ' + self._cmd_to_string(cmd, shell=False)
-            mark_unstable(failure_string)
+            self.mark_unstable(failure_string)
         if memcheck:
             self.run_cmd('xsltproc -o Testing/Temporary/valgrind_unit.xml ../releng/ctest_valgrind_to_junit.xsl Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml', shell=True)
 
