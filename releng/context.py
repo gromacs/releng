@@ -381,6 +381,28 @@ class BuildContext(object):
         self.mark_unstable('analyzer found issues')
         shutil.move(os.path.join(html_dir, subdirs[0]), output_dir)
 
+    def process_coverage_results(self, exclude=None):
+        """Processes results from coverage runs.
+
+        Uses gcovr to process all coverage files found in the workspace
+        (from running a build compiled with --coverage).
+
+        Args:
+            exclude (List[str]): Exclusions to pass to gcovr -e (regexs).
+        """
+        releng_dir = self.workspace.get_project_dir(Project.RELENG)
+        gromacs_dir = self.workspace.get_project_dir(Project.GROMACS)
+        output_path = self.workspace.get_path_for_logfile('coverage.xml')
+        os.chdir(self.workspace.build_dir)
+        gcovr = os.path.join(releng_dir, 'scripts', 'gcovr-3.2')
+        # TODO: This relies on gcov from the path being compatible with
+        # whatever compiler was set in the build script, which is fragile.
+        cmd = [gcovr, '--xml', '-r', gromacs_dir, '-o', output_path, '.']
+        if exclude:
+            for x in exclude:
+                cmd.extend(['-e', x])
+        self.run_cmd(cmd, failure_message='gcovr failed')
+
     @staticmethod
     def _run_build(build, job_type, opts, workspace=None, **kwargs):
         """Runs the actual build.

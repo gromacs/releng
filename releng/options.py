@@ -91,7 +91,7 @@ class _OptionHandlerClosure(object):
 
     def _add_env_var(self, assignment):
         var, value = assignment.split('=', 1)
-        self._env._add_env_var(var, value)
+        self._env.add_env_var(var, value)
 
     def _add_cmake_option(self, assignment):
         var, value = assignment.split('=', 1)
@@ -233,8 +233,8 @@ def process_build_options(system, opts):
     handlers = (
             _SuffixOptionHandler('build-jobs=', h._init_build_jobs),
             _SuffixOptionHandler('cmake-', e._init_cmake),
-            _SuffixOptionHandler('gcc-', e._init_gcc),
-            _SuffixOptionHandler('clang-', e._init_clang),
+            _SuffixOptionHandler('gcc-', e.init_gcc),
+            _SuffixOptionHandler('clang-', e.init_clang),
             _SuffixOptionHandler('icc-', e._init_icc),
             _SuffixOptionHandler('msvc-', e._init_msvc),
             _SuffixOptionHandler('cuda-', e._init_cuda),

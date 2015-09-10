@@ -106,13 +106,24 @@ class BuildEnvironment(object):
             cmd.append('-k')
         return cmd
 
-    def _add_env_var(self, variable, value):
+    def add_env_var(self, variable, value):
+        """Sets environment variable to be used for further commands.
+
+        All subsequent commands run with BuildContext.run_cmd() etc. will use
+        the environment variable.
+
+        Args:
+            variable (str): Name of environment variable to set.
+            value (str): Value to set the variable to.
+        """
         os.environ[variable] = value
 
-    def _prepend_path_env(self, path):
-        os.environ['PATH'] = os.pathsep.join(os.path.expanduser(path), os.environ['PATH'])
+    def prepend_path_env(self, path):
+        """Prepends a path to the executable search path (PATH)."""
+        os.environ['PATH'] = os.pathsep.join((os.path.expanduser(path), os.environ['PATH']))
 
-    def _append_path_env(self, path):
+    def append_path_env(self, path):
+        """Appends a path to the executable search path (PATH)."""
         os.environ['PATH'] += os.pathsep + os.path.expanduser(path)
 
     def _init_system(self):
@@ -122,7 +133,7 @@ class BuildEnvironment(object):
         else:
             self.shell_call_opts['executable'] = '/bin/bash'
             self._build_jobs = 2
-            self._append_path_env('~/bin')
+            self.prepend_path_env('~/bin')
             if self.system == System.OSX:
                 os.environ['CMAKE_PREFIX_PATH'] = '/opt/local'
             self._init_core_dump()
@@ -139,17 +150,36 @@ class BuildEnvironment(object):
     # Please keep them in the same order as in process_build_options().
 
     def _init_cmake(self, version):
-        self._prepend_path_env('~/tools/cmake-{0}/bin'.format(version))
+        self.prepend_path_env('~/tools/cmake-{0}/bin'.format(version))
 
-    def _init_gcc(self, version):
+    def init_gcc(self, version):
+        """Initializes the build to use given gcc version as the compiler.
+
+        This method is called internally if the build options set the compiler
+        (with gcc-X.Y), but it can also be called directly from a build script
+        if the build does not use options.
+
+        Args:
+            version (str): GCC version number (major.minor) to use.
+        """
         self.compiler = Compiler.GCC
         self.c_compiler = 'gcc-' + version
         self.cxx_compiler = 'g++-' + version
 
-    def _init_clang(self, version):
+    def init_clang(self, version):
+        """Initializes the build to use given clang version as the compiler.
+
+        This method is called internally if the build options set the compiler
+        (with clang-X.Y), but it can also be called directly from a build
+        script if the build does not use options.
+
+        Args:
+            version (str): clang version number (major.minor) to use.
+        """
         self.compiler = Compiler.CLANG
         self.c_compiler = 'clang-' + version
         self.cxx_compiler = 'clang++-' + version
+        # Need newer standard library for C++11 support.
         if os.getenv('NODE_NAME') in ('bs_centos63', 'bs_mic'):
             os.environ['CFLAGS'] = os.environ['CXXFLAGS'] = '--gcc-toolchain=/opt/rh/devtoolset-1.1/root/usr'
 
@@ -184,7 +214,7 @@ class BuildEnvironment(object):
             raise ConfigurationError('only Visual Studio 2010, 2013, and 2013 are supported, got msvc-' + version)
 
     def init_clang_analyzer(self, clang_version, html_output_dir):
-        self._init_clang(clang_version)
+        self.init_clang(clang_version)
         analyzer = self._find_executable(self.c_compiler)
         os.environ['CCC_CC'] = self.c_compiler
         os.environ['CCC_CXX'] = self.cxx_compiler
