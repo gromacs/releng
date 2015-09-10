@@ -50,13 +50,44 @@ Builds using the releng scripts use the following sequence:
     from the common log location, and using the unsuccessful reason reported
     from the script as the failure message to report back to Gerrit.
 
+Matrix builds
+^^^^^^^^^^^^^
+
+The releng scripts also provide helpers for creating Jenkins builds that load
+the configuration matrix from the ``gromacs`` repository.  The format of such
+matrix files is one configuration per line.  Empty lines are ignored, and
+comments can be started with ``#``.
+
+The preparatory steps for these builds are similar as described above, but
+instead of calling run_build(), the sequence is as follows:
+
+1. After preparatory steps, Jenkins calls prepare_multi_configuration_build().
+2. The releng script checks out the ``gromacs`` repo if not yet done by
+   Jenkins.
+3. The releng script locates the configuration list from the ``gromacs`` repo
+   based on the file name given to prepare_multi_configuration_build().
+   It processes it into a form that is suitable for Jenkins to use in the next
+   step, and writes this into a file.
+4. Jenkins triggers a sub-build with the configuration matrix as a parameter.
+   The sub-build is a matrix build that uses the sequence described above.
+5. Once the sub-build completes (whether it failed or not), Jenkins calls
+   write_triggered_build_url_file().  The releng script reads environment
+   variables set by the trigger step, and writes a file that contains the
+   URL for the sub-build.
+6. Jenkins reads the file written in the previous step to get the sub-build URL
+   into an environment variable, which it can then use for reporting back to
+   Gerrit.
+
+See :doc:`jenkins-config` for more details.
+
 .. _releng-jenkins-build-opts:
 
 Build options
 -------------
 
 Currently, the following build options can be passed from Jenkins to
-run_build() to influence the build environment.  These are typically used for
+run_build() to influence the build environment (and as part of a configuration
+line in a matrix specification).  These are typically used for
 multi-configuration jobs; for jobs that only build a single configuration, the
 configuration is typically hard-coded in the build script.  For boolean options,
 multiple formats are accepted.  E.g., an OpenMP build can be specified as

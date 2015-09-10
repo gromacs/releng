@@ -58,6 +58,25 @@ class Workspace(object):
         """Initializes the logs directory."""
         self._ensure_empty_dir(self._logs_dir)
 
+    def _resolve_build_input_file(self, path, extension=None):
+        """Resolves the name of a build input file.
+
+        Args:
+            path (str): Name/path to the input file.
+                If only a name is provided, the name is converted
+                into an absolute path in :file:`gromacs/admin/builds/`.
+            extension (Optional[str]): Extension for the input file.
+                If provided and not present in the input path, it is
+                automatically appended.
+        """
+        if extension and not path.endswith(extension):
+            path += extension
+        if os.path.dirname(path):
+            return path
+        gromacs_dir = self.get_project_dir(Project.GROMACS)
+        path = os.path.join(gromacs_dir, 'admin', 'builds', path)
+        return path
+
     @property
     def build_dir(self):
         """Build directory for building gromacs.

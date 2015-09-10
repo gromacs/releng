@@ -59,3 +59,16 @@ additional information:
 .. py:currentmodule:: releng.workspace
 .. autoclass:: Workspace
    :members:
+
+API for Jenkins
+---------------
+
+The following functions from the ``releng`` package are intended to be called
+from scripts in Jenkins build configuration (see :doc:`jenkins-config`).
+
+.. py:currentmodule:: releng
+.. autofunction:: run_build
+
+.. autofunction:: prepare_multi_configuration_build
+
+.. autofunction:: write_triggered_build_url_file

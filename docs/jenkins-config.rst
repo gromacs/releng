@@ -3,6 +3,9 @@ Jenkins job configuration
 
 Configuration for Jenkins projects that use the releng scripts are described here.
 
+General configuration
+---------------------
+
 SCM checkout configuration and related environment variables:
 
 * Jenkins SCM configuration is used to check out the repository from where the
@@ -20,7 +23,7 @@ SCM checkout configuration and related environment variables:
   below).
 * The project that triggers the build (and the refspec) should be specified in
   ``CHECKOUT_PROJECT`` and ``CHECKOUT_REFSPEC`` environment variables (for
-  simplicity, it is also posisble to use ``GERRIT_PROJECT`` and
+  simplicity, it is also possible to use ``GERRIT_PROJECT`` and
   ``GERRIT_REFSPEC``).
 
 To create a build that allows both intuitive parameterized builds with given
@@ -39,10 +42,17 @@ refspecs and Gerrit Trigger builds, the following configuration is recommended:
 * Configure all SCM checkout behaviors to use ``CHECKOUT_PROJECT`` and
   ``CHECKOUT_REFSPEC``.
 
-.. TODO: Describe configuration for SCM pull jobs (it should straightforwardly
-   follow from the above).
+SCM poll jobs are simpler, as it is possible to simply set the various
+environment variables to static values using a properties file in "Prepare
+environment for the run" (``CHECKOUT_PROJECT`` and the various ``*_REFSPEC``
+variables).  Note that the SCM checkout behavior cannot use
+``CHECKOUT_PROJECT`` in the git address, because the injected variables are not
+available for SCM polling.
 
-Post-build steps:
+Normal builds
+-------------
+
+Builds that call run_build() should use the following post-build steps:
 
 * The job should check the console output for the string "FAILED" and mark the
   build unstable if this is found.
@@ -107,3 +117,49 @@ The folder structure in the build workspace looks like this::
     logs/
       [unsuccessful-reason.log]
       [<category>/]*
+
+Matrix builds with dynamic matrix
+---------------------------------
+
+To set up a build that builds multiple configurations, with the configurations
+read from the ``gromacs`` repository, two builds are needed.
+
+The actual build is configured as a multi-configuration build, following the
+guidelines listed above.  The only difference is that there should be an
+additional ``OPTIONS`` parameter for the build, and this should be used as a
+dynamic axis in the matrix (using Dynamic Axis plugin).  This build is not
+triggered directly from Gerrit, and the same build can potentially be used for
+multiple different branches/configuration setups.
+
+The build that is triggered from Gerrit is configured slightly differently:
+
+* The Groovy script that injects the environment variables should inject an
+  additional ``URL_TO_POST`` environment variable, with the value taken from
+  ``BUILD_URL``.
+* Gerrit Trigger should be configured to use ``URL_TO_POST`` as a custom url
+  to post back to Gerrit.
+* The first build step is running a Python script from releng, but after
+  importing ``releng``, the call is of the form ::
+
+    releng.prepare_multi_configuration_build('pre-submit-matrix', 'matrix.txt')
+
+  where ``'pre-submit-matrix'`` identifies the matrix input file to use (will
+  be loaded from :file:`gromacs/admin/builds/`).
+* The next step uses Parameterized Trigger to trigger the actual build, passing
+  the current build parameters and the parameters from
+  :file:`build/matrix.txt`, and blocking until the build completes.
+  This step should be configured to propagate the build status back from the
+  matrix build, but it should not fail the actual build step, so that the next
+  build steps still get executed even if the matrix build fails.
+* The next step again calls ``releng``, this time as ::
+
+    import releng
+    releng.write_triggered_build_url_file('URL_TO_POST', 'build/url-to-post.txt')
+
+* The last step injects environment varibles from the file specified above.
+  
+The last two steps make it possible to post the link to the downstream build to
+Gerrit, avoiding additional clicks to get to the actual build.  If the build
+fails without actually triggering the downstream build, the initial value set
+to ``URL_TO_POST`` is used, and the link in Gerrit will point to the launcher
+build, allowing the failure to be diagnosed.

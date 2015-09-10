@@ -493,12 +493,7 @@ class BuildContext(object):
             workspace._init_logs_dir()
             context = factory.create_context(job_type, opts)
             workspace._checkout_project(Project.GROMACS)
-            gromacs_dir = workspace.get_project_dir(Project.GROMACS)
-            if os.path.dirname(build):
-                build_script_path = build
-            else:
-                build_script_path = os.path.join(gromacs_dir, 'admin',
-                        'builds', build + '.py')
+            build_script_path = workspace._resolve_build_input_file(build, '.py')
             script = BuildScript(build_script_path)
             for project in script.extra_projects:
                 workspace._checkout_project(project)

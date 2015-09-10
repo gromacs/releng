@@ -38,3 +38,39 @@ def run_build(build, job_type, opts):
     # Please ensure that __main__.py stays in sync.
     factory = ContextFactory()
     BuildContext._run_build(factory, build, job_type, opts)
+
+def prepare_multi_configuration_build(configfile, outputfile):
+    """Main entry point for preparing matrix builds.
+
+    Reads a file with configurations to use (one configuration per line,
+    with a list of space-separated build options on each line; comments
+    starting with # and empty lines ignored).
+    Writes out a file with the provided name to build/, in a format suitable
+    for passing to Parameterized Trigger as a build parameter that can be used
+    as a dynamic axis in a matrix build to build the provided configurations.
+
+    Args:
+        configfile (str): File that contains the configurations to use.
+            Names without directory separators are interpreted as
+            :file:`gromacs/admin/builds/{configfile}.txt`.
+        outputfile (str): File to write the configurations to, under build/.
+    """
+    from context import ContextFactory
+    from matrixbuild import prepare_build_matrix
+    factory = ContextFactory()
+    prepare_build_matrix(factory, configfile, outputfile)
+
+def write_triggered_build_url_file(varname, filename):
+    """Extracts the URL for a build triggered with Parameterized Trigger.
+
+    Writes a Java properties file suitable for injecting an environment
+    variable named ``varname`` into the build, containing the URL of the last
+    job triggered with Parameterized Trigger (requires that the triggering
+    build step was blocking).
+
+    Args:
+        varname (str): Variable to set.
+        filename (str): File (including path) to write the properties to.
+    """
+    from matrixbuild import write_triggered_build_url_file
+    write_triggered_build_url_file(varname, filename)
