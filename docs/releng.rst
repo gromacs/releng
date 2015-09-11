@@ -344,7 +344,7 @@ clear-cut, but the general approach should be well covered.
    until releng changes are merged; the releng change can be merged safely
    without breaking old builds.  To verify the releng change with its
    corresponding main repo change, the releng change can be uploaded to Gerrit
-   with a suitable ``_OVERRIDES`` specified in :file:`workspace.py`.  This will
+   with a suitable ``_OVERRIDES`` specified in :file:`gerrit.py`.  This will
    build the combination and report the result in the releng change, allowing
    full integration testing and showing that the build passes.  Care should
    be taken to not merge a change with ``_OVERRIDES`` specified, but if it
@@ -388,12 +388,17 @@ Currently, the only way to fully test the releng script is to upload a change
 to Gerrit and let Jenkins build it.  In principle, it is possible to run the
 script in an environment that exactly matches a Jenkins node (including paths
 to all required tools and all relevant environment variables that Jenkins
-sets), but that can be tedious to set up.  The ``releng`` package can be
-executed from the command-line using ::
+sets), but that can be tedious to set up.  However, it is possible to execute
+most of the code from the command line using ::
 
     python releng <options>
 
-and using the ``--dry-run`` option it may be possible to test some of the
-build scripts and the releng code without actually having the environment.
-But full support for this would require substantial refactoring in the way the
-build environment, the workspace, and command execution is managed.
+This requires that you have your projects checked out in the same layout as in
+Jenkins: the gromacs, regressiontests, and releng repositories should be in
+sibling directories, with directory names matching the repository names.
+
+Please note that even though the command-line mode does not perform most of the
+actions that the real build script does (unless you run it with ``--run``), it
+can still write to some files etc.
+But full support for mock execution would require substantial refactoring in
+the way the build environment, the workspace, and command execution is managed.

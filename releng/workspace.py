@@ -13,33 +13,6 @@ import subprocess
 from common import BuildError, ConfigurationError
 from common import Project
 
-def _ref(change, patchset):
-    """Constructs a Gerrit refspec for given patchset in a change.
-
-    Arguments:
-        change (int): Number of the change.
-        patchset (int): Patchset number.
-    """
-    return 'refs/changes/{0}/{1}/{2}'.format(str(change)[-2:], change, patchset)
-
-# TODO: These defaults are currently not used, except for interactive testing
-# (in Jenkins, the *_REFSPEC environment variables should always be set to
-# specify what changes to test).
-# Consider better alternatives.
-_DEFAULT = {
-        Project.GROMACS: 'refs/heads/master',
-        Project.REGRESSIONTESTS: 'refs/heads/master',
-        Project.RELENG: 'refs/heads/master'
-    }
-# These variables can be used to trigger the builds from Gerrit against changes
-# still in review, instead of the default branch head.
-# They only take effect in builds triggered for releng changes.
-# _ref() from above can be used.
-_OVERRIDES = {
-        Project.GROMACS: None,
-        Project.REGRESSIONTESTS: None
-    }
-
 class Workspace(object):
     """Provides access to the build workspace.
 
@@ -54,51 +27,17 @@ class Workspace(object):
     Attributes:
         root (str): Root directory of the workspace.
     """
-    def __init__(self, root=None, gerrit_user=None, dry_run=False, checkout=True):
+    def __init__(self, factory, root=None):
         if root is None:
             root = os.getenv('WORKSPACE', os.getcwd())
         self.root = root
-        self._is_dry_run = dry_run
-        self._checked_out_project, self._checked_out_refspec = self._get_checked_out_project()
+        self._gerrit = factory.gerrit
+        self._is_dry_run = factory.dry_run
         # The releng project is always checked out, since we are already
         # executing code from there...
-        self._projects = { Project.RELENG, self._checked_out_project }
-        if gerrit_user is None:
-            gerrit_user = 'jenkins'
-        self._gerrit_user = gerrit_user
-        self._checkout = checkout and not dry_run
+        self._projects = { Project.RELENG, self._gerrit.checked_out_project }
         self._build_dir = None
         self._logs_dir = os.path.join(self.root, 'logs')
-
-    def _get_checked_out_project(self):
-        """Determines the project already checked out by Jenkins.
-
-        If the build is triggered by Gerrit Trigger, then GERRIT_PROJECT
-        environment variable exists, and the Jenkins build configuration needs
-        to check out this project to properly integrate with different plugins.
-
-        For other cases, CHECKOUT_PROJECT can also be used.
-
-        Returns:
-          Tuple[Project,str]: The checked out project and refspec.
-        """
-        checkout_project = os.getenv('CHECKOUT_PROJECT', None)
-        gerrit_project = os.getenv('GERRIT_PROJECT', None)
-        if checkout_project is not None:
-            checkout_project = Project.parse(checkout_project)
-            if gerrit_project is not None and gerrit_project != checkout_project:
-                raise ConfigurationError('Inconsistent CHECKOUT_PROJECT and GERRIT_PROJECT')
-            refspec = os.getenv('CHECKOUT_REFSPEC', None)
-            if refspec is None:
-                raise ConfigurationError('CHECKOUT_REFSPEC not set')
-            return checkout_project, refspec
-        if gerrit_project is not None:
-            gerrit_project = Project.parse(gerrit_project)
-            refspec = os.getenv('GERRIT_REFSPEC', None)
-            if refspec is None:
-                raise ConfigurationError('GERRIT_REFSPEC not set')
-            return gerrit_project, refspec
-        raise ConfigurationError('Neither CHECKOUT_PROJECT nor GERRIT_PROJECT is set')
 
     def _ensure_empty_dir(self, path):
         """Ensures that the given directory exists and is empty."""
@@ -184,37 +123,21 @@ class Workspace(object):
         path = self.get_log_dir(category=category)
         return os.path.join(path, name)
 
-    def _get_git_url(self, project):
-        """Returns the URL for git to access the given project."""
-        return 'ssh://{0}@gerrit.gromacs.org/{1}.git'.format(self._gerrit_user, project)
-
-    def _get_refspec(self, project):
-        """Returns the refspec that is being built for the given project."""
-        if self._checked_out_project == project:
-            return self._checked_out_refspec
-        if self._checked_out_project == Project.RELENG:
-            if _OVERRIDES.get(project, None) is not None:
-                return _OVERRIDES[project]
-        refspec = os.getenv('{0}_REFSPEC'.format(project.upper()), None)
-        if refspec is None:
-            refspec = _DEFAULT[project]
-        return refspec
-
     def _checkout_project(self, project):
         """Checks out the given project if not yet done for this build."""
         if project in self._projects:
             return
         self._projects.add(project)
-        if not self._checkout:
-            return
         project_dir = self.get_project_dir(project)
-        refspec = self._get_refspec(project)
+        refspec = self._gerrit.get_refspec(project)
+        if refspec == 'HEAD':
+            return
         if not os.path.isdir(project_dir):
             os.makedirs(project_dir)
         try:
             if not os.path.isdir(os.path.join(project_dir, '.git')):
                 subprocess.check_call(['git', 'init'], cwd=project_dir)
-            subprocess.check_call(['git', 'fetch', self._get_git_url(project), refspec], cwd=project_dir)
+            subprocess.check_call(['git', 'fetch', self._gerrit.get_git_url(project), refspec], cwd=project_dir)
             subprocess.check_call(['git', 'checkout', '-qf', 'FETCH_HEAD'], cwd=project_dir)
             subprocess.check_call(['git', 'clean', '-ffdxq'], cwd=project_dir)
             subprocess.check_call(['git', 'gc'], cwd=project_dir)
@@ -228,34 +151,33 @@ class Workspace(object):
         correctly checked out.  It is unknown whether this was a Jenkins bug
         or something else, and whether the issue still exists.
         """
-        # TODO: For dynamic refs like refs/heads/master, there is a race
-        # condition that can cause spurious failures if the remote ref gets
-        # updated between the checkout and this call.  Also, consider how
-        # this should interact with --dry-run etc.
         project_info = []
         all_correct = True
         for project in sorted(self._projects):
             project_dir = self.get_project_dir(project)
-            refspec = self._get_refspec(project)
-            cmd = ['git', 'ls-remote', self._get_git_url(project), refspec]
+            cmd = ['git', 'rev-list', '-n1', '--format=oneline', 'HEAD']
             try:
-                correct_sha1 = subprocess.check_output(cmd, cwd=project_dir).split(None, 1)[0].strip()
-                current_sha1 = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=project_dir).strip()
+                sha1, title = subprocess.check_output(cmd, cwd=project_dir).strip().split(None, 1)
             except subprocess.CalledProcessError as e:
-                raise BuildError('failed to execute: ' + e.cmd)
-            if current_sha1 != correct_sha1:
-                print('Checkout of {0} failed: HEAD is {1}, expected {2}'.format(
-                    project, current_sha1, correct_sha1))
-                all_correct = False
-            project_info.append((project, refspec, current_sha1, current_sha1 == correct_sha1))
+                raise BuildError('failed to execute: ' + ' '.join(e.cmd))
+            refspec = self._gerrit.get_refspec(project)
+            correct = True
+            if refspec.startswith('refs/changes/'):
+                correct_sha1 = self._gerrit.get_remote_hash(project, refspec)
+                if sha1 != correct_sha1:
+                    print('Checkout of {0} failed: HEAD is {1}, expected {2}'.format(
+                        project, sha1, correct_sha1))
+                    correct = False
+                    all_correct = False
+            project_info.append((project, refspec, sha1, title, correct))
         print('-----------------------------------------------------------')
         print('Building using versions:')
-        for project, refspec, sha1, correct in project_info:
+        for project, refspec, sha1, title, correct in project_info:
             correct_info = ''
             if not correct:
                 correct_info = ' (WRONG)'
-            print('{0:20} {1:30} {2}{3}'.format(
-                project + ':', refspec, sha1, correct_info))
+            print('{0:16} {1:26} {2}{3}\n{4:19}{5}'.format(
+                project + ':', refspec, sha1, correct_info, '', title))
         print('-----------------------------------------------------------')
-        if not all_correct and self._checkout:
+        if not all_correct:
             raise BuildError('Checkout failed (Jenkins issue)')

@@ -34,6 +34,7 @@ def run_build(build, job_type, opts):
             Build scripts not intended for such builds may simply ignore most
             of the parameters that can be influenced by these options.
     """
-    from context import BuildContext
+    from context import BuildContext, ContextFactory
     # Please ensure that __main__.py stays in sync.
-    BuildContext._run_build(build, job_type, opts)
+    factory = ContextFactory()
+    BuildContext._run_build(factory, build, job_type, opts)

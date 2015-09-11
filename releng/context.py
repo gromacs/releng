@@ -6,12 +6,14 @@ from __future__ import print_function
 
 import os
 import pipes
+import platform
 import shutil
 import subprocess
 import sys
 
 from common import BuildError, ConfigurationError
 from common import JobType, Project, System
+from gerrit import GerritIntegration
 from options import process_build_options
 from script import BuildScript
 from workspace import Workspace
@@ -70,6 +72,65 @@ class FailureTracker(object):
         if self.failed:
             assert self._unsuccessful_reason, "Failed build did not produce an unsuccessful reason"
 
+class ContextFactory(object):
+
+    """Encapsulates construction of objects related to the build.
+
+    This class provides a single place that is responsible of creating
+    instances of different objects needed for creating a BuildContext.
+    This makes it simpler to pass custom parameters to the various objects,
+    while still providing default logic for constructing them in case the
+    custom parameters are not needed.  This class reduces the need to pass
+    objects or values needed to construct them through various layers.
+
+    Typically, a Jenkins build will use all the objects with their default
+    parameters, but testing (using the routines from __main__.py, or otherwise)
+    generally needs to have more control.
+    """
+
+    def __init__(self, system=None, dry_run=False):
+        if system is None:
+            system = platform.system()
+        self.system = system
+        self.dry_run = dry_run
+        self.failure_tracker = FailureTracker()
+        self._gerrit = None
+        self._workspace = None
+
+    @property
+    def gerrit(self):
+        """Returns the GerritIntegration instance for the build."""
+        if self._gerrit is None:
+            self.init_gerrit_integration()
+        return self._gerrit
+
+    @property
+    def workspace(self):
+        """Returns the Workspace instance for the build."""
+        if self._workspace is None:
+            self.init_workspace()
+        return self._workspace
+
+    def init_gerrit_integration(self, **kwargs):
+        """Initializes GerritIntegration with given parameters.
+
+        If not called, the object will be created with default parameters.
+        """
+        assert self._gerrit is None
+        self._gerrit = GerritIntegration(**kwargs)
+
+    def init_workspace(self, **kwargs):
+        """Initializes Workspace with given parameters.
+
+        If not called, the object will be created with default parameters.
+        """
+        assert self._workspace is None
+        self._workspace = Workspace(factory=self, **kwargs)
+
+    def create_context(self, job_type, opts):
+        """Creates a BuildContext with given arguments."""
+        return BuildContext(self, job_type, opts)
+
 class BuildContext(object):
     """Top-level interface for build scripts to the releng package.
 
@@ -92,15 +153,14 @@ class BuildContext(object):
             changing directories and for producing log files.
     """
 
-    def __init__(self, job_type, failure_tracker, workspace, opts, system=None,
-            dry_run=False):
+    def __init__(self, factory, job_type, opts):
         if job_type is not None:
             JobType.validate(job_type)
         self.job_type = job_type
-        self.is_dry_run = dry_run
-        self._failure_tracker = failure_tracker
-        self.workspace = workspace
-        self.env, self.params = process_build_options(system, opts)
+        self.is_dry_run = factory.dry_run
+        self._failure_tracker = factory.failure_tracker
+        self.workspace = factory.workspace
+        self.env, self.params = process_build_options(factory.system, opts)
 
     def _flush_output(self):
         """Ensures all output is flushed before an external process is started.
@@ -404,18 +464,18 @@ class BuildContext(object):
         self.run_cmd(cmd, failure_message='gcovr failed')
 
     @staticmethod
-    def _run_build(build, job_type, opts, workspace=None, **kwargs):
+    def _run_build(factory, build, job_type, opts):
         """Runs the actual build.
 
         This method is the top-level driver for the build."""
-        failure_tracker = FailureTracker()
+        workspace = None
+        failure_tracker = factory.failure_tracker
         try:
-            if workspace is None:
-                workspace = Workspace()
+            workspace = factory.workspace
             workspace._init_logs_dir()
-            context = BuildContext(job_type, failure_tracker, workspace, opts, **kwargs)
-            context.workspace._checkout_project(Project.GROMACS)
-            gromacs_dir = context.workspace.get_project_dir(Project.GROMACS)
+            context = factory.create_context(job_type, opts)
+            workspace._checkout_project(Project.GROMACS)
+            gromacs_dir = workspace.get_project_dir(Project.GROMACS)
             if os.path.dirname(build):
                 build_script_path = build
             else:
@@ -423,10 +483,10 @@ class BuildContext(object):
                         'builds', build + '.py')
             script = BuildScript(build_script_path)
             for project in script.extra_projects:
-                context.workspace._checkout_project(project)
-            context.workspace._check_projects()
-            context.workspace._init_build_dir(script.build_out_of_source)
-            os.chdir(context.workspace.build_dir)
+                workspace._checkout_project(project)
+            workspace._check_projects()
+            workspace._init_build_dir(script.build_out_of_source)
+            os.chdir(workspace.build_dir)
             context._flush_output()
             script.do_build(context)
         except BuildError as e:
