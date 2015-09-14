@@ -263,10 +263,10 @@ class BuildContext(object):
             if failure_string is None:
                 if target_descr is not None:
                     what = target_descr
+                elif target is None:
+                    what = 'Default (all) target'
                 else:
                     what = target + ' target'
-                    if target is None:
-                        what = 'Default (all) target'
                 failure_string = '{0} failed to build'.format(what)
             if continue_on_failure:
                 self._failure_tracker.mark_failed(failure_string)
