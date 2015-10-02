@@ -276,7 +276,7 @@ if use_gpu:
    # gmxtest.pl test harness needing to handle test cases that must
    # run with only one rank.
    if use_mpi or use_tmpi:
-      gpu_id = "12" # for (T)MPI use the two GT 640-s
+      gpu_id = "01"
    else:
       gpu_id = "0" # use GPU #0 by default
    cmd += ' -gpu_id %s' % (gpu_id)
@@ -291,7 +291,7 @@ if use_separate_pme_nodes:
    if use_tmpi:
       cmd += ' -nt 3'
    if use_gpu:
-      gpu_id = "121" # gmxtest.pl trims this if there is a separate PME node actually in use
+      gpu_id = "010" # gmxtest.pl trims this if there is a separate PME node actually in use
    cmd += ' -npme 1'
 elif use_mpi:
    cmd += ' -np 2'
