@@ -1,11 +1,8 @@
-releng (Jenkins) scripts
-========================
+Jenkins scripts (releng Python module)
+======================================
 
-.. Formatting, cross-references, exact syntax for autodoc and similar techical
-   details can be sorted out once this documentation actually gets included
-   somewhere (not in the initial change).
-
-Scripts used for Jenkins builds reside in a separate ``releng`` repository.
+The main scripts used for Jenkins build are collected into a ``releng`` Python
+package in the ``releng`` repository.
 
 .. TODO: Some more introductory text.
 
@@ -14,7 +11,7 @@ Build overview
 
 Builds using the releng scripts use the following sequence:
 
-1. Jenkins does some preparatory steps (see :ref:`releng-jenkins-config`),
+1. Jenkins does some preparatory steps (see :doc:`jenkins-config`),
    including checking out the ``releng`` repo.
 2. Jenkins imports the releng Python package, and calls run_build().
 3. The releng script checks out the ``gromacs`` repo if not yet done by
@@ -42,8 +39,7 @@ Builds using the releng scripts use the following sequence:
    logs to a common location in the workspace, to mark the build unstable, and
    other such helper functions to help interacting with Jenkins in an uniform
    manner.
-   See :ref:`releng-jenkins-build-script` for details on the API available to
-   the build script.
+   See :doc:`releng-api` for details on the API available to the build script.
 8. The build script provides the steps to do the actual build, typically
    calling methods in the build context to interact with the CMake build system
    or Jenkins where required.
@@ -136,172 +132,6 @@ gmxtest+ARGS
   whitespace, which separates options (in such a case, it needs to be quoted).
   Quotes within ``ARGS`` are also allowed to pass arguments that contain
   whitespace.
-
-.. _releng-jenkins-build-script:
-
-Build script API
-----------------
-
-The build script is required to provide one function:
-
-.. py:function:: do_build(context)
-
-   Called to run the actual build.  The context parameter is an instance of
-   BuildContext, and can be used to access the build environment and to
-   interact with Jenkins.  The function can signal fatal build errors by
-   raising BuildError directly; typically, this is done by methods in
-   BuildContext if they fail to execute the requested commands.
-
-   When the function is called, the current working directory is set to the
-   build directory (whether the build is in- or out-of-source).
-
-The build script can also set a few global variables to influence the behavior
-of the build:
-
-.. py:data:: build_out_of_source
-
-   If this boolean value is set to ``True``, the build will be executed
-   out-of-source.  By default, the build will be in-source.
-
-.. py:data:: extra_projects
-
-   If this list value is set to a non-empty list, then these repositories are
-   also checked out before executing the build.  ``releng`` and ``gromacs``
-   repositories are always checked out.
-   Currently, only ``Project.REGRESSIONTESTS`` makes sense to specify here.
-
-When the build script is loaded, various enums from the releng package are
-injected into the global scope to make them easy to access.
-
-The build script gets input and perfoms most tasks by using data and methods in
-a BuildContext instance:
-
-.. autoclass:: BuildContext
-   :members:
-
-The build context contains attributes of the following classes to access
-additional information:
-
-.. autoclass:: BuildEnvironment
-   :members:
-
-.. autoclass:: BuildParameters
-   :members:
-
-.. autoclass:: Workspace
-   :members:
-
-.. _releng-jenkins-config:
-
-Jenkins project configuration
------------------------------
-
-Configuration for Jenkins projects that use the releng scripts are described here.
-
-SCM checkout configuration and related environment variables:
-
-* Jenkins SCM configuration is used to check out the repository from where the
-  build is triggered as a subdirectory of the workspace, with the same name as
-  the repository.  This is necessary for the Git Plugin to show reasonable
-  change lists for the builds etc., although the build in reality always starts
-  from the releng repository.
-* The build script will then check out the :file:`releng` repository if it did
-  not trigger the build, and start the build from there.
-* The releng script will check out remaining repositories if necessary.
-* The refspecs for repositories that did not cause the build to trigger should
-  be specified in ``GROMACS_REFSPEC``, ``REGRESSIONTESTS_REFSPEC``, and
-  ``RELENG_REFSPEC`` environment variables, respectively (whether regression
-  tests will actually be checked out is determined by the build script; see
-  below).
-* The project that triggers the build (and the refspec) should be specified in
-  ``CHECKOUT_PROJECT`` and ``CHECKOUT_REFSPEC`` environment variables (for
-  simplicity, it is also posisble to use ``GERRIT_PROJECT`` and
-  ``GERRIT_REFSPEC``).
-
-To create a build that allows both intuitive parameterized builds with given
-refspecs and Gerrit Trigger builds, the following configuration is recommended:
-
-* Use ``GROMACS_REFSPEC``, ``RELENG_REFSPEC``, and ``REGRESSIONTESTS_REFSPEC``
-  as build parameters.
-* Use "Prepare environment for the run" and the following Groovy script::
-
-    if (!binding.variables.containsKey('GERRIT_PROJECT')) {
-      return [CHECKOUT_PROJECT: 'gromacs', CHECKOUT_REFSPEC: GROMACS_REFSPEC]
-    } else {
-      return [CHECKOUT_PROJECT: GERRIT_PROJECT, CHECKOUT_REFSPEC: GERRIT_REFSPEC]
-    }
-
-* Configure all SCM checkout behaviors to use ``CHECKOUT_PROJECT`` and
-  ``CHECKOUT_REFSPEC``.
-
-.. TODO: Describe configuration for SCM pull jobs (it should straightforwardly
-   follow from the above).
-
-Post-build steps:
-
-* The job should check the console output for the string "FAILED" and mark the
-  build unstable if this is found.
-* The job should use :file:`logs/unsuccessful-reason.log` as the "Unsuccessful
-  Message File" for the Gerrit Trigger plugin.
-  TODO: How to best handle this for matrix builds (or other types of
-  multi-configuration builds)
-* The job should archive all :file:`.log` files from :file:`logs/`.  Note that
-  the build should be configured not to fail if there is nothing to archive if
-  all the logs are conditionally produced.
-* The job can check various log files under :file:`logs/{category}/` for
-  warnings; the general design is that all logs from a certain category are
-  checked using the same warning parser.
-
-The build script in Jenkins will look something like this::
-
-  import os
-  import shlex
-  import subprocess
-  import sys
-
-  # For builds not triggered by Gerrit Trigger, the conditional is not
-  # necessary.
-  if os.environ['CHECKOUT_PROJECT'] != 'releng':
-      if not os.path.isdir('releng'):
-          os.makedirs('releng')
-      os.chdir('releng')
-      subprocess.check_call(['git', 'init'])
-      subprocess.check_call(['git', 'fetch', 'ssh://jenkins@gerrit.gromacs.org/releng.git', os.environ['RELENG_REFSPEC']])
-      subprocess.check_call(['git', 'checkout', '-qf', 'FETCH_HEAD'])
-      subprocess.check_call(['git', 'clean', '-ffdxq'])
-      subprocess.check_call(['git', 'gc'])
-      os.chdir('..')
-
-  sys.path.append(os.path.abspath('releng'))
-  import releng
-
-  # For non-matrix builds, opts can be a hard-coded list (or possibly None).
-  opts = shlex.split(os.environ['OPTIONS'])
-  opts = filter(lambda x: not x.lower().startswith('host='), opts)
-  releng.run_build('gromacs', releng.JobType.GERRIT, opts)
-
-The script checks out the :file:`releng` repository to a :file:`releng/`
-subdirectory of the workspace if not already checked out, imports the
-:file:`releng` package and runs run_build() with arguments identifying which
-build script to run, and options that affect how the build is done.
-``shlex.split()`` is necessary to be able to pass quoted arguments with spaces
-to options such as ``gmxtest+``.
-
-run_build() will first check out the :file:`gromacs` repository to a
-:file:`gromacs/` subdirectory of the workspace, and then execute a script from
-:file:`gromacs/admin/builds/`, selected based on the first argument.
-If necessary, it will also check out the regression tests.
-If the script exits with a non-zero exit code, the build fails.
-
-The folder structure in the build workspace looks like this::
-
-  $WORKSPACE/
-    releng/
-    gromacs/
-    [regressiontests/]
-    logs/
-      [unsuccessful-reason.log]
-      [<category>/]*
 
 Build system changes
 --------------------
