@@ -7,7 +7,6 @@ slave environment, such as paths to various executables.
 
 from distutils.spawn import find_executable
 import os
-import platform
 
 from common import ConfigurationError
 from common import Compiler,System
@@ -53,9 +52,9 @@ class BuildEnvironment(object):
     """
 
     def __init__(self, system):
-        if system is None:
-            system = platform.system()
-        self.system = System.parse(system)
+        if system is not None:
+            system = System.parse(system)
+        self.system = system
         self.compiler = None
         self.shell_call_opts = dict()
         self.env_cmd = None
@@ -71,7 +70,8 @@ class BuildEnvironment(object):
         self._build_jobs = 1
         self._build_prefix_cmd = None
 
-        self._init_system()
+        if self.system is not None:
+            self._init_system()
 
     def get_cppcheck_command(self, version):
         """Returns path to the cppcheck executable of given version.

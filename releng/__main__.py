@@ -2,7 +2,8 @@
 Command-line interface to releng scripts for testing
 
 This file provides a command-line interface that allows testing
-the script more easily (it is still difficult; refactoring is needed).
+the script more easily (some things are still difficult; refactoring is
+needed).
 Jenkins imports the module and uses run_build() from __init__.py
 instead.
 """
@@ -10,16 +11,15 @@ instead.
 import argparse
 import os
 
-from context import BuildContext
+from common import Project
+from context import BuildContext, ContextFactory
 from workspace import Workspace
 
 parser = argparse.ArgumentParser(description="""\
         Build script for GROMACS Jenkins CI builds
         """)
-parser.add_argument('--dry-run', action='store_true', default=False,
-                    help='Show what would be done, but do not execute anything')
-parser.add_argument('--checkout', action='store_true', default=False,
-                    help='Perform git checkout and clean actions (beware that it can delete any local modifications in the repos in the workspace)')
+parser.add_argument('--run', action='store_true', default=False,
+                    help='Actually run the build, instead of only showing what would be done')
 parser.add_argument('-U', '--user', help='User with ssh permissions to Gerrit')
 parser.add_argument('--system', help='Override system for testing')
 parser.add_argument('-B', '--build', help='Build script to run')
@@ -29,11 +29,20 @@ parser.add_argument('-O', '--opts', nargs='*', help='Build options')
 args = parser.parse_args()
 
 workspace_root = args.workspace
-if workspace_root is not None:
-    workspace_root = os.path.abspath(workspace_root)
+if workspace_root is None:
+    workspace_root = os.path.join(os.path.dirname(__file__), "..", "..")
+workspace_root = os.path.abspath(workspace_root)
+
+env = {
+        'CHECKOUT_PROJECT': Project.RELENG,
+        'CHECKOUT_REFSPEC': 'HEAD',
+        'GROMACS_REFSPEC': 'HEAD',
+        'RELENG_REFSPEC': 'HEAD',
+        'REGRESSIONTESTS_REFSPEC': 'HEAD'
+}
 
 # Please ensure that run_build() in __init__.py stays in sync.
-workspace = Workspace(root=workspace_root, gerrit_user=args.user,
-    dry_run=args.dry_run, checkout=args.checkout)
-BuildContext._run_build(args.build, args.job_type, args.opts,
-        workspace=workspace, system=args.system, dry_run=args.dry_run)
+factory = ContextFactory(system=args.system, dry_run=not args.run)
+factory.init_gerrit_integration(user=args.user, env=env)
+factory.init_workspace(root=workspace_root)
+BuildContext._run_build(factory, args.build, args.job_type, args.opts)
