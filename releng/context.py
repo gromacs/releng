@@ -5,6 +5,8 @@ Top-level interface for build scripts to the releng package.
 from __future__ import print_function
 
 import os
+import glob
+import re
 import pipes
 import platform
 import shutil
@@ -410,13 +412,29 @@ class BuildContext(object):
     def process_cppcheck_results(self, xml_pattern):
         """Processes results from cppcheck.
 
-        Currently, this method is just a placeholder for logic that would
-        report additional information about the issues back to Gerrit.
+        This method massages the XML output into a form the Jenkins
+        CppCheck plugin can handle. It could also contain logic that
+        would report additional information about the issues back to
+        Jenkins.
 
         Args:
             xml_pattern (str): Pattern that matches all XML files produced by
             cppcheck.
         """
+
+        # The Jenkins Cppcheck Plugin assumes cppcheck was run on in
+        # the base folder of the slave workspace, but we run it from
+        # the directory of the source repo. The docs for the plugin
+        # recommend not doing that, or instead doing a sed-style
+        # change on all the resulting .xml files to fix it so that the
+        # plugin finds the file in the slave workspace. Thus:
+        output_with_prefix = '\\1{dir}/'.format(dir=Project.GROMACS)
+        for xml_filename in glob.glob(xml_pattern):
+            with open(xml_filename, "r") as xml_file:
+                lines = xml_file.read()
+            with open(xml_filename, "w") as xml_file:
+                xml_file.write(re.sub('(<location file=")', output_with_prefix, lines))
+
         # TODO: Consider providing an analysis/summary of the results.
         pass
 
