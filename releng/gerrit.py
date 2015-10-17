@@ -38,12 +38,10 @@ class GerritIntegration(object):
         checked_out_project (Project): Project initially checked out by Jenkins.
     """
 
-    def __init__(self, user=None, env=None):
+    def __init__(self, factory, user=None):
         if user is None:
             user = 'jenkins'
-        if env is None:
-            env = dict(os.environ)
-        self._env = env
+        self._env = factory.env
         self._user = user
         self.checked_out_project, self._checked_out_refspec = self._get_checked_out_project()
 

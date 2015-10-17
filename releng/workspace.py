@@ -6,8 +6,7 @@ commands related to setting up and inspecting the workspace.
 """
 from __future__ import print_function
 
-import os
-import shutil
+import os.path
 import subprocess
 
 from common import BuildError, ConfigurationError
@@ -27,12 +26,11 @@ class Workspace(object):
     Attributes:
         root (str): Root directory of the workspace.
     """
-    def __init__(self, factory, root=None):
-        if root is None:
-            root = os.getenv('WORKSPACE', os.getcwd())
-        self.root = root
+    def __init__(self, factory, skip_checkouts=False):
+        self.root = factory.env['WORKSPACE']
+        self._executor = factory.executor
         self._gerrit = factory.gerrit
-        self._is_dry_run = factory.dry_run
+        self._skip_checkouts = skip_checkouts
         # The releng project is always checked out, since we are already
         # executing code from there...
         self._projects = { Project.RELENG, self._gerrit.checked_out_project }
@@ -41,10 +39,7 @@ class Workspace(object):
 
     def _ensure_empty_dir(self, path):
         """Ensures that the given directory exists and is empty."""
-        if not self._is_dry_run:
-            if os.path.exists(path):
-                shutil.rmtree(path)
-            os.makedirs(path)
+        self._executor.ensure_dir_exists(path, ensure_empty=True)
 
     def _init_build_dir(self, out_of_source):
         """Initializes the build directory."""
@@ -118,8 +113,7 @@ class Workspace(object):
         path = self._logs_dir
         if category is not None:
             path = os.path.join(path, category)
-        if not self._is_dry_run and not os.path.isdir(path):
-            os.makedirs(path)
+        self._executor.ensure_dir_exists(path)
         return path
 
     def get_path_for_logfile(self, name, category=None):
@@ -144,15 +138,14 @@ class Workspace(object):
 
     def _checkout_project(self, project):
         """Checks out the given project if not yet done for this build."""
-        if project in self._projects:
+        if project in self._projects or self._skip_checkouts:
             return
         self._projects.add(project)
         project_dir = self.get_project_dir(project)
         refspec = self._gerrit.get_refspec(project)
         if refspec == 'HEAD':
             return
-        if not os.path.isdir(project_dir):
-            os.makedirs(project_dir)
+        self._executor.ensure_dir_exists(project_dir)
         try:
             if not os.path.isdir(os.path.join(project_dir, '.git')):
                 subprocess.check_call(['git', 'init'], cwd=project_dir)
@@ -170,6 +163,8 @@ class Workspace(object):
         correctly checked out.  It is unknown whether this was a Jenkins bug
         or something else, and whether the issue still exists.
         """
+        if self._skip_checkouts:
+            return
         project_info = []
         all_correct = True
         for project in sorted(self._projects):

@@ -39,13 +39,16 @@ env = {
         'CHECKOUT_REFSPEC': 'HEAD',
         'GROMACS_REFSPEC': 'HEAD',
         'RELENG_REFSPEC': 'HEAD',
-        'REGRESSIONTESTS_REFSPEC': 'HEAD'
+        'REGRESSIONTESTS_REFSPEC': 'HEAD',
+        'WORKSPACE': workspace_root
 }
 
 # Please ensure that run_build() in __init__.py stays in sync.
-factory = ContextFactory(system=args.system, dry_run=not args.run)
-factory.init_gerrit_integration(user=args.user, env=env)
-factory.init_workspace(root=workspace_root)
+factory = ContextFactory(system=args.system, env=env, dry_run=not args.run)
+if not args.run:
+    from executor import DryRunExecutor
+    factory.init_executor(DryRunExecutor())
+factory.init_gerrit_integration(user=args.user)
 if args.matrix:
     prepare_build_matrix(factory, args.matrix, os.path.basename(args.matrix))
 else:

@@ -245,7 +245,13 @@ clear-cut, but the general approach should be well covered.
 Testing releng scripts
 ----------------------
 
-Currently, the only way to fully test the releng script is to upload a change
+Currently, there are limited unit tests for some parts of the scripts.
+They require a backport of ``unittest.mock`` to be installed, and can be
+executed with ::
+
+    python -m unittest discover releng.test
+
+The only way to fully test the releng script is to upload a change
 to Gerrit and let Jenkins build it.  In principle, it is possible to run the
 script in an environment that exactly matches a Jenkins node (including paths
 to all required tools and all relevant environment variables that Jenkins
@@ -261,5 +267,6 @@ sibling directories, with directory names matching the repository names.
 Please note that even though the command-line mode does not perform most of the
 actions that the real build script does (unless you run it with ``--run``), it
 can still write to some files etc.
-But full support for mock execution would require substantial refactoring in
-the way the build environment, the workspace, and command execution is managed.
+
+Refactoring to better support mock execution is in progress, combined with
+extending the scope of unit tests.

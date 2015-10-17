@@ -72,5 +72,7 @@ def write_triggered_build_url_file(varname, filename):
         varname (str): Variable to set.
         filename (str): File (including path) to write the properties to.
     """
+    from context import ContextFactory
     from matrixbuild import write_triggered_build_url_file
-    write_triggered_build_url_file(varname, filename)
+    factory = ContextFactory()
+    write_triggered_build_url_file(factory, varname, filename)

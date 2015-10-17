@@ -15,6 +15,7 @@ import sys
 
 from common import BuildError, ConfigurationError
 from common import JobType, Project, System
+from executor import Executor
 from gerrit import GerritIntegration
 from options import process_build_options
 from script import BuildScript
@@ -90,14 +91,33 @@ class ContextFactory(object):
     generally needs to have more control.
     """
 
-    def __init__(self, system=None, dry_run=False):
+    def __init__(self, system=None, env=None, dry_run=False):
         if system is None:
             system = platform.system()
+        if env is None:
+            env = dict(os.environ)
         self.system = system
         self.dry_run = dry_run
         self.failure_tracker = FailureTracker()
+        self._env = env
+        self._executor = None
         self._gerrit = None
         self._workspace = None
+
+    @property
+    def env(self):
+        """Returns the environment variables for the build.
+
+        The caller should not modify the returned dictionary.
+        """
+        return self._env
+
+    @property
+    def executor(self):
+        """Returns an Executor instance for the build."""
+        if self._executor is None:
+            self.init_executor()
+        return self._executor
 
     @property
     def gerrit(self):
@@ -113,13 +133,23 @@ class ContextFactory(object):
             self.init_workspace()
         return self._workspace
 
+    def init_executor(self, instance=None):
+        """Sets an executor instance to be used.
+
+        If not called, a default instance is created.
+        """
+        assert self._executor is None
+        if instance is None:
+            instance = Executor()
+        self._executor = instance
+
     def init_gerrit_integration(self, **kwargs):
         """Initializes GerritIntegration with given parameters.
 
         If not called, the object will be created with default parameters.
         """
         assert self._gerrit is None
-        self._gerrit = GerritIntegration(**kwargs)
+        self._gerrit = GerritIntegration(factory=self, **kwargs)
 
     def init_workspace(self, **kwargs):
         """Initializes Workspace with given parameters.
