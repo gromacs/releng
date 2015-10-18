@@ -13,6 +13,10 @@ from common import ConfigurationError
 from common import BuildType, FftLibrary, Simd
 from environment import BuildEnvironment
 from parameters import BuildParameters
+import slaves
+
+# Indicates that an option requires a label of the same name as the option.
+OPT = '_OPT_'
 
 class BuildOptions(object):
     """Values for all build options.
@@ -161,10 +165,9 @@ class _OptionHandlerClosure(object):
     def _init_gpu(self, value):
         self._params.gpu = value
 
-    def _init_mpi(self, value):
-        if value:
-            self._env._init_mpi(self._params.gpu)
-        self._params.mpi = value
+    def _init_mpi(self):
+        self._env._init_mpi(self._params.gpu)
+        self._params.mpi = True
 
     def _init_openmp(self, value):
         self._params.openmp = value
@@ -190,7 +193,7 @@ class _BuildOptionHandler(object):
     identify and handle the option.
     """
 
-    def __init__(self, name, handler=None, allow_multiple=False):
+    def __init__(self, name, handler=None, label=None, allow_multiple=False):
         """Creates a handler for a specified option.
 
         Args:
@@ -200,6 +203,10 @@ class _BuildOptionHandler(object):
                 Parameters may be passed to the handler to provide information
                 parsed from the option string (e.g., a version number),
                 depending on the subclass.
+            label (Optional[str]): Label that the host is required to have to
+                build with this option.  Can be set to OPT to require a label
+                with the same name as the option.  If None, this option does
+                not impose any restriction on the host.
             allow_multiple (bool): If not True, at most one option is allowed
                 to match this handler.
         """
@@ -207,6 +214,7 @@ class _BuildOptionHandler(object):
         if handler is None:
             handler = self._null_handler
         self._handler = handler
+        self.label = label
         self.allow_multiple = allow_multiple
 
     def _null_handler(self, *args):
@@ -323,6 +331,59 @@ class _BoolOptionHandler(_BuildOptionHandler):
                 return False
         raise ConfigurationError('invalid build option: ' + opt)
 
+def _define_handlers(e, p, extra_options):
+    """Defines the list of recognized build options."""
+    h = _OptionHandlerClosure(e, p)
+    # The options are processed in the order they are in the tuple, to support
+    # cross-dependencies between the options (there are a few).
+    # If you add options here, please also update the documentation for the
+    # options in docs/releng.rst.
+    # Labels need to be specified for options that require specific features
+    # from the build host (e.g., required software versions or special
+    # hardware support).  They need to match with the labels defined in
+    # slaves.py.
+    handlers = [
+            _SuffixOptionHandler('build-jobs=', h._init_build_jobs),
+            _VersionOptionHandler('cmake', e._init_cmake, label=OPT),
+            _VersionOptionHandler('gcc', e.init_gcc, label=OPT),
+            _VersionOptionHandler('clang', e.init_clang, label=OPT),
+            _SimpleOptionHandler('clang-analyzer', e.init_clang_analyzer),
+            _VersionOptionHandler('icc', e._init_icc, label=OPT),
+            _VersionOptionHandler('msvc', e._init_msvc, label=OPT),
+            _VersionOptionHandler('cuda', e._init_cuda, label=OPT),
+            _SimpleOptionHandler('phi', h._init_phi, label=OPT),
+            _SimpleOptionHandler('mdrun-only', h._init_mdrun_only),
+            _SimpleOptionHandler('reference', h._init_reference),
+            _SimpleOptionHandler('release', h._init_release),
+            _SimpleOptionHandler('asan', h._init_asan),
+            _SimpleOptionHandler('tsan', h._init_tsan, label=OPT),
+            _SimpleOptionHandler('atlas', h._init_atlas),
+            _SimpleOptionHandler('mkl', h._init_mkl),
+            _SimpleOptionHandler('fftpack', h._init_fftpack),
+            _SimpleOptionHandler('double', h._init_double),
+            _SimpleOptionHandler('x11', h._init_x11, label=OPT),
+            _SuffixOptionHandler('simd=', h._init_simd),
+            _BoolOptionHandler('thread-mpi', h._init_thread_mpi),
+            _BoolOptionHandler('gpu', h._init_gpu),
+            _SimpleOptionHandler('mpi', h._init_mpi, label=OPT),
+            _BoolOptionHandler('openmp', h._init_openmp),
+            _SimpleOptionHandler('valgrind', h._init_valgrind),
+            _SuffixOptionHandler('env+', h._add_env_var, allow_multiple=True),
+            _SuffixOptionHandler('cmake+', h._add_cmake_option, allow_multiple=True),
+            _SuffixOptionHandler('gmxtest+', h._add_gmxtest_args, allow_multiple=True),
+        ]
+    if extra_options:
+        for name, builder in extra_options.iteritems():
+            new_handler = builder(name)
+            existing_handlers = [x for x in handlers if x.name == name]
+            assert len(existing_handlers) <= 1
+            if existing_handlers:
+                if type(new_handler) != type(existing_handlers[0]):
+                    raise ConfigurationError('Option {0} redeclared with a different type'.format(name))
+                continue
+            handlers.append(new_handler)
+    return handlers
+
 def process_build_options(factory, opts, extra_options):
     """Initializes build environment and parameters from OS and build options.
 
@@ -340,50 +401,46 @@ def process_build_options(factory, opts, extra_options):
     """
     e = BuildEnvironment(factory)
     p = BuildParameters()
-    h = _OptionHandlerClosure(e, p)
-    # The options are processed in the order they are in the tuple, to support
-    # cross-dependencies between the options (there are a few).
-    # If you add options here, please also update the documentation for the
-    # options in docs/releng.rst.
-    handlers = [
-            _SuffixOptionHandler('build-jobs=', h._init_build_jobs),
-            _VersionOptionHandler('cmake', e._init_cmake),
-            _VersionOptionHandler('gcc', e.init_gcc),
-            _VersionOptionHandler('clang', e.init_clang),
-            _SimpleOptionHandler('clang-analyzer', e.init_clang_analyzer),
-            _VersionOptionHandler('icc', e._init_icc),
-            _VersionOptionHandler('msvc', e._init_msvc),
-            _VersionOptionHandler('cuda', e._init_cuda),
-            _SimpleOptionHandler('phi', h._init_phi),
-            _SimpleOptionHandler('mdrun-only', h._init_mdrun_only),
-            _SimpleOptionHandler('reference', h._init_reference),
-            _SimpleOptionHandler('release', h._init_release),
-            _SimpleOptionHandler('asan', h._init_asan),
-            _SimpleOptionHandler('tsan', h._init_tsan),
-            _SimpleOptionHandler('atlas', h._init_atlas),
-            _SimpleOptionHandler('mkl', h._init_mkl),
-            _SimpleOptionHandler('fftpack', h._init_fftpack),
-            _SimpleOptionHandler('double', h._init_double),
-            _SimpleOptionHandler('x11', h._init_x11),
-            _SuffixOptionHandler('simd=', h._init_simd),
-            _BoolOptionHandler('thread-mpi', h._init_thread_mpi),
-            _BoolOptionHandler('gpu', h._init_gpu),
-            _BoolOptionHandler('mpi', h._init_mpi),
-            _BoolOptionHandler('openmp', h._init_openmp),
-            _SimpleOptionHandler('valgrind', h._init_valgrind),
-            _SuffixOptionHandler('env+', h._add_env_var, allow_multiple=True),
-            _SuffixOptionHandler('cmake+', h._add_cmake_option, allow_multiple=True),
-            _SuffixOptionHandler('gmxtest+', h._add_gmxtest_args, allow_multiple=True),
-        ]
-    if extra_options:
-        for name, builder in extra_options.iteritems():
-            new_handler = builder(name)
-            existing_handlers = [x for x in handlers if x.name == name]
-            assert len(existing_handlers) <= 1
-            if existing_handlers:
-                if type(new_handler) != type(existing_handlers[0]):
-                    raise ConfigurationError('Option {0} redeclared with a different type'.format(name))
-                continue
-            handlers.append(new_handler)
+    handlers = _define_handlers(e, p, extra_options)
+    if opts:
+        opts = _remove_host_option(opts)
     o = BuildOptions(handlers, opts)
     return (e, p, o)
+
+def _remove_host_option(opts):
+    """Removes options that specify the execution host."""
+    return list(filter(lambda x: not x.lower().startswith(('host=', 'label=')), opts))
+
+def select_build_hosts(factory, configs):
+    """Selects build host for each configuration.
+
+    Args:
+        factory (ContextFactory): Factory to access other objects.
+        List[List[str]]: List of build options for each configuration.
+
+    Returns:
+        List[List[str]]: The input configurations with ``host=`` or ``label=``
+            option added/replaced.
+    """
+    e = BuildEnvironment(factory)
+    p = BuildParameters()
+    handlers = _define_handlers(e, p, None)
+    result = []
+    for opts in configs:
+        labels = set()
+        for handler in handlers:
+            if handler.label:
+                found_opts = [x for x in opts if handler.matches(x)]
+                for found_opt in found_opts:
+                    if handler.label == OPT:
+                        labels.add(found_opt)
+                    else:
+                        labels.add(handler.label)
+        result_opts = _remove_host_option(opts)
+        host = slaves.pick_host(labels, result_opts)
+        if slaves.is_label(host):
+            result_opts.append('label=' + host)
+        else:
+            result_opts.append('host=' + host)
+        result.append(list(result_opts))
+    return result

@@ -36,9 +36,9 @@ class TestPrepareBuildMatrix(unittest.TestCase):
         factory = self.helper.factory
         executor = self.helper.executor
         input_lines = [
-                'gcc-4.6 gpu cuda-5.0 host=bs_nix1204',
-                'clang-3.4 no-openmp asan host=bs_centos63',
-                'msvc-2013 host=bs-win2012r2'
+                'gcc-4.6 gpu cuda-5.0',
+                'clang-3.4 no-openmp asan',
+                'msvc-2013'
             ]
         self.helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(input_lines) + '\n')
@@ -47,7 +47,7 @@ class TestPrepareBuildMatrix(unittest.TestCase):
                 mock.call.ensure_dir_exists('ws/build', ensure_empty=True),
                 mock.call.read_file('ws/gromacs/admin/builds/pre-submit-matrix.txt'),
                 mock.call.write_file('ws/build/matrix.txt',
-                    'OPTIONS "{0}" "{1}" "{2}"\n'.format(*[x.strip() for x in input_lines]))
+                    'OPTIONS "{0} host=bs_nix1310" "{1} host=bs_mic" "{2} host=bs-win2012r2"\n'.format(*[x.strip() for x in input_lines]))
             ])
 
 if __name__ == '__main__':

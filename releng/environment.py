@@ -10,6 +10,7 @@ import os
 
 from common import ConfigurationError
 from common import Compiler,System
+import slaves
 
 # TODO: Check that the paths returned/used actually exists and raise nice
 # errors instead of mysteriously breaking builds if the node configuration is
@@ -32,7 +33,7 @@ def manage_stdlib_from_gcc(format_for_stdlib_flag):
     particular host in use, since the system gcc may be too old.
     """
 
-    if os.getenv('NODE_NAME') in ('bs_centos63', 'bs_mic'):
+    if os.getenv('NODE_NAME') in (slaves.BS_CENTOS63, slaves.BS_MIC):
         # TODO should setting gcctoolchain go in node-specific
         # setup somewhere? Or the C++ standard library become
         # a build option?
@@ -210,7 +211,7 @@ class BuildEnvironment(object):
     def _init_icc(self, version):
         self.compiler = Compiler.INTEL
         if self.system == System.WINDOWS:
-            if version == '16.0' and os.getenv('NODE_NAME') in ('bs-win2012r2'):
+            if version == '16.0' and os.getenv('NODE_NAME') in (slaves.BS_WIN2012R2,):
                 # Note that installing icc 16 over icc 15 uninstalled
                 # the latter, so it is likely not possible to have
                 # multiple icc versions installed on Windows.
@@ -220,7 +221,7 @@ class BuildEnvironment(object):
                 self.env_cmd = r'"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64 && "C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs2015'
                 self.c_compiler = 'icl'
                 self.cxx_compiler = 'icl'
-                self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/STACK:10000000 /machine:x64"'
+                self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/machine:x64"'
             else:
                 raise ConfigurationError('only bs-win2012r2 is supported for Windows builds with the Intel compiler')
         else:

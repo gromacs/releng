@@ -5,11 +5,12 @@ See __init__.py for documentation (the functions are called essentially
 directly from there).
 """
 
-import os
+import os.path
 import pipes
 import shlex
 
 from common import Project
+from options import select_build_hosts
 
 def prepare_build_matrix(factory, configfile, outputfile):
     executor = factory.executor
@@ -22,6 +23,7 @@ def prepare_build_matrix(factory, configfile, outputfile):
     outputpath = os.path.join(workspace.build_dir, outputfile)
 
     configs = _read_matrix_configs(executor, inputpath)
+    configs = select_build_hosts(factory, configs)
     _write_matrix_configs(executor, outputpath, configs)
 
 def _read_matrix_configs(executor, path):

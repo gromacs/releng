@@ -92,7 +92,6 @@ The build script in Jenkins will look something like this::
 
   # For non-matrix builds, opts can be a hard-coded list (or possibly None).
   opts = shlex.split(os.environ['OPTIONS'])
-  opts = filter(lambda x: not x.lower().startswith('host='), opts)
   releng.run_build('gromacs', releng.JobType.GERRIT, opts)
 
 The script checks out the :file:`releng` repository to a :file:`releng/`
@@ -101,6 +100,10 @@ subdirectory of the workspace if not already checked out, imports the
 build script to run, and options that affect how the build is done.
 ``shlex.split()`` is necessary to be able to pass quoted arguments with spaces
 to options such as ``gmxtest+``.
+
+For matrix builds not triggered with a dynamic matrix (see below), the build
+host can be selected with a ``host=`` or a ``label=`` option that is
+automatically ignored by run_build().
 
 run_build() will first check out the :file:`gromacs` repository to a
 :file:`gromacs/` subdirectory of the workspace, and then execute a script from
@@ -127,9 +130,12 @@ read from the ``gromacs`` repository, two builds are needed.
 The actual build is configured as a multi-configuration build, following the
 guidelines listed above.  The only difference is that there should be an
 additional ``OPTIONS`` parameter for the build, and this should be used as a
-dynamic axis in the matrix (using Dynamic Axis plugin).  This build is not
-triggered directly from Gerrit, and the same build can potentially be used for
-multiple different branches/configuration setups.
+dynamic axis in the matrix (using Dynamic Axis plugin).  Also, in order to
+support assignment of hosts from the releng script, the build should use the
+host that is provided in a ``host=`` option that is at the end of each
+``OPTIONS`` value.
+This build is not triggered directly from Gerrit, and the same build can
+potentially be used for multiple different branches/configuration setups.
 
 The build that is triggered from Gerrit is configured slightly differently:
 

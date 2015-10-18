@@ -67,7 +67,8 @@ instead of calling run_build(), the sequence is as follows:
 3. The releng script locates the configuration list from the ``gromacs`` repo
    based on the file name given to prepare_multi_configuration_build().
    It processes it into a form that is suitable for Jenkins to use in the next
-   step, and writes this into a file.
+   step, and writes this into a file.  The script also assigns build hosts
+   for each configuration (see below).
 4. Jenkins triggers a sub-build with the configuration matrix as a parameter.
    The sub-build is a matrix build that uses the sequence described above.
 5. Once the sub-build completes (whether it failed or not), Jenkins calls
@@ -79,6 +80,11 @@ instead of calling run_build(), the sequence is as follows:
    Gerrit.
 
 See :doc:`jenkins-config` for more details.
+
+The build host assignment happens through a set of labels: build options that affect
+the possible host for building the configuration map to labels (the mapping is
+defined in :file:`options.py`), and the set of labels supported by each build
+slave is defined in :file:`slaves.py`.
 
 .. _releng-jenkins-build-opts:
 
