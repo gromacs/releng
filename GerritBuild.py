@@ -59,6 +59,22 @@ if args['Compiler']=="icc":
       env["CXX"] = "icl"
       #remove incremental which is added by cmake to avoid warning
       opts_list += ' -DCMAKE_EXE_LINKER_FLAGS="/STACK:10000000 /machine:x64"'
+   elif args['CompilerVersion']=='15.0':
+      env_cmd = ". /opt/intel/composer_xe_2015/bin/compilervars.sh intel64"
+      env["CC"]  = "icc"
+      env["CXX"] = "icpc"
+   elif args['CompilerVersion']=='14.0':
+      env_cmd = ". /opt/intel/composer_xe_2013_sp1/bin/compilervars.sh intel64"
+      env["CC"]  = "icc"
+      env["CXX"] = "icpc"
+   elif args['CompilerVersion']=='13.0':
+      env_cmd = ". /opt/intel/composer_xe_2013/bin/compilervars.sh intel64"
+      env["CC"]  = "icc"
+      env["CXX"] = "icpc"
+   elif args['CompilerVersion']=='12.1':
+      env_cmd = ". /opt/intel/composer_xe_2011_sp1/bin/compilervars.sh intel64"
+      env["CC"]  = "icc"
+      env["CXX"] = "icpc"
    else:
       env_cmd = ". /opt/intel/bin/iccvars.sh intel64"
       env["CC"]  = "icc"
