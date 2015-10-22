@@ -18,6 +18,30 @@ from common import Compiler,System
 # different approaches may be used (some might set an environment variable,
 # others use an absolute path, or set a CMake option).
 
+def append_to_env(var, string):
+    if var in os.environ and os.environ[var]:
+        os.environ[var] += ' ' + string
+    else:
+        os.environ[var] = string
+
+def manage_stdlib_from_gcc(format_for_stdlib_flag):
+    """Manages using a C++ standard library from a particular gcc toolchain
+
+    Use this function to configure compilers (e.g. icc or clang) to
+    use the standard library from a particular gcc installation on the
+    particular host in use, since the system gcc may be too old.
+    """
+
+    if os.getenv('NODE_NAME') in ('bs_centos63', 'bs_mic'):
+        # TODO should setting gcctoolchain go in node-specific
+        # setup somewhere? Or the C++ standard library become
+        # a build option?
+        gcctoolchainpath='/opt/rh/devtoolset-1.1/root/usr'
+
+        stdlibflag=format_for_stdlib_flag.format(gcctoolchain=gcctoolchainpath)
+        append_to_env('CFLAGS', stdlibflag)
+        append_to_env('CXXFLAGS', stdlibflag)
+
 class BuildEnvironment(object):
     """Provides access to the build environment.
 
@@ -179,28 +203,47 @@ class BuildEnvironment(object):
         self.compiler = Compiler.CLANG
         self.c_compiler = 'clang-' + version
         self.cxx_compiler = 'clang++-' + version
-        # Need newer standard library for C++11 support.
-        if os.getenv('NODE_NAME') in ('bs_centos63', 'bs_mic'):
-            os.environ['CFLAGS'] = os.environ['CXXFLAGS'] = '--gcc-toolchain=/opt/rh/devtoolset-1.1/root/usr'
+        # Need a suitable standard library for C++11 support, so get
+        # one from a gcc on the host.
+        manage_stdlib_from_gcc('--gcc-toolchain={gcctoolchain}')
 
     def _init_icc(self, version):
-        # TODO: The version is ignored; this can be very misleading if the tag
-        # in Jenkins does not actually match the version of icc installed on
-        # the node.
-        # If it is not possible to install multiple icc versions, then the code
-        # here should check that the installed icc actually has the correct
-        # version.
         self.compiler = Compiler.INTEL
         if self.system == System.WINDOWS:
-            self.env_cmd = r'"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat" amd64 && "C:\Program Files (x86)\Intel\Composer XE\bin\compilervars.bat" intel64 vs2010'
-            self.c_compiler = 'icl'
-            self.cxx_compiler = 'icl'
-            # Remove incremental which is added by CMake to avoid warnings.
-            self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/STACK:10000000 /machine:x64"'
+            if version == '16.0' and os.getenv('NODE_NAME') in ('bs-win2012r2'):
+                # Note that installing icc 16 over icc 15 uninstalled
+                # the latter, so it is likely not possible to have
+                # multiple icc versions installed on Windows.
+                #
+                # TODO should the dependency on Visual Studio be
+                # expressed as a build option and thus use _init_msvc?
+                self.env_cmd = r'"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64 && "C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs2015'
+                self.c_compiler = 'icl'
+                self.cxx_compiler = 'icl'
+                self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/STACK:10000000 /machine:x64"'
+            else:
+                raise ConfigurationError('only bs-win2012r2 is supported for Windows builds with the Intel compiler')
         else:
-            self.env_cmd = '. /opt/intel/bin/iccvars.sh intel64'
             self.c_compiler = 'icc'
             self.cxx_compiler = 'icpc'
+            if version == '16.0':
+                self.env_cmd = '. /opt/intel/compilers_and_libraries_2016/linux/bin/compilervars.sh intel64'
+            elif version == '15.0':
+                self.env_cmd = '. /opt/intel/composer_xe_2015/bin/compilervars.sh intel64'
+            elif version == '14.0':
+                self.env_cmd = '. /opt/intel/composer_xe_2013_sp1/bin/compilervars.sh intel64'
+            elif version == '13.0':
+                self.env_cmd = '. /opt/intel/composer_xe_2013/bin/compilervars.sh intel64'
+            elif version == '12.1':
+                self.env_cmd = '. /opt/intel/composer_xe_2011_sp1/bin/compilervars.sh intel64'
+            else:
+                raise ConfigurationError('only icc 12.1, 13.0, 14.0, 15.0, 16.0 are supported, got icc-' + version)
+
+            # Need a suitable standard library for C++11 support.
+            # icc on Linux is required to use the C++ headers and
+            # standard libraries from a gcc installation, and defaults
+            # to that of the gcc it finds in the path.
+            manage_stdlib_from_gcc('-gcc-name={gcctoolchain}/bin/gcc')
 
     def _init_msvc(self, version):
         self.compiler = Compiler.MSVC

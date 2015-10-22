@@ -108,13 +108,14 @@ class Simd(Enum):
     # simplifies the gromacs.py build script significantly.
     NONE = 'None'
     REFERENCE = 'Reference'
+    MIC = 'MIC'
     SSE2 = 'SSE2'
     SSE41 = 'SSE4.1'
     AVX_128_FMA = 'AVX_128_FMA'
     AVX_256 = 'AVX_256'
     AVX2_256 = 'AVX2_256'
 
-    _values = (NONE, REFERENCE, SSE2, SSE41, AVX_128_FMA, AVX_256, AVX2_256)
+    _values = (NONE, REFERENCE, MIC, SSE2, SSE41, AVX_128_FMA, AVX_256, AVX2_256)
 
 class FftLibrary(Enum):
     """Enum to identify the FFT library to use"""
