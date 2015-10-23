@@ -20,6 +20,12 @@ The build script is required to provide one function:
 The build script can also set a few global variables to influence the behavior
 of the build:
 
+.. py:data:: build_options
+
+   If this list value is set to a non-empty list, then these build options are
+   used to initialize the build environment.  Useful for non-matrix builds that
+   want to, e.g., specify the compiler to use.
+
 .. py:data:: build_out_of_source
 
    If this boolean value is set to ``True``, the build will be executed

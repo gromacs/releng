@@ -532,10 +532,14 @@ class BuildContext(object):
         try:
             workspace = factory.workspace
             workspace._init_logs_dir()
-            context = factory.create_context(job_type, opts)
             workspace._checkout_project(Project.GROMACS)
             build_script_path = workspace._resolve_build_input_file(build, '.py')
-            script = BuildScript(build_script_path)
+            script = BuildScript(factory.executor, build_script_path)
+            if script.build_opts:
+                if opts is None:
+                    opts = []
+                opts.extend(script.build_opts)
+            context = factory.create_context(job_type, opts)
             for project in script.extra_projects:
                 workspace._checkout_project(project)
             workspace._check_projects()
