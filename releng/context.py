@@ -28,7 +28,8 @@ class FailureTracker(object):
         failed (bool): Whether the build has already failed.
     """
 
-    def __init__(self):
+    def __init__(self, factory):
+        self._executor = factory.executor
         self.failed = False
         self._unsuccessful_reason = []
 
@@ -69,9 +70,8 @@ class FailureTracker(object):
             # so skip the log for simplicity.
             if workspace is not None:
                 path = workspace.get_path_for_logfile('unsuccessful-reason.log')
-                if not workspace._is_dry_run:
-                    with open(path, 'w') as f:
-                        f.write('\n'.join(self._unsuccessful_reason) + '\n')
+                contents = '\n'.join(self._unsuccessful_reason) + '\n'
+                self._executor.write_file(path, contents)
         if self.failed:
             assert self._unsuccessful_reason, "Failed build did not produce an unsuccessful reason"
 
@@ -98,9 +98,9 @@ class ContextFactory(object):
             env = dict(os.environ)
         self.system = system
         self.dry_run = dry_run
-        self.failure_tracker = FailureTracker()
         self._env = env
         self._executor = None
+        self._failure_tracker = None
         self._gerrit = None
         self._workspace = None
 
@@ -118,6 +118,13 @@ class ContextFactory(object):
         if self._executor is None:
             self.init_executor()
         return self._executor
+
+    @property
+    def failure_tracker(self):
+        """Returns the FailureTracker instance for the build."""
+        if self._failure_tracker is None:
+            self._init_failure_tracker()
+        return self._failure_tracker
 
     @property
     def gerrit(self):
@@ -142,6 +149,10 @@ class ContextFactory(object):
         if instance is None:
             instance = Executor()
         self._executor = instance
+
+    def _init_failure_tracker(self):
+        assert self._failure_tracker is None
+        self._failure_tracker = FailureTracker(self)
 
     def init_gerrit_integration(self, **kwargs):
         """Initializes GerritIntegration with given parameters.
