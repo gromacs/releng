@@ -17,7 +17,7 @@ class TestTriggeredBuildUrl(unittest.TestCase):
                 'LAST_TRIGGERED_JOB_NAME': 'Test_Job',
                 'TRIGGERED_BUILD_NUMBER_Test_Job': 42
         }
-        self.helper = TestHelper(env)
+        self.helper = TestHelper(self, env=env)
 
     def test_TriggeredBuildUrl(self):
         factory = self.helper.factory
@@ -30,12 +30,7 @@ class TestTriggeredBuildUrl(unittest.TestCase):
 
 class TestPrepareBuildMatrix(unittest.TestCase):
     def setUp(self):
-        env = {
-                'CHECKOUT_PROJECT': Project.GROMACS,
-                'CHECKOUT_REFSPEC': 'HEAD',
-                'WORKSPACE': 'ws'
-        }
-        self.helper = TestHelper(env)
+        self.helper = TestHelper(self, workspace='ws')
 
     def test_PrepareBuildMatrix(self):
         factory = self.helper.factory

@@ -11,7 +11,7 @@ from releng.test.utils import TestHelper
 
 class TestBuildScript(unittest.TestCase):
     def setUp(self):
-        self.helper = TestHelper(dict())
+        self.helper = TestHelper(self)
 
     def test_EmptyScript(self):
         executor = self.helper.executor

@@ -249,7 +249,7 @@ Currently, there are limited unit tests for some parts of the scripts.
 They require a backport of ``unittest.mock`` to be installed, and can be
 executed with ::
 
-    python -m unittest discover releng.test
+    python -m releng.test
 
 The only way to fully test the releng script is to upload a change
 to Gerrit and let Jenkins build it.  In principle, it is possible to run the

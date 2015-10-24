@@ -50,7 +50,7 @@ class FailureTracker(object):
             details (Optional[List[str]]): Reason(s) reported back to Gerrit.
                 If not provided, reason is used.
         """
-        print('FAILED: ' + reason)
+        print('FAILED: ' + reason, file=self._executor.console)
         if details is None:
             self._unsuccessful_reason.append(reason)
         else:
@@ -63,9 +63,10 @@ class FailureTracker(object):
             workspace (Workspace): Workspace to put the failure log into.
         """
         if self._unsuccessful_reason:
-            print('Build FAILED:')
+            console = self._executor.console
+            print('Build FAILED:', file=console)
             for line in self._unsuccessful_reason:
-                print('  ' + line)
+                print('  ' + line, file=console)
             # Only severe configuration errors can cause workspace to be None,
             # so skip the log for simplicity.
             if workspace is not None:

@@ -15,9 +15,14 @@ from __future__ import print_function
 
 import os
 import shutil
+import sys
 
 class Executor(object):
     """Real executor for Jenkins builds that does all operations for real."""
+
+    @property
+    def console(self):
+        return sys.stdout
 
     def ensure_dir_exists(self, path, ensure_empty=False):
         """Ensures that a directory exists and optionally that it is empty."""
@@ -41,6 +46,11 @@ class Executor(object):
 
 class DryRunExecutor(object):
     """Executor replacement for manual testing dry runs."""
+
+    @property
+    def console(self):
+        return sys.stdout
+
     def ensure_dir_exists(self, path, ensure_empty=False):
         pass
 
