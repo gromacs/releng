@@ -105,11 +105,13 @@ if "GMX_EXTERNAL" in opts.keys():
        else:
           env["CMAKE_LIBRARY_PATH"] = "/usr/lib/atlas-base"
 
-use_gpu = use_mpi = use_tmpi = use_separate_pme_nodes = False
+use_gpu = use_opencl = use_amdappsdk = use_mpi = use_tmpi = use_separate_pme_nodes = False
 if "GMX_GPU" in opts.keys() and cmake_istrue(opts["GMX_GPU"]):
    use_gpu = True
-if "GMX_MPI" in opts.keys() and cmake_istrue(opts["GMX_MPI"]):
-   use_mpi = True
+if use_gpu and "GMX_USE_OPENCL" in opts.keys() and cmake_istrue(opts["GMX_USE_OPENCL"]):
+   use_opencl = True
+if "AMDAPPSDK" in args.keys():
+   use_amdappsdk = True
 if not use_mpi and (not "GMX_THREAD_MPI" in opts.keys() or cmake_istrue(opts["GMX_THREAD_MPI"])):
    use_tmpi = True
 if "GMX_TEST_NPME" in opts.keys() and (use_mpi or use_tmpi):
@@ -146,7 +148,13 @@ if use_mpi:
          sys.exit("Could not determine the full path to the compiler (%s)" % env["OMPI_CC"])
 
 if "CUDA" in args:
+   # used for FindCUDA
    opts_list += ' -DCUDA_TOOLKIT_ROOT_DIR="/opt/cuda_%s"' % (args["CUDA"],)
+   # used for FindOpenCL
+   env['CUDA_HOME'] = '/opt/cuda_%s' % (args["CUDA"],)
+
+if use_amdappsdk:
+   env['AMDAPPSDKROOT'] = '/opt/AMDAPPSDK-%s' % (args["AMDAPPSDK"])
 
 if not os.getenv("NODE_NAME").lower().find("win")>-1:
    call_opts = {"executable":"/bin/bash"}
@@ -287,6 +295,11 @@ else:
 
 mdparam = ""
 if use_gpu:
+   if use_opencl and use_amdappsdk:
+      # With real MPI, we can currently only use one rank, so we hack
+      # this to avoid triggering -np 2 below
+      use_mpi = False
+
    # We used to pass -gpu_id in gmxtest.pl -mdparam to add to the
    # mdrun command line, but this does not interact well with the
    # gmxtest.pl test harness needing to handle test cases that must
