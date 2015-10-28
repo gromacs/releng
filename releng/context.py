@@ -530,6 +530,7 @@ class BuildContext(object):
         This method is the top-level driver for the build."""
         workspace = None
         failure_tracker = factory.failure_tracker
+        executor = factory.executor
         try:
             workspace = factory.workspace
             workspace._init_logs_dir()
@@ -545,7 +546,7 @@ class BuildContext(object):
                 workspace._checkout_project(project)
             workspace._check_projects()
             workspace._init_build_dir(script.build_out_of_source)
-            os.chdir(workspace.build_dir)
+            executor.chdir(workspace.build_dir)
             context._flush_output()
             script.do_build(context)
         except BuildError as e:
@@ -554,4 +555,4 @@ class BuildContext(object):
             failure_tracker.mark_failed('Jenkins configuration error: ' + str(e))
         failure_tracker.report(workspace)
         if failure_tracker.failed:
-            sys.exit(1)
+            executor.exit(1)

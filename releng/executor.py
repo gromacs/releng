@@ -24,6 +24,12 @@ class Executor(object):
     def console(self):
         return sys.stdout
 
+    def chdir(self, path):
+        os.chdir(path)
+
+    def exit(self, exitcode):
+        sys.exit(exitcode)
+
     def ensure_dir_exists(self, path, ensure_empty=False):
         """Ensures that a directory exists and optionally that it is empty."""
         if ensure_empty:
@@ -50,6 +56,12 @@ class DryRunExecutor(object):
     @property
     def console(self):
         return sys.stdout
+
+    def chdir(self, path):
+        os.chdir(path)
+
+    def exit(self, exitcode):
+        sys.exit(exitcode)
 
     def ensure_dir_exists(self, path, ensure_empty=False):
         pass
