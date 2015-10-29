@@ -58,6 +58,9 @@ additional information:
 .. autoclass:: BuildEnvironment
    :members:
 
+.. py:currentmodule:: releng.options
+.. autoclass:: BuildOptions
+
 .. py:currentmodule:: releng.parameters
 .. autoclass:: BuildParameters
    :members:

@@ -6,12 +6,71 @@ the build environment and parameters, and helper classes used by it.
 It is is only used internally within the releng package.
 """
 
+import re
 import shlex
 
 from common import ConfigurationError
 from common import BuildType, FftLibrary, Simd
 from environment import BuildEnvironment
 from parameters import BuildParameters
+
+class BuildOptions(object):
+    """Values for all build options.
+
+    This class provides read-only access to the values of all build options.
+    A build option named ``mdrun-only`` is accessible as ``opts.mdrun_only``
+    and ``opts['mdrun-only']``, whichever is more convenient.
+    The keys for all build options are always available.  If an option is not
+    specified, the corresponding value is ``None``.
+
+    For simple flag options that can only be set or unset, the stored value is
+    ``True`` if the option is set.
+
+    For boolean options, the stored value is ``False`` or ``True``.  For
+    example, ``no-mpi`` and ``mpi=no`` are both stored as ``opts.mpi == True``.
+
+    For options like ``gcc-4.8``, the value is stored as ``opts.gcc == '4.8'``.
+    Similarly, ``build-jobs=2`` is stored as ``opts.build_jobs == '2'``.
+    """
+    def __init__(self, handlers, opts):
+        self._opts = dict()
+        for handler in handlers:
+            name = handler.name
+            self._opts[name] = None
+            self._set_option(name, None)
+        if opts:
+            self._process_options(handlers, opts)
+
+    def _set_option(self, name, value):
+        assert name in self._opts
+        self._opts[name] = value
+        self.__dict__[self._option_var_name(name)] = value
+
+    def _option_var_name(self, name):
+        return re.sub(r'[^0-9a-zA-Z_]', '_', name)
+
+    def _process_options(self, handlers, opts):
+        opts = list(opts)
+        for handler in handlers:
+            found_opts = [x for x in opts if handler.matches(x)]
+            if not handler.allow_multiple and len(found_opts) > 1:
+                raise ConfigurationError('conflicting options found: ' + ' '.join(found_opts))
+            for found_opt in found_opts:
+                opts.remove(found_opt)
+                self._handle_option(handler, found_opt)
+        if opts:
+            raise ConfigurationError('unknown options: ' + ' '.join(opts))
+
+    def _handle_option(self, handler, opt):
+        name = handler.name
+        value = handler.handle(opt)
+        self._set_option(name, value)
+
+    def __getitem__(self, key):
+        return self._opts[key]
+
+    def __contains__(self, item):
+        return item in self._opts
 
 class _OptionHandlerClosure(object):
     """Helper class for providing context for build option handler methods.
@@ -124,6 +183,11 @@ class _BuildOptionHandler(object):
         self._handler = handler
         self.allow_multiple = allow_multiple
 
+    @property
+    def name(self):
+        """Name of the option (without any assignment suffixes etc.)."""
+        return self._name
+
     def matches(self, opt):
         """Checks whether this handler handles the provided option.
 
@@ -148,7 +212,7 @@ class _BuildOptionHandler(object):
         Args:
             opt (str): Option to process.
         """
-        pass
+        return None
 
 class _SimpleOptionHandler(_BuildOptionHandler):
     """Handler for a simple flag option.
@@ -165,6 +229,7 @@ class _SimpleOptionHandler(_BuildOptionHandler):
 
     def handle(self, opt):
         self._handler()
+        return True
 
 class _SuffixOptionHandler(_BuildOptionHandler):
     """Handler for an option with syntax 'opt-VALUE'.
@@ -173,12 +238,17 @@ class _SuffixOptionHandler(_BuildOptionHandler):
     parameter that provides VALUE.
     """
 
+    @property
+    def name(self):
+        return self._name[:-1]
+
     def matches(self, opt):
         return opt.startswith(self._name)
 
     def handle(self, opt):
         suffix = opt[len(self._name):]
         self._handler(suffix)
+        return suffix
 
 class _BoolOptionHandler(_BuildOptionHandler):
     """Handler for an option with syntax '[no-]opt[=on/off]'.
@@ -192,7 +262,9 @@ class _BoolOptionHandler(_BuildOptionHandler):
                 or opt.startswith(self._name + '=')
 
     def handle(self, opt):
-        self._handler(self._parse(opt))
+        value = self._parse(opt)
+        self._handler(value)
+        return value
 
     def _parse(self, opt):
         if opt == self._name:
@@ -223,8 +295,6 @@ def process_build_options(system, opts):
     """
     e = BuildEnvironment(system)
     p = BuildParameters()
-    if not opts:
-        return (e, p)
     h = _OptionHandlerClosure(e, p)
     # The options are processed in the order they are in the tuple, to support
     # cross-dependencies between the options (there are a few).
@@ -259,14 +329,5 @@ def process_build_options(system, opts):
             _SuffixOptionHandler('cmake+', h._add_cmake_option, allow_multiple=True),
             _SuffixOptionHandler('gmxtest+', h._add_gmxtest_args, allow_multiple=True),
         )
-    opts = list(opts)
-    for handler in handlers:
-        found_opts = [x for x in opts if handler.matches(x)]
-        if not handler.allow_multiple and len(found_opts) > 1:
-            raise ConfigurationError('conflicting options found: ' + ' '.join(found_opts))
-        for found_opt in found_opts:
-            opts.remove(found_opt)
-            handler.handle(found_opt)
-    if opts:
-        raise ConfigurationError('unknown options: ' + ' '.join(opts))
-    return (e, p)
+    o = BuildOptions(handlers, opts)
+    return (e, p, o)

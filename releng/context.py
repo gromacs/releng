@@ -190,8 +190,9 @@ class BuildContext(object):
             paths to executables.  Many of the environment properties, such as
             selecting the compiler, are handled by the build context
             transparently, without the build script needing to access this.
+        opts (BuildOptions): Access to all build options.
         params (BuildParameters): Access to build parameters set through build
-            options.
+            options (deprecated).
         workspace (Workspace): Access to the build workspace.
             Can be used to get paths to various parts in the workspace for
             changing directories and for producing log files.
@@ -204,7 +205,7 @@ class BuildContext(object):
         self.is_dry_run = factory.dry_run
         self._failure_tracker = factory.failure_tracker
         self.workspace = factory.workspace
-        self.env, self.params = process_build_options(factory.system, opts)
+        self.env, self.params, self.opts = process_build_options(factory.system, opts)
 
     def _flush_output(self):
         """Ensures all output is flushed before an external process is started.
