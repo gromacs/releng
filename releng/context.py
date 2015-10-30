@@ -95,6 +95,8 @@ class ContextFactory(object):
     def __init__(self, system=None, env=None, dry_run=False):
         if system is None:
             system = platform.system()
+        if system is not None:
+            system = System.parse(system)
         if env is None:
             env = dict(os.environ)
         self.system = system
@@ -204,8 +206,9 @@ class BuildContext(object):
         self.job_type = job_type
         self.is_dry_run = factory.dry_run
         self._failure_tracker = factory.failure_tracker
+        self._executor = factory.executor
         self.workspace = factory.workspace
-        self.env, self.params, self.opts = process_build_options(factory.system, opts, extra_options)
+        self.env, self.params, self.opts = process_build_options(factory, opts, extra_options)
 
     def _flush_output(self):
         """Ensures all output is flushed before an external process is started.
@@ -227,6 +230,10 @@ class BuildContext(object):
     def get_doc_cmake_options(self, doxygen_version, sphinx_version):
         """Returns non-GROMACS-specific CMake options to set for documentation builds."""
         return {'DOXYGEN_EXECUTABLE': self.env.get_doxygen_command(doxygen_version)}
+
+    def chdir(self, path):
+        """Changes the working directory for subsequent run_cmd() calls."""
+        self._executor.chdir(path)
 
     def _cmd_to_string(self, cmd, shell):
         """Converts a shell command from a string/list into properly escaped string."""
@@ -481,12 +488,14 @@ class BuildContext(object):
         # TODO: Consider providing an analysis/summary of the results.
         pass
 
-    def process_clang_analyzer_results(self, html_dir):
+    def process_clang_analyzer_results(self, html_dir=None):
         """Processes results from clang analyzer.
 
         Args:
             html_dir (str): Output directory to which scan-build wrote found issues.
         """
+        if html_dir is None:
+            html_dir = self.env.clang_analyzer_output_dir
         # The analyzer produces a subdirectory for each run with a dynamic name.
         # To make it easier to process in Jenkins, we rename it to a fixed name.
         subdirs = os.listdir(html_dir)
@@ -514,7 +523,7 @@ class BuildContext(object):
         releng_dir = self.workspace.get_project_dir(Project.RELENG)
         gromacs_dir = self.workspace.get_project_dir(Project.GROMACS)
         output_path = self.workspace.get_path_for_logfile('coverage.xml')
-        os.chdir(self.workspace.build_dir)
+        self.chdir(self.workspace.build_dir)
         gcovr = os.path.join(releng_dir, 'scripts', 'gcovr-3.2')
         # TODO: This relies on gcov from the path being compatible with
         # whatever compiler was set in the build script, which is fragile.

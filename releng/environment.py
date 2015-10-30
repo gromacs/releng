@@ -75,10 +75,8 @@ class BuildEnvironment(object):
            CMake.
     """
 
-    def __init__(self, system):
-        if system is not None:
-            system = System.parse(system)
-        self.system = system
+    def __init__(self, factory):
+        self.system = factory.system
         self.compiler = None
         self.shell_call_opts = dict()
         self.env_cmd = None
@@ -89,10 +87,12 @@ class BuildEnvironment(object):
         self.cmake_generator = None
         self.cuda_root = None
         self.cuda_host_compiler = None
+        self.clang_analyzer_output_dir = None
         self.extra_cmake_options = dict()
 
         self._build_jobs = 1
         self._build_prefix_cmd = None
+        self._workspace = factory.workspace
 
         if self.system is not None:
             self._init_system()
@@ -256,8 +256,12 @@ class BuildEnvironment(object):
         else:
             raise ConfigurationError('only Visual Studio 2010, 2013, and 2013 are supported, got msvc-' + version)
 
-    def init_clang_analyzer(self, clang_version, html_output_dir):
-        self.init_clang(clang_version)
+    def init_clang_analyzer(self, clang_version=None, html_output_dir=None):
+        if clang_version is not None:
+            self.init_clang(clang_version)
+        if html_output_dir is None:
+            html_output_dir = self._workspace.get_log_dir(category='scan_html')
+        self.clang_analyzer_output_dir = html_output_dir
         analyzer = self._find_executable(self.c_compiler)
         os.environ['CCC_CC'] = self.c_compiler
         os.environ['CCC_CXX'] = self.cxx_compiler

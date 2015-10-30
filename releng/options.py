@@ -279,6 +279,21 @@ class _SuffixOptionHandler(_BuildOptionHandler):
         self._handler(suffix)
         return suffix
 
+class _VersionOptionHandler(_BuildOptionHandler):
+    """Handler for an option with syntax 'opt-X[.Y]*'.
+
+    The handler provided to the constructor is called with a single string
+    parameter that provides the version number.
+    """
+
+    def matches(self, opt):
+        return bool(re.match(self._name + r'-\d+(\.\d+)*$', opt))
+
+    def handle(self, opt):
+        suffix = opt[len(self._name)+1:]
+        self._handler(suffix)
+        return suffix
+
 class _BoolOptionHandler(_BuildOptionHandler):
     """Handler for an option with syntax '[no-]opt[=on/off]'.
 
@@ -308,21 +323,22 @@ class _BoolOptionHandler(_BuildOptionHandler):
                 return False
         raise ConfigurationError('invalid build option: ' + opt)
 
-def process_build_options(system, opts, extra_options):
+def process_build_options(factory, opts, extra_options):
     """Initializes build environment and parameters from OS and build options.
 
     Creates the environment and parameters objects, and adjusts them
     based on the provided options.
 
     Args:
-        system (str or None): Operating system of the build node.
+        factory (ContextFactory): Factory to access other objects.
         opts (List[str]): List of build options.
+        extra_options (Dict[str, function]): Extra build options to accept.
 
     Returns:
         Tuple[BuildEnvironment, BuildParameters]: Build environment and
             parameters initialized according to the options.
     """
-    e = BuildEnvironment(system)
+    e = BuildEnvironment(factory)
     p = BuildParameters()
     h = _OptionHandlerClosure(e, p)
     # The options are processed in the order they are in the tuple, to support
@@ -331,12 +347,13 @@ def process_build_options(system, opts, extra_options):
     # options in docs/releng.rst.
     handlers = [
             _SuffixOptionHandler('build-jobs=', h._init_build_jobs),
-            _SuffixOptionHandler('cmake-', e._init_cmake),
-            _SuffixOptionHandler('gcc-', e.init_gcc),
-            _SuffixOptionHandler('clang-', e.init_clang),
-            _SuffixOptionHandler('icc-', e._init_icc),
-            _SuffixOptionHandler('msvc-', e._init_msvc),
-            _SuffixOptionHandler('cuda-', e._init_cuda),
+            _VersionOptionHandler('cmake', e._init_cmake),
+            _VersionOptionHandler('gcc', e.init_gcc),
+            _VersionOptionHandler('clang', e.init_clang),
+            _SimpleOptionHandler('clang-analyzer', e.init_clang_analyzer),
+            _VersionOptionHandler('icc', e._init_icc),
+            _VersionOptionHandler('msvc', e._init_msvc),
+            _VersionOptionHandler('cuda', e._init_cuda),
             _SimpleOptionHandler('phi', h._init_phi),
             _SimpleOptionHandler('mdrun-only', h._init_mdrun_only),
             _SimpleOptionHandler('reference', h._init_reference),
