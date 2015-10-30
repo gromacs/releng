@@ -8,6 +8,7 @@ import os.path
 
 from common import BuildError, ConfigurationError
 from common import BuildType, Compiler, FftLibrary, JobType, Project, Simd, System
+from options import OptionTypes
 
 class BuildScript(object):
     """
@@ -41,6 +42,7 @@ class BuildScript(object):
         build_globals['Project'] = Project
         build_globals['Simd'] = Simd
         build_globals['System'] = System
+        build_globals['Option'] = OptionTypes
         try:
             source = ''.join(executor.read_file(path))
         except IOError:
@@ -54,6 +56,7 @@ class BuildScript(object):
         self._do_build = do_build
         self.build_opts = build_globals.get('build_options', [])
         self.build_out_of_source = build_globals.get('build_out_of_source', False)
+        self.extra_options = build_globals.get('extra_options', dict())
         self.extra_projects = build_globals.get('extra_projects', [])
 
     def do_build(self, context):

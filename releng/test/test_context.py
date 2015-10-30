@@ -86,6 +86,19 @@ class TestRunBuild(unittest.TestCase):
         BuildContext._run_build(self.helper.factory,
                 'script/build.py', JobType.GERRIT, ['build-jobs=3'])
 
+    def test_ExtraOptions(self):
+        executor = self.helper.executor
+        self.helper.add_input_file('script/build.py',
+                """\
+                extra_options = {
+                    'extra': Option.simple
+                }
+                def do_build(context):
+                    pass
+                """);
+        BuildContext._run_build(self.helper.factory,
+                'script/build.py', JobType.GERRIT, ['extra'])
+
 if __name__ == '__main__':
     unittest.main()
 

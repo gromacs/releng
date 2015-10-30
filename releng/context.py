@@ -171,9 +171,9 @@ class ContextFactory(object):
         assert self._workspace is None
         self._workspace = Workspace(factory=self, **kwargs)
 
-    def create_context(self, job_type, opts):
+    def create_context(self, *args):
         """Creates a BuildContext with given arguments."""
-        return BuildContext(self, job_type, opts)
+        return BuildContext(self, *args)
 
 class BuildContext(object):
     """Top-level interface for build scripts to the releng package.
@@ -198,14 +198,14 @@ class BuildContext(object):
             changing directories and for producing log files.
     """
 
-    def __init__(self, factory, job_type, opts):
+    def __init__(self, factory, job_type, opts, extra_options):
         if job_type is not None:
             JobType.validate(job_type)
         self.job_type = job_type
         self.is_dry_run = factory.dry_run
         self._failure_tracker = factory.failure_tracker
         self.workspace = factory.workspace
-        self.env, self.params, self.opts = process_build_options(factory.system, opts)
+        self.env, self.params, self.opts = process_build_options(factory.system, opts, extra_options)
 
     def _flush_output(self):
         """Ensures all output is flushed before an external process is started.
@@ -542,7 +542,7 @@ class BuildContext(object):
                 if opts is None:
                     opts = []
                 opts.extend(script.build_opts)
-            context = factory.create_context(job_type, opts)
+            context = factory.create_context(job_type, opts, script.extra_options)
             for project in script.extra_projects:
                 workspace._checkout_project(project)
             workspace._check_projects()

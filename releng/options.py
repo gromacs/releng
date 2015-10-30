@@ -72,6 +72,30 @@ class BuildOptions(object):
     def __contains__(self, item):
         return item in self._opts
 
+class OptionTypes(object):
+    """Factories for declaring options in build scripts."""
+
+    @staticmethod
+    def simple(name):
+        """Creates a simple option that stores ``True`` if set."""
+        return _SimpleOptionHandler(name)
+
+    @staticmethod
+    def bool(name):
+        """Creates a boolean option that stores ``True`` or ``False`` if set.
+
+        Accepted syntax is ``[no-]opt[=on/off]``.
+        """
+        return _BoolOptionHandler(name)
+
+    @staticmethod
+    def string(name):
+        """Creates an option that stores an arbitrary string value if set.
+
+        Accepted syntax is ``opt=value``.
+        """
+        return _SuffixOptionHandler(name + '=')
+
 class _OptionHandlerClosure(object):
     """Helper class for providing context for build option handler methods.
 
@@ -166,7 +190,7 @@ class _BuildOptionHandler(object):
     identify and handle the option.
     """
 
-    def __init__(self, name, handler, allow_multiple=False):
+    def __init__(self, name, handler=None, allow_multiple=False):
         """Creates a handler for a specified option.
 
         Args:
@@ -180,8 +204,13 @@ class _BuildOptionHandler(object):
                 to match this handler.
         """
         self._name = name
+        if handler is None:
+            handler = self._null_handler
         self._handler = handler
         self.allow_multiple = allow_multiple
+
+    def _null_handler(self, *args):
+        pass
 
     @property
     def name(self):
@@ -279,7 +308,7 @@ class _BoolOptionHandler(_BuildOptionHandler):
                 return False
         raise ConfigurationError('invalid build option: ' + opt)
 
-def process_build_options(system, opts):
+def process_build_options(system, opts, extra_options):
     """Initializes build environment and parameters from OS and build options.
 
     Creates the environment and parameters objects, and adjusts them
@@ -300,7 +329,7 @@ def process_build_options(system, opts):
     # cross-dependencies between the options (there are a few).
     # If you add options here, please also update the documentation for the
     # options in docs/releng.rst.
-    handlers = (
+    handlers = [
             _SuffixOptionHandler('build-jobs=', h._init_build_jobs),
             _SuffixOptionHandler('cmake-', e._init_cmake),
             _SuffixOptionHandler('gcc-', e.init_gcc),
@@ -328,6 +357,16 @@ def process_build_options(system, opts):
             _SuffixOptionHandler('env+', h._add_env_var, allow_multiple=True),
             _SuffixOptionHandler('cmake+', h._add_cmake_option, allow_multiple=True),
             _SuffixOptionHandler('gmxtest+', h._add_gmxtest_args, allow_multiple=True),
-        )
+        ]
+    if extra_options:
+        for name, builder in extra_options.iteritems():
+            new_handler = builder(name)
+            existing_handlers = [x for x in handlers if x.name == name]
+            assert len(existing_handlers) <= 1
+            if existing_handlers:
+                if type(new_handler) != type(existing_handlers[0]):
+                    raise ConfigurationError('Option {0} redeclared with a different type'.format(name))
+                continue
+            handlers.append(new_handler)
     o = BuildOptions(handlers, opts)
     return (e, p, o)

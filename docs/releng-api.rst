@@ -31,6 +31,27 @@ of the build:
    If this boolean value is set to ``True``, the build will be executed
    out-of-source.  By default, the build will be in-source.
 
+.. py:data:: extra_options
+
+   If this dictionary is set, it declares additional build options that the
+   script understands.  This can be used to declare options that only influence
+   the build script; releng declares only options that affect the build
+   environment or the build host assignment.  Syntax is as follows::
+
+     extra_options = {
+         'opt': Option.simple,
+         'opt-bool': Option.bool,
+         'opt-str': Option.string
+     }
+
+   The values of the build options can be read from ``context.opts`` in
+   do_build().  See ``OptionTypes`` documentation for the available option
+   types: in the build script, ``Option`` is bound to ``OptionTypes``.
+
+   Technically, the value in the dictionary is a callable that gets called
+   with the name of the option to create an internal handler class for
+   processing the option.
+
 .. py:data:: extra_projects
 
    If this list value is set to a non-empty list, then these repositories are
