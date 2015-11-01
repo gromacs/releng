@@ -152,23 +152,11 @@ openmp[=on/off]
 valgrind
   Use valgrind for running (some of the) tests.
 
-Additionally, the following options can be used to pass raw environment
-variables and arguments to CMake and ``gmxtest.pl``.  These are included to
-support quick testing of different setups, but as soon as things stabilize, a
-proper build option should be added.  In particular when used to pass
-|Gromacs|-specific options to CMake, these create unwanted coupling between
-Jenkins and the build system, making it impossible for people without admin
-access to Jenkins to change anything that is influenced by these options.
-
-env+VAR=VALUE
-  Set environment variable ``VAR`` to ``VALUE``.
-cmake+VAR=VALUE
-  Set CMake variable ``VAR`` to ``VALUE``.
-gmxtest+ARGS
-  Pass ``ARGS`` as command-line arguments to gmxtest.pl.  ``ARGS`` can contain
-  whitespace, which separates options (in such a case, it needs to be quoted).
-  Quotes within ``ARGS`` are also allowed to pass arguments that contain
-  whitespace.
+Build scripts can define additional options that only influence the behavior of
+the build scripts.  This is used for matrix builds in :file:`gromacs.py` for
+options that do not influence build the build environment or place requirements
+on the build host.  This allows adding new options when the |Gromacs| build
+system changes and new combinations need to be tested, without changing releng.
 
 Build system changes
 --------------------

@@ -15,9 +15,6 @@ from environment import BuildEnvironment
 from parameters import BuildParameters
 import slaves
 
-# Indicates that an option requires a label of the same name as the option.
-OPT = '_OPT_'
-
 class BuildOptions(object):
     """Values for all build options.
 
@@ -66,9 +63,9 @@ class BuildOptions(object):
             raise ConfigurationError('unknown options: ' + ' '.join(opts))
 
     def _handle_option(self, handler, opt):
-        name = handler.name
-        value = handler.handle(opt)
-        self._set_option(name, value)
+        value = handler.parse(opt)
+        self._set_option(handler.name, value)
+        handler.handle(value)
 
     def __getitem__(self, key):
         return self._opts[key]
@@ -98,7 +95,7 @@ class OptionTypes(object):
 
         Accepted syntax is ``opt=value``.
         """
-        return _SuffixOptionHandler(name + '=')
+        return _StringOptionHandler(name)
 
 class _OptionHandlerClosure(object):
     """Helper class for providing context for build option handler methods.
@@ -175,60 +172,52 @@ class _OptionHandlerClosure(object):
     def _init_valgrind(self):
         self._params.memcheck = True
 
-    def _add_env_var(self, assignment):
-        var, value = assignment.split('=', 1)
-        self._env.add_env_var(var, value)
-
-    def _add_cmake_option(self, assignment):
-        var, value = assignment.split('=', 1)
-        self._params.extra_cmake_options[var] = value
-
-    def _add_gmxtest_args(self, args):
-        self._params.extra_gmxtest_args.extend(shlex.split(args))
+# Indicates that an option requires a label of the same name as the option.
+OPT = lambda opt, value: opt
 
 class _BuildOptionHandler(object):
     """Base class for build options.
 
-    Concrete option classes implement matches() and handle() methods to
-    identify and handle the option.
+    Concrete option classes implement matches() and parse() to identify and
+    parse the option, and potentially override handle() and label() to
+    customize the logic for processing the option.
     """
 
     def __init__(self, name, handler=None, label=None, allow_multiple=False):
         """Creates a handler for a specified option.
 
         Args:
-            name (str): Name of the option. Exact interpretation depends on the
-                subclass.
+            name (str): Name of the option.
             handler (function): Handler function to call when the option is set.
                 Parameters may be passed to the handler to provide information
                 parsed from the option string (e.g., a version number),
-                depending on the subclass.
-            label (Optional[str]): Label that the host is required to have to
-                build with this option.  Can be set to OPT to require a label
-                with the same name as the option.  If None, this option does
-                not impose any restriction on the host.
+                depending on the subclass.  If None, only the value is stored
+                in BuildOptions.
+            label (function): Determines label that the host is required to
+                have to build with this option.  Called with two parameters:
+                full string of the option, and the option value parsed from it.
+                Can be set to OPT to require a label with the same name as the
+                option.  If None, this option does not restrict the build host.
             allow_multiple (bool): If not True, at most one option is allowed
                 to match this handler.
         """
-        self._name = name
+        self.name = name
         if handler is None:
             handler = self._null_handler
+        if label is None:
+            label = self._null_handler
         self._handler = handler
-        self.label = label
+        self._label = label
         self.allow_multiple = allow_multiple
 
     def _null_handler(self, *args):
+        """Dummy handler to avoid null checks in callers."""
         pass
-
-    @property
-    def name(self):
-        """Name of the option (without any assignment suffixes etc.)."""
-        return self._name
 
     def matches(self, opt):
         """Checks whether this handler handles the provided option.
 
-        If this method returns True, then handle() will be called to process
+        If this method returns True, then parse() will be called to process
         the option.
 
         Args:
@@ -239,17 +228,46 @@ class _BuildOptionHandler(object):
         """
         return False
 
-    def handle(self, opt):
-        """Handles the provided option.
+    def parse(self, opt):
+        """Parses the option value from option string.
 
         This method is called for each option for which matches() returns True.
-        It calls the handler provided to the constructor, possibly after
-        parsing information from the option name.
 
         Args:
-            opt (str): Option to process.
+            opt (str): Option to parse.
+
+        Returns:
+            variable: Value for this option.
         """
         return None
+
+    def handle(self, value):
+        """Handles the provided option.
+
+        This method may be called after parse() to perform any build
+        environment effects that the option should have.
+        It calls the handler provided to the constructor.
+
+        Args:
+            value: Value of the option returned by parse().
+        """
+        self._handler(value)
+
+    def label(self, opt, value):
+        """Handles the provided option.
+
+        This method may be called after parse() to determine which hosts can
+        build with this option.
+        It calls the label handler provided to the constructor.
+
+        Args:
+            opt (str): Original option string.
+            value (variable): Value of the option returned by parse().
+
+        Returns:
+            str or None: Label required from the build host.
+        """
+        return self._label(opt, value)
 
 class _SimpleOptionHandler(_BuildOptionHandler):
     """Handler for a simple flag option.
@@ -258,78 +276,75 @@ class _SimpleOptionHandler(_BuildOptionHandler):
     specific feature and the negation would not make much sense, and so
     _BoolOptionHandler would not be appropriate.
 
-    The handler provided to the constructor is called without parameters.
+    The value of the option will always be ``True``.
     """
 
     def matches(self, opt):
-        return opt == self._name
+        return opt == self.name
 
-    def handle(self, opt):
-        self._handler()
+    def parse(self, opt):
         return True
 
-class _SuffixOptionHandler(_BuildOptionHandler):
-    """Handler for an option with syntax 'opt-VALUE'.
+    def handle(self, value):
+        self._handler()
 
-    The handler provided to the constructor is called with a single string
-    parameter that provides VALUE.
+class _StringOptionHandler(_BuildOptionHandler):
+    """Handler for an option with syntax 'opt=VALUE'.
+
+    The value of the option will be VALUE (a string).
     """
 
-    @property
-    def name(self):
-        return self._name[:-1]
-
     def matches(self, opt):
-        return opt.startswith(self._name)
+        return opt.startswith(self.name + '=')
 
-    def handle(self, opt):
-        suffix = opt[len(self._name):]
-        self._handler(suffix)
-        return suffix
+    def parse(self, opt):
+        return opt[len(self.name)+1:]
 
 class _VersionOptionHandler(_BuildOptionHandler):
     """Handler for an option with syntax 'opt-X[.Y]*'.
 
-    The handler provided to the constructor is called with a single string
-    parameter that provides the version number.
+    The value of the option will be the version number (a string).
     """
 
     def matches(self, opt):
-        return bool(re.match(self._name + r'-\d+(\.\d+)*$', opt))
+        return bool(re.match(self.name + r'-\d+(\.\d+)*$', opt))
 
-    def handle(self, opt):
-        suffix = opt[len(self._name)+1:]
-        self._handler(suffix)
-        return suffix
+    def parse(self, opt):
+        return opt[len(self.name)+1:]
 
 class _BoolOptionHandler(_BuildOptionHandler):
     """Handler for an option with syntax '[no-]opt[=on/off]'.
 
-    The handler provided to the constructor is called with a single boolean
-    parameter that identifies whether the option is on or off.
+    The value of the option will be ``True`` or ``False``.
     """
 
     def matches(self, opt):
-        return opt in (self._name, 'no-' + self._name) \
-                or opt.startswith(self._name + '=')
+        return opt in (self.name, 'no-' + self.name) \
+                or opt.startswith(self.name + '=')
 
-    def handle(self, opt):
-        value = self._parse(opt)
-        self._handler(value)
-        return value
-
-    def _parse(self, opt):
-        if opt == self._name:
+    def parse(self, opt):
+        if opt == self.name:
             return True
-        if opt == 'no-' + self._name:
+        if opt == 'no-' + self.name:
             return False
-        if opt.startswith(self._name + '='):
-            value = opt[len(self._name)+1:].lower()
+        if opt.startswith(self.name + '='):
+            value = opt[len(self.name)+1:].lower()
             if value in ('1', 'on', 'true'):
                 return True
             if value in ('0', 'off', 'false'):
                 return False
         raise ConfigurationError('invalid build option: ' + opt)
+
+    def label(self, opt, value):
+        if not value:
+            return None
+        return self._label(opt, value)
+
+def simd_label(opt, value):
+    """Determines the host label needed for selected SIMD option."""
+    if value in (Simd.NONE, Simd.REFERENCE):
+        return None
+    return str(value).lower()
 
 def _define_handlers(e, p, extra_options):
     """Defines the list of recognized build options."""
@@ -343,7 +358,7 @@ def _define_handlers(e, p, extra_options):
     # hardware support).  They need to match with the labels defined in
     # slaves.py.
     handlers = [
-            _SuffixOptionHandler('build-jobs=', h._init_build_jobs),
+            _StringOptionHandler('build-jobs', h._init_build_jobs),
             _VersionOptionHandler('cmake', e._init_cmake, label=OPT),
             _VersionOptionHandler('gcc', e.init_gcc, label=OPT),
             _VersionOptionHandler('clang', e.init_clang, label=OPT),
@@ -362,15 +377,12 @@ def _define_handlers(e, p, extra_options):
             _SimpleOptionHandler('fftpack', h._init_fftpack),
             _SimpleOptionHandler('double', h._init_double),
             _SimpleOptionHandler('x11', h._init_x11, label=OPT),
-            _SuffixOptionHandler('simd=', h._init_simd),
+            _StringOptionHandler('simd', h._init_simd, label=simd_label),
             _BoolOptionHandler('thread-mpi', h._init_thread_mpi),
             _BoolOptionHandler('gpu', h._init_gpu),
             _SimpleOptionHandler('mpi', h._init_mpi, label=OPT),
             _BoolOptionHandler('openmp', h._init_openmp),
-            _SimpleOptionHandler('valgrind', h._init_valgrind),
-            _SuffixOptionHandler('env+', h._add_env_var, allow_multiple=True),
-            _SuffixOptionHandler('cmake+', h._add_cmake_option, allow_multiple=True),
-            _SuffixOptionHandler('gmxtest+', h._add_gmxtest_args, allow_multiple=True),
+            _SimpleOptionHandler('valgrind', h._init_valgrind)
         ]
     if extra_options:
         for name, builder in extra_options.iteritems():
@@ -387,7 +399,7 @@ def _define_handlers(e, p, extra_options):
 def process_build_options(factory, opts, extra_options):
     """Initializes build environment and parameters from OS and build options.
 
-    Creates the environment and parameters objects, and adjusts them
+    Creates the environment and options objects, and adjusts them
     based on the provided options.
 
     Args:
@@ -396,8 +408,8 @@ def process_build_options(factory, opts, extra_options):
         extra_options (Dict[str, function]): Extra build options to accept.
 
     Returns:
-        Tuple[BuildEnvironment, BuildParameters]: Build environment and
-            parameters initialized according to the options.
+        Tuple[BuildEnvironment, BuildParameters, BuildOptions]: Build
+            environment and options initialized from the options.
     """
     e = BuildEnvironment(factory)
     p = BuildParameters()
@@ -429,13 +441,12 @@ def select_build_hosts(factory, configs):
     for opts in configs:
         labels = set()
         for handler in handlers:
-            if handler.label:
-                found_opts = [x for x in opts if handler.matches(x)]
-                for found_opt in found_opts:
-                    if handler.label == OPT:
-                        labels.add(found_opt)
-                    else:
-                        labels.add(handler.label)
+            found_opts = [x for x in opts if handler.matches(x)]
+            for found_opt in found_opts:
+                value = handler.parse(found_opt)
+                label = handler.label(found_opt, value)
+                if label:
+                    labels.add(label)
         result_opts = _remove_host_option(opts)
         host = slaves.pick_host(labels, result_opts)
         if slaves.is_label(host):
