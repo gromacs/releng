@@ -86,7 +86,7 @@ _HOST_LABELS = {
                               'simd=SSE2', 'simd=SSE4.1', 'simd=AVX_128_FMA',
                               'mpi' },
             BS_NIX_AMD:     { 'gcc-4.8', 'gcc-5.2',
-                              'clang-3.5', 'clang-3.6',
+                              'clang-3.5', 'clang-3.6', 'clang-3.7',
                               'amdappsdk-3.0',
                               'cmake-2.8.12.2',
                               'simd=SSE2', 'simd=SSE4.1', 'simd=AVX_128_FMA',
