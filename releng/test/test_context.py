@@ -90,14 +90,16 @@ class TestRunBuild(unittest.TestCase):
         executor = self.helper.executor
         self.helper.add_input_file('script/build.py',
                 """\
+                TestEnum = Enum.create('TestEnum', 'foo', 'bar')
                 extra_options = {
-                    'extra': Option.simple
+                    'extra': Option.simple,
+                    'enum': Option.enum(TestEnum)
                 }
                 def do_build(context):
                     pass
                 """);
         BuildContext._run_build(self.helper.factory,
-                'script/build.py', JobType.GERRIT, ['extra'])
+                'script/build.py', JobType.GERRIT, ['extra', 'enum=foo'])
 
 if __name__ == '__main__':
     unittest.main()

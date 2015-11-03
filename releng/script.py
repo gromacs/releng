@@ -7,6 +7,7 @@ This module is only used internally within the releng package.
 import os.path
 
 from common import BuildError, ConfigurationError
+from common import Enum
 from common import BuildType, Compiler, FftLibrary, JobType, Project, Simd, System
 from options import OptionTypes
 
@@ -35,6 +36,9 @@ class BuildScript(object):
         # Inject some globals to make the enums and exceptions easily usable in
         # the build script.
         build_globals['BuildError'] = BuildError
+        build_globals['Enum'] = Enum
+        build_globals['Option'] = OptionTypes
+
         build_globals['BuildType'] = BuildType
         build_globals['Compiler'] = Compiler
         build_globals['FftLibrary'] = FftLibrary
@@ -42,7 +46,6 @@ class BuildScript(object):
         build_globals['Project'] = Project
         build_globals['Simd'] = Simd
         build_globals['System'] = System
-        build_globals['Option'] = OptionTypes
         try:
             source = ''.join(executor.read_file(path))
         except IOError:

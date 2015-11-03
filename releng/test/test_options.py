@@ -2,6 +2,7 @@ import unittest
 
 from releng.test.utils import TestHelper
 
+from releng.common import Enum
 from releng.options import OptionTypes
 from releng.options import process_build_options
 
@@ -25,13 +26,16 @@ class TestProcessBuildOptions(unittest.TestCase):
         self.assertEqual(o.double, True)
 
     def test_ExtraOptions(self):
+        TestEnum = Enum.create('TestEnum', 'foo', 'bar')
         extra_opts = {
             'extra': OptionTypes.simple,
             'ex-bool': OptionTypes.bool,
-            'ex-string': OptionTypes.string
+            'ex-string': OptionTypes.string,
+            'ex-enum': OptionTypes.enum(TestEnum)
         }
-        opts = ['gcc-4.8', 'extra', 'ex-bool=on', 'ex-string=foo']
+        opts = ['gcc-4.8', 'extra', 'ex-bool=on', 'ex-string=foo', 'ex-enum=bar']
         e, p, o = process_build_options(self.helper.factory, opts, extra_opts)
         self.assertEqual(o.extra, True)
         self.assertEqual(o.ex_bool, True)
         self.assertEqual(o.ex_string, 'foo')
+        self.assertEqual(o.ex_enum, TestEnum.BAR)

@@ -9,6 +9,7 @@ It is is only used internally within the releng package.
 import re
 import shlex
 
+from common import to_python_identifier
 from common import ConfigurationError
 from common import BuildType, FftLibrary, Simd
 from environment import BuildEnvironment
@@ -45,10 +46,7 @@ class BuildOptions(object):
     def _set_option(self, name, value):
         assert name in self._opts
         self._opts[name] = value
-        self.__dict__[self._option_var_name(name)] = value
-
-    def _option_var_name(self, name):
-        return re.sub(r'[^0-9a-zA-Z_]', '_', name)
+        self.__dict__[to_python_identifier(name)] = value
 
     def _process_options(self, handlers, opts):
         opts = list(opts)
@@ -96,6 +94,16 @@ class OptionTypes(object):
         Accepted syntax is ``opt=value``.
         """
         return _StringOptionHandler(name)
+
+    @staticmethod
+    def enum(enum):
+        """Creates an option that an enum value if set.
+
+        Accepted syntax is ``opt=value``, with allowed values specified by
+        the enum passed in.
+        """
+        return lambda name: _EnumOptionHandler(name, enum)
+
 
 class _OptionHandlerClosure(object):
     """Helper class for providing context for build option handler methods.
@@ -154,7 +162,7 @@ class _OptionHandlerClosure(object):
         self._params.x11 = True
 
     def _init_simd(self, simd):
-        self._params.simd = Simd.parse(simd)
+        self._params.simd = simd
 
     def _init_thread_mpi(self, value):
         self._params.thread_mpi = value
@@ -300,6 +308,22 @@ class _StringOptionHandler(_BuildOptionHandler):
     def parse(self, opt):
         return opt[len(self.name)+1:]
 
+class _EnumOptionHandler(_BuildOptionHandler):
+    """Handler for an option with syntax 'opt=VALUE' with enumerated values.
+
+    The value of the option will be VALUE (an enum of type passed to constructor).
+    """
+
+    def __init__(self, name, enum, *args, **kwargs):
+        _BuildOptionHandler.__init__(self, name, *args, **kwargs)
+        self._enum = enum
+
+    def matches(self, opt):
+        return opt.startswith(self.name + '=')
+
+    def parse(self, opt):
+        return self._enum.parse(opt[len(self.name)+1:])
+
 class _VersionOptionHandler(_BuildOptionHandler):
     """Handler for an option with syntax 'opt-X[.Y]*'.
 
@@ -377,7 +401,7 @@ def _define_handlers(e, p, extra_options):
             _SimpleOptionHandler('fftpack', h._init_fftpack),
             _SimpleOptionHandler('double', h._init_double),
             _SimpleOptionHandler('x11', h._init_x11, label=OPT),
-            _StringOptionHandler('simd', h._init_simd, label=simd_label),
+            _EnumOptionHandler('simd', Simd, h._init_simd, label=simd_label),
             _BoolOptionHandler('thread-mpi', h._init_thread_mpi),
             _BoolOptionHandler('gpu', h._init_gpu),
             _SimpleOptionHandler('mpi', h._init_mpi, label=OPT),

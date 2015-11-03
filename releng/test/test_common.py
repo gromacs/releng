@@ -31,7 +31,7 @@ class TestEnums(unittest.TestCase):
     def test_Simd(self):
         self.assertEqual(Simd.NONE, Simd.parse('none'))
         self.assertEqual(Simd.REFERENCE, Simd.parse('Reference'))
-        self.assertEqual(Simd.SSE41, Simd.parse('sse4.1'))
+        self.assertEqual(Simd.SSE4_1, Simd.parse('sse4.1'))
 
     def test_FftLibrary(self):
         self.assertEqual(FftLibrary.MKL, FftLibrary.parse('MKL'))
