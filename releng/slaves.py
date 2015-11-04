@@ -98,6 +98,8 @@ _HOST_LABELS = {
             DOCKER_DEFAULT: {} # TODO
         }
 
+_WINDOWS_HOSTS = {BS_WIN2008, BS_WIN2012R2}
+
 def is_label(host):
     return host in ALL_LABELS
 
@@ -105,10 +107,17 @@ def pick_host(labels, opts):
     """Selects a host that can build with a given set of labels."""
     if labels.issubset(_HOST_LABELS[DOCKER_DEFAULT]):
         return DOCKER_DEFAULT
+    possible_hosts = []
     for host, host_labels in _HOST_LABELS.iteritems():
         if labels.issubset(host_labels):
-            # TODO: If there are multiple possible hosts, it would be better to
-            # optimize the selection globally over all the configurations to
-            # avoid assigning all the builds to the same host.
-            return host
-    raise ConfigurationError('no build slave supports this combination: ' + ' '.join(opts))
+            possible_hosts.append(host)
+    if not possible_hosts:
+        raise ConfigurationError('no build slave supports this combination: ' + ' '.join(opts))
+    # TODO: If there are multiple possible hosts, it would be better to
+    # optimize the selection globally over all the configurations to
+    # avoid assigning all the builds to the same host.
+    # Use Windows machines only for builds that can only be run there.
+    if set(possible_hosts).issubset(_WINDOWS_HOSTS):
+        return possible_hosts[0]
+    possible_hosts = [x for x in possible_hosts if x not in _WINDOWS_HOSTS]
+    return possible_hosts[0]

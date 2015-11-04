@@ -60,6 +60,7 @@ class BuildEnvironment(object):
     Attributes:
        system (System): Operating system of the build node.
        compiler (Compiler or None): Selected compiler.
+       compiler_version (string): Version number for the selected compiler.
        shell_call_opts (Dict[str, str]):
        env_cmd (str or None): Command that sets environment variables required
            by the compiler (Visual Studio and Intel uses this).
@@ -79,6 +80,7 @@ class BuildEnvironment(object):
     def __init__(self, factory):
         self.system = factory.system
         self.compiler = None
+        self.compiler_version = None
         self.shell_call_opts = dict()
         self.env_cmd = None
         self.c_compiler = None
@@ -188,6 +190,7 @@ class BuildEnvironment(object):
             version (str): GCC version number (major.minor) to use.
         """
         self.compiler = Compiler.GCC
+        self.compiler_version = version
         self.c_compiler = 'gcc-' + version
         self.cxx_compiler = 'g++-' + version
 
@@ -202,6 +205,7 @@ class BuildEnvironment(object):
             version (str): clang version number (major.minor) to use.
         """
         self.compiler = Compiler.CLANG
+        self.compiler_version = version
         self.c_compiler = 'clang-' + version
         self.cxx_compiler = 'clang++-' + version
         # Need a suitable standard library for C++11 support, so get
@@ -209,21 +213,19 @@ class BuildEnvironment(object):
         manage_stdlib_from_gcc('--gcc-toolchain={gcctoolchain}')
 
     def _init_icc(self, version):
-        self.compiler = Compiler.INTEL
         if self.system == System.WINDOWS:
-            if version == '16.0' and os.getenv('NODE_NAME') in (slaves.BS_WIN2012R2,):
+            if self.compiler is None or self.compiler != Compiler.MSVC:
+                raise ConfigurationError('need to specify msvc version for icc on Windows')
+            if version == '16.0':
                 # Note that installing icc 16 over icc 15 uninstalled
                 # the latter, so it is likely not possible to have
                 # multiple icc versions installed on Windows.
-                #
-                # TODO should the dependency on Visual Studio be
-                # expressed as a build option and thus use _init_msvc?
-                self.env_cmd = r'"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64 && "C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs2015'
+                self.env_cmd += r' && "C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs' + self.compiler_version
                 self.c_compiler = 'icl'
                 self.cxx_compiler = 'icl'
                 self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/machine:x64"'
             else:
-                raise ConfigurationError('only bs-win2012r2 is supported for Windows builds with the Intel compiler')
+                raise ConfigurationError('only icc 16.0 is supported for Windows builds with the Intel compiler')
         else:
             self.c_compiler = 'icc'
             self.cxx_compiler = 'icpc'
@@ -245,9 +247,12 @@ class BuildEnvironment(object):
             # standard libraries from a gcc installation, and defaults
             # to that of the gcc it finds in the path.
             manage_stdlib_from_gcc('-gcc-name={gcctoolchain}/bin/gcc')
+        self.compiler = Compiler.INTEL
+        self.compiler_version = version
 
     def _init_msvc(self, version):
         self.compiler = Compiler.MSVC
+        self.compiler_version = version
         if version == '2010':
             self.env_cmd = r'"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat" amd64'
         elif version == '2013':
