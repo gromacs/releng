@@ -93,7 +93,7 @@ _HOST_LABELS = {
                               'mpi' },
             BS_WIN2008:     { 'msvc-2010',
                               'icc-12.1' },
-            BS_WIN2012R2:   { 'msvc-2013',
+            BS_WIN2012R2:   { 'msvc-2013', 'msvc-2015',
                               'icc-16.0' },
             DOCKER_DEFAULT: {} # TODO
         }
