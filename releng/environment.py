@@ -25,24 +25,6 @@ def append_to_env(var, string):
     else:
         os.environ[var] = string
 
-def manage_stdlib_from_gcc(format_for_stdlib_flag):
-    """Manages using a C++ standard library from a particular gcc toolchain
-
-    Use this function to configure compilers (e.g. icc or clang) to
-    use the standard library from a particular gcc installation on the
-    particular host in use, since the system gcc may be too old.
-    """
-
-    if os.getenv('NODE_NAME') in (slaves.BS_CENTOS63, slaves.BS_MIC):
-        # TODO should setting gcctoolchain go in node-specific
-        # setup somewhere? Or the C++ standard library become
-        # a build option?
-        gcctoolchainpath='/opt/rh/devtoolset-1.1/root/usr'
-
-        stdlibflag=format_for_stdlib_flag.format(gcctoolchain=gcctoolchainpath)
-        append_to_env('CFLAGS', stdlibflag)
-        append_to_env('CXXFLAGS', stdlibflag)
-
 class BuildEnvironment(object):
     """Provides access to the build environment.
 
@@ -194,6 +176,31 @@ class BuildEnvironment(object):
         self.c_compiler = 'gcc-' + version
         self.cxx_compiler = 'g++-' + version
 
+    def _manage_stdlib_from_gcc(self, format_for_stdlib_flag):
+        """Manages using a C++ standard library from a particular gcc toolchain
+
+        Use this function to configure compilers (e.g. icc or clang) to
+        use the standard library from a particular gcc installation on the
+        particular host in use, since the system gcc may be too old.
+        """
+
+        # TODO should setting gcctoolchain go in node-specific
+        # setup somewhere? Or the C++ standard library become
+        # a build option?
+        gcctoolchainpath=None
+        if os.getenv('NODE_NAME') == slaves.BS_CENTOS63:
+            gcctoolchainpath='/opt/gcc/5.2.0'
+        if os.getenv('NODE_NAME') == slaves.BS_MIC:
+            # icc is used here, and is buggy with respect to libstdc++ in gcc-5
+            gcctoolchainpath='/opt/gcc/4.9.3'
+
+        if gcctoolchainpath:
+            stdlibflag=format_for_stdlib_flag.format(gcctoolchain=gcctoolchainpath)
+            append_to_env('CFLAGS', stdlibflag)
+            append_to_env('CXXFLAGS', stdlibflag)
+            format_for_linker_flags="-Wl,-rpath,{gcctoolchain}/lib64 -L{gcctoolchain}/lib64"
+            self.extra_cmake_options['CMAKE_CXX_LINK_FLAGS'] = format_for_linker_flags.format(gcctoolchain=gcctoolchainpath)
+
     def init_clang(self, version):
         """Initializes the build to use given clang version as the compiler.
 
@@ -210,7 +217,7 @@ class BuildEnvironment(object):
         self.cxx_compiler = 'clang++-' + version
         # Need a suitable standard library for C++11 support, so get
         # one from a gcc on the host.
-        manage_stdlib_from_gcc('--gcc-toolchain={gcctoolchain}')
+        self._manage_stdlib_from_gcc('--gcc-toolchain={gcctoolchain}')
 
     def _init_icc(self, version):
         if self.system == System.WINDOWS:
@@ -246,7 +253,7 @@ class BuildEnvironment(object):
             # icc on Linux is required to use the C++ headers and
             # standard libraries from a gcc installation, and defaults
             # to that of the gcc it finds in the path.
-            manage_stdlib_from_gcc('-gcc-name={gcctoolchain}/bin/gcc')
+            self._manage_stdlib_from_gcc('-gcc-name={gcctoolchain}/bin/gcc')
         self.compiler = Compiler.INTEL
         self.compiler_version = version
 

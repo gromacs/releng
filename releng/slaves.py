@@ -29,14 +29,14 @@ ALL_LABELS = (DOCKER_DEFAULT,)
 # selecting the node using a label expression, which we can easily construct
 # directly in options.py.
 _HOST_LABELS = {
-            BS_CENTOS63:    { 'gcc-4.4',
+            BS_CENTOS63:    { 'gcc-4.4', 'gcc-5.2',
                               'clang-3.4',
                               'cuda-5.5',
                               'cmake-2.8.12.2',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi',
                               'valgrind' },
-            BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8',
+            BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2',
                               'clang-3.4',
                               'icc-14.0', 'icc-16.0',
                               'phi',
