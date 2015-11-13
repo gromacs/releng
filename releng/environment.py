@@ -158,10 +158,13 @@ class BuildEnvironment(object):
     # Methods from here down are used as build option handlers in options.py.
     # Please keep them in the same order as in process_build_options().
 
+    def _set_build_jobs(self, jobs):
+        self._build_jobs = jobs
+
     def _init_cmake(self, version):
         self.prepend_path_env('~/tools/cmake-{0}/bin'.format(version))
 
-    def init_gcc(self, version):
+    def _init_gcc(self, version):
         """Initializes the build to use given gcc version as the compiler.
 
         This method is called internally if the build options set the compiler
@@ -201,7 +204,7 @@ class BuildEnvironment(object):
             format_for_linker_flags="-Wl,-rpath,{gcctoolchain}/lib64 -L{gcctoolchain}/lib64"
             self.extra_cmake_options['CMAKE_CXX_LINK_FLAGS'] = format_for_linker_flags.format(gcctoolchain=gcctoolchainpath)
 
-    def init_clang(self, version):
+    def _init_clang(self, version):
         """Initializes the build to use given clang version as the compiler.
 
         This method is called internally if the build options set the compiler
@@ -269,9 +272,9 @@ class BuildEnvironment(object):
         else:
             raise ConfigurationError('only Visual Studio 2010, 2013, and 2013 are supported, got msvc-' + version)
 
-    def init_clang_analyzer(self, clang_version=None, html_output_dir=None):
+    def _init_clang_analyzer(self, clang_version=None, html_output_dir=None):
         if clang_version is not None:
-            self.init_clang(clang_version)
+            self._init_clang(clang_version)
         if html_output_dir is None:
             html_output_dir = self._workspace.get_log_dir(category='scan_html')
         self.clang_analyzer_output_dir = html_output_dir
@@ -301,12 +304,12 @@ class BuildEnvironment(object):
     def _init_atlas(self):
         os.environ['CMAKE_LIBRARY_PATH'] = '/usr/lib/atlas-base'
 
-    def _init_mpi(self, use_gpu):
+    def _init_mpi(self):
         # Set the host compiler to the underlying compiler.
         # Normally, C++ compiler should be used, but nvcc <=v5.0 does not
         # recognize icpc, only icc, so for simplicity the C compiler is used
         # for all cases, as it works as well.
-        if use_gpu and self.compiler in (Compiler.GCC, Compiler.INTEL) and self.system != System.WINDOWS:
+        if self.compiler in (Compiler.GCC, Compiler.INTEL) and self.system != System.WINDOWS:
             c_compiler_path = self._find_executable(self.c_compiler)
             if not c_compiler_path:
                 raise ConfigurationError("Could not determine the full path to the compiler ({0})".format(self.c_compiler))

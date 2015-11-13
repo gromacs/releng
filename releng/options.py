@@ -2,8 +2,9 @@
 Handling of Jenkins build options
 
 This module provides a method for processing build options to initialize
-the build environment and parameters, and helper classes used by it.
-It is is only used internally within the releng package.
+the build environment and options, and helper classes used by it.
+BuildOptions and OptionTypes are exposed to build scripts, but other
+code is internal to releng.
 """
 
 import re
@@ -13,7 +14,6 @@ from common import to_python_identifier
 from common import ConfigurationError
 from common import BuildType, FftLibrary, Simd
 from environment import BuildEnvironment
-from parameters import BuildParameters
 import slaves
 
 class BuildOptions(object):
@@ -104,81 +104,6 @@ class OptionTypes(object):
         """
         return lambda name: _EnumOptionHandler(name, enum)
 
-
-class _OptionHandlerClosure(object):
-    """Helper class for providing context for build option handler methods.
-
-    This class provides methods that are used as build option handlers for
-    cases that cannot be directly call methods in BuildEnvironment.
-    It essentially just captures the environment and parameter objects from
-    the scope that creates it, and provides methods that can then be called
-    without explicitly passing these objects around to each.
-    """
-
-    def __init__(self, env, params):
-        self._env = env
-        self._params = params
-
-    # Please keep the handlers in the same order as in process_build_options().
-
-    def _init_build_jobs(self, value):
-        self._env._build_jobs = int(value)
-
-    def _init_phi(self):
-        self._env._init_phi()
-        self._params.phi = True
-
-    def _init_mdrun_only(self):
-        self._params.mdrun_only = True
-
-    def _init_reference(self):
-        self._params.build_type = BuildType.REFERENCE
-
-    def _init_release(self):
-        self._params.build_type = BuildType.OPTIMIZED
-
-    def _init_asan(self):
-        self._params.build_type = BuildType.ASAN
-
-    def _init_tsan(self):
-        self._env._init_tsan()
-        self._params.build_type = BuildType.TSAN
-
-    def _init_atlas(self):
-        self._env._init_atlas()
-        self._params.external_linalg = True
-
-    def _init_mkl(self):
-        self._params.fft_library = FftLibrary.MKL
-        self._params.external_linalg = True
-
-    def _init_fftpack(self):
-        self._params.fft_library = FftLibrary.FFTPACK
-
-    def _init_double(self):
-        self._params.double = True
-
-    def _init_x11(self):
-        self._params.x11 = True
-
-    def _init_simd(self, simd):
-        self._params.simd = simd
-
-    def _init_thread_mpi(self, value):
-        self._params.thread_mpi = value
-
-    def _init_gpu(self, value):
-        self._params.gpu = value
-
-    def _init_mpi(self):
-        self._env._init_mpi(self._params.gpu)
-        self._params.mpi = True
-
-    def _init_openmp(self, value):
-        self._params.openmp = value
-
-    def _init_valgrind(self):
-        self._params.memcheck = True
 
 # Indicates that an option requires a label of the same name as the option.
 OPT = lambda opt, value: opt
@@ -308,6 +233,18 @@ class _StringOptionHandler(_BuildOptionHandler):
     def parse(self, opt):
         return opt[len(self.name)+1:]
 
+class _IntOptionHandler(_BuildOptionHandler):
+    """Handler for an option with syntax 'opt=VALUE'.
+
+    The value of the option will be VALUE (an integer).
+    """
+
+    def matches(self, opt):
+        return opt.startswith(self.name + '=')
+
+    def parse(self, opt):
+        return int(opt[len(self.name)+1:])
+
 class _EnumOptionHandler(_BuildOptionHandler):
     """Handler for an option with syntax 'opt=VALUE' with enumerated values.
 
@@ -370,9 +307,8 @@ def simd_label(opt, value):
         return None
     return str(value).lower()
 
-def _define_handlers(e, p, extra_options):
+def _define_handlers(e, extra_options):
     """Defines the list of recognized build options."""
-    h = _OptionHandlerClosure(e, p)
     # The options are processed in the order they are in the tuple, to support
     # cross-dependencies between the options (there are a few).
     # If you add options here, please also update the documentation for the
@@ -382,31 +318,20 @@ def _define_handlers(e, p, extra_options):
     # hardware support).  They need to match with the labels defined in
     # slaves.py.
     handlers = [
-            _StringOptionHandler('build-jobs', h._init_build_jobs),
+            _IntOptionHandler('build-jobs', e._set_build_jobs),
             _VersionOptionHandler('cmake', e._init_cmake, label=OPT),
-            _VersionOptionHandler('gcc', e.init_gcc, label=OPT),
-            _VersionOptionHandler('clang', e.init_clang, label=OPT),
-            _SimpleOptionHandler('clang-analyzer', e.init_clang_analyzer),
+            _VersionOptionHandler('gcc', e._init_gcc, label=OPT),
+            _VersionOptionHandler('clang', e._init_clang, label=OPT),
+            _SimpleOptionHandler('clang-analyzer', e._init_clang_analyzer),
             _VersionOptionHandler('msvc', e._init_msvc, label=OPT),
             _VersionOptionHandler('icc', e._init_icc, label=OPT),
             _VersionOptionHandler('cuda', e._init_cuda, label=OPT),
-            _SimpleOptionHandler('phi', h._init_phi, label=OPT),
-            _SimpleOptionHandler('mdrun-only', h._init_mdrun_only),
-            _SimpleOptionHandler('reference', h._init_reference),
-            _SimpleOptionHandler('release', h._init_release),
-            _SimpleOptionHandler('asan', h._init_asan),
-            _SimpleOptionHandler('tsan', h._init_tsan, label=OPT),
-            _SimpleOptionHandler('atlas', h._init_atlas),
-            _SimpleOptionHandler('mkl', h._init_mkl),
-            _SimpleOptionHandler('fftpack', h._init_fftpack),
-            _SimpleOptionHandler('double', h._init_double),
-            _SimpleOptionHandler('x11', h._init_x11, label=OPT),
-            _EnumOptionHandler('simd', Simd, h._init_simd, label=simd_label),
-            _BoolOptionHandler('thread-mpi', h._init_thread_mpi),
-            _BoolOptionHandler('gpu', h._init_gpu),
-            _SimpleOptionHandler('mpi', h._init_mpi, label=OPT),
-            _BoolOptionHandler('openmp', h._init_openmp),
-            _SimpleOptionHandler('valgrind', h._init_valgrind)
+            _SimpleOptionHandler('phi', e._init_phi, label=OPT),
+            _SimpleOptionHandler('tsan', e._init_tsan, label=OPT),
+            _SimpleOptionHandler('atlas', e._init_atlas),
+            _SimpleOptionHandler('x11', label=OPT),
+            _EnumOptionHandler('simd', Simd, label=simd_label),
+            _SimpleOptionHandler('mpi', e._init_mpi, label=OPT)
         ]
     if extra_options:
         for name, builder in extra_options.iteritems():
@@ -436,12 +361,11 @@ def process_build_options(factory, opts, extra_options):
             environment and options initialized from the options.
     """
     e = BuildEnvironment(factory)
-    p = BuildParameters()
-    handlers = _define_handlers(e, p, extra_options)
+    handlers = _define_handlers(e, extra_options)
     if opts:
         opts = _remove_host_option(opts)
     o = BuildOptions(handlers, opts)
-    return (e, p, o)
+    return (e, o)
 
 def _remove_host_option(opts):
     """Removes options that specify the execution host."""
@@ -459,8 +383,7 @@ def select_build_hosts(factory, configs):
             option added/replaced.
     """
     e = BuildEnvironment(factory)
-    p = BuildParameters()
-    handlers = _define_handlers(e, p, None)
+    handlers = _define_handlers(e, None)
     result = []
     for opts in configs:
         labels = set()

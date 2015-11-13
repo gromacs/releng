@@ -193,8 +193,6 @@ class BuildContext(object):
             selecting the compiler, are handled by the build context
             transparently, without the build script needing to access this.
         opts (BuildOptions): Access to all build options.
-        params (BuildParameters): Access to build parameters set through build
-            options (deprecated).
         workspace (Workspace): Access to the build workspace.
             Can be used to get paths to various parts in the workspace for
             changing directories and for producing log files.
@@ -208,7 +206,7 @@ class BuildContext(object):
         self._failure_tracker = factory.failure_tracker
         self._executor = factory.executor
         self.workspace = factory.workspace
-        self.env, self.params, self.opts = process_build_options(factory, opts, extra_options)
+        self.env, self.opts = process_build_options(factory, opts, extra_options)
 
     def _flush_output(self):
         """Ensures all output is flushed before an external process is started.
@@ -328,7 +326,6 @@ class BuildContext(object):
         options['CMAKE_C_COMPILER'] = self.env.c_compiler
         options['CMAKE_CXX_COMPILER'] = self.env.cxx_compiler
         options.update(self.env.extra_cmake_options)
-        options.update(self.params.extra_cmake_options)
         cmake_args = [self.env.cmake_command, self.workspace.get_project_dir(Project.GROMACS)]
         if self.env.cmake_generator is not None:
             cmake_args.extend(['-G', self.env.cmake_generator])

@@ -82,10 +82,6 @@ additional information:
 .. py:currentmodule:: releng.options
 .. autoclass:: BuildOptions
 
-.. py:currentmodule:: releng.parameters
-.. autoclass:: BuildParameters
-   :members:
-
 .. py:currentmodule:: releng.workspace
 .. autoclass:: Workspace
    :members:
