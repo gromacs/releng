@@ -221,7 +221,7 @@ class BuildContext(object):
     # TODO: Consider if these would be better set in the build script, and
     # just the values queried.
     def get_cuda_cmake_options(self):
-        """Returns non-GROMACS-specific CMake options to set for CUDA builds."""
+        """Returns non-GROMACS-specific CMake options to set for CUDA native and OpenCL builds."""
         return {'CUDA_TOOLKIT_ROOT_DIR': self.env.cuda_root,
                 'CUDA_HOST_COMPILER': self.env.cuda_host_compiler}
 

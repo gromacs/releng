@@ -115,7 +115,9 @@ icc-X.Y
 msvc-YYYY
   Use the specified MSVC version as the compiler.
 cuda-X.Y
-  Use the specified CUDA version (only has effect in combination with ``gpu``).
+  Use the specified CUDA version (only has effect in combination with ``gpu=native`` or ``gpu=opencl``).
+amdappsdk-X.Y
+  Use the specified AMD SDK version (only has effect in combination with ``gpu=opencl``).
 phi
   Build for Xeon Phi.
 mdrun-only
@@ -145,8 +147,8 @@ no-thread-mpi
   Build without thread-MPI.
 mpi
   Do an MPI build.
-gpu
-  Do a GPU-enabled build.
+gpu=none/native/opencl
+  Do a GPU-enabled build if set and equal to ``native`` or ``opencl``. Requires a valid ``cuda`` or ``amdappsdk``.
 openmp[=on/off]
   Do a build with/without OpenMP.
 valgrind

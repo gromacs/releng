@@ -326,6 +326,7 @@ def _define_handlers(e, extra_options):
             _VersionOptionHandler('msvc', e._init_msvc, label=OPT),
             _VersionOptionHandler('icc', e._init_icc, label=OPT),
             _VersionOptionHandler('cuda', e._init_cuda, label=OPT),
+            _VersionOptionHandler('amdappsdk', e._init_amdappsdk, label=OPT),
             _SimpleOptionHandler('phi', e._init_phi, label=OPT),
             _SimpleOptionHandler('tsan', e._init_tsan, label=OPT),
             _SimpleOptionHandler('atlas', e._init_atlas),

@@ -55,6 +55,8 @@ class BuildEnvironment(object):
            (for passing to CUDA_TOOLKIT_ROOT_DIR CMake option).
        cuda_host_compiler (str or None): Full path to the host compiler used
            with CUDA (for passing to CUDA_HOST_COMPILER CMake option).
+       amdappsdk_root (str or None): Root of the AMD SDK being used
+           (for using as AMDAPPSDKROOT environment variable).
        extra_cmake_options (Dict[str, str]): Additional options to pass to
            CMake.
     """
@@ -72,6 +74,7 @@ class BuildEnvironment(object):
         self.cmake_generator = None
         self.cuda_root = None
         self.cuda_host_compiler = None
+        self.amdappsdk_root = None
         self.clang_analyzer_output_dir = None
         self.extra_cmake_options = dict()
 
@@ -123,9 +126,11 @@ class BuildEnvironment(object):
 
         Args:
             variable (str): Name of environment variable to set.
-            value (str): Value to set the variable to.
+            value (str): Value to set the variable to.  As a convenience, if
+                the value is None, nothing is done.
         """
-        os.environ[variable] = value
+        if value is not None:
+            os.environ[variable] = value
 
     def prepend_path_env(self, path):
         """Prepends a path to the executable search path (PATH)."""
@@ -294,6 +299,9 @@ class BuildEnvironment(object):
 
     def _init_cuda(self, version):
         self.cuda_root = '/opt/cuda_' + version
+
+    def _init_amdappsdk(self, version):
+        self.amdappsdk_root = '/opt/AMDAPPSDK-' + version
 
     def _init_phi(self):
         self.extra_cmake_options['CMAKE_PREFIX_PATH'] = os.path.expanduser('~/utils/libxml2')
