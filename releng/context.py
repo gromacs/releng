@@ -6,9 +6,10 @@ from __future__ import print_function
 
 import os
 import glob
-import re
+import hashlib
 import pipes
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -407,6 +408,29 @@ class BuildContext(object):
         if memcheck:
             self.run_cmd('xsltproc -o Testing/Temporary/valgrind_unit.xml ../releng/ctest_valgrind_to_junit.xsl Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml', shell=True)
 
+    def compute_md5(self, path):
+        """Computes MD5 hash of a file.
+
+        Args:
+            path (str): Path to the file to compute the hash for.
+
+        Returns:
+            str: String with the computed hash in hexadecimal.
+        """
+        md5 = hashlib.md5()
+        for block in self._executor.read_file(path, binary=True):
+            md5.update(block)
+        return md5.hexdigest()
+
+    def write_property_file(self, path, values):
+        """Writes a property file at given path.
+
+        Args:
+            path (str): Path to the file to write.
+            values (Dict): Dictionary of key/value pairs to write.
+        """
+        contents = ''.join(['{0} = {1}\n'.format(key, value) for key, value in values.iteritems()])
+        self._executor.write_file(path, contents)
 
     def publish_logs(self, logs, category=None):
         """Copies provided log(s) to Jenkins.

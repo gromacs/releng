@@ -17,6 +17,16 @@ import os
 import shutil
 import sys
 
+def _read_file(path, binary):
+    if binary:
+        with open(path, 'rb') as fp:
+            for block in iter(lambda: fp.read(4096), b''):
+                yield block
+    else:
+        with open(path, 'r') as fp:
+            for line in fp:
+                yield line
+
 class Executor(object):
     """Real executor for Jenkins builds that does all operations for real."""
 
@@ -39,11 +49,9 @@ class Executor(object):
             return
         os.makedirs(path)
 
-    def read_file(self, path):
+    def read_file(self, path, binary=False):
         """Iterates over lines in a file."""
-        with open(path, 'r') as fp:
-            for line in fp:
-                yield line
+        return _read_file(path, binary)
 
     def write_file(self, path, contents):
         """Writes a file with the given contents."""
@@ -66,10 +74,8 @@ class DryRunExecutor(object):
     def ensure_dir_exists(self, path, ensure_empty=False):
         pass
 
-    def read_file(self, path):
-        with open(path, 'r') as fp:
-            for line in fp:
-                yield line
+    def read_file(self, path, binary=False):
+        return _read_file(path, binary)
 
     def write_file(self, path, contents):
         print('write: ' + path + ' <<<')
