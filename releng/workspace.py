@@ -31,6 +31,7 @@ class Workspace(object):
         self._executor = factory.executor
         self._gerrit = factory.gerrit
         self._skip_checkouts = skip_checkouts
+        self._default_project = factory.default_project
         # The releng project is always checked out, since we are already
         # executing code from there...
         self._projects = { Project.RELENG, self._gerrit.checked_out_project }
@@ -47,7 +48,7 @@ class Workspace(object):
             self._build_dir = os.path.join(self.root, 'build')
             self._ensure_empty_dir(self._build_dir)
         else:
-            self._build_dir = self.get_project_dir(Project.GROMACS)
+            self._build_dir = self.get_project_dir(self._default_project)
 
     def _init_logs_dir(self):
         """Initializes the logs directory."""
@@ -68,7 +69,7 @@ class Workspace(object):
             path += extension
         if os.path.dirname(path):
             return path
-        gromacs_dir = self.get_project_dir(Project.GROMACS)
+        gromacs_dir = self.get_project_dir(self._default_project)
         path = os.path.join(gromacs_dir, 'admin', 'builds', path)
         return path
 

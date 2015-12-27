@@ -8,9 +8,9 @@ For testing, the package can also be executed as a command-line module.
 
 # Expose the JobType enum to make it simpler to import just the releng module
 # and call run_build().
-from common import JobType
+from common import JobType, Project
 
-def run_build(build, job_type, opts):
+def run_build(build, job_type, opts, project=Project.GROMACS):
     """Main entry point for Jenkins builds.
 
     Runs the build with the given build script and build parameters.
@@ -36,7 +36,7 @@ def run_build(build, job_type, opts):
     """
     from context import BuildContext, ContextFactory
     # Please ensure that __main__.py stays in sync.
-    factory = ContextFactory()
+    factory = ContextFactory(default_project=project)
     BuildContext._run_build(factory, build, job_type, opts)
 
 def prepare_multi_configuration_build(configfile, outputfile):

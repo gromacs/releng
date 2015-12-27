@@ -24,6 +24,7 @@ parser.add_argument('-U', '--user', help='User with ssh permissions to Gerrit')
 parser.add_argument('--system', help='Override system for testing')
 parser.add_argument('-W', '--workspace', help='Workspace root directory')
 parser.add_argument('-B', '--build', help='Build script to run')
+parser.add_argument('-P', '--project', help='Project for the build')
 parser.add_argument('-J', '--job-type', help='Job type')
 parser.add_argument('-O', '--opts', nargs='*', help='Build options')
 parser.add_argument('-M', '--matrix', help='Matrix to process')
@@ -33,6 +34,10 @@ workspace_root = args.workspace
 if workspace_root is None:
     workspace_root = os.path.join(os.path.dirname(__file__), "..", "..")
 workspace_root = os.path.abspath(workspace_root)
+
+project = Project.GROMACS
+if args.project is not None:
+    project = Project.parse(args.project)
 
 env = {
         'CHECKOUT_PROJECT': Project.RELENG,
@@ -44,7 +49,8 @@ env = {
 }
 
 # Please ensure that run_build() in __init__.py stays in sync.
-factory = ContextFactory(system=args.system, env=env, dry_run=not args.run)
+factory = ContextFactory(default_project=project, system=args.system,
+        env=env, dry_run=not args.run)
 if not args.run:
     from executor import DryRunExecutor
     factory.init_executor(DryRunExecutor())

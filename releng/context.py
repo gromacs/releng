@@ -93,7 +93,7 @@ class ContextFactory(object):
     generally needs to have more control.
     """
 
-    def __init__(self, system=None, env=None, dry_run=False):
+    def __init__(self, default_project=Project.GROMACS, system=None, env=None, dry_run=False):
         if system is None:
             system = platform.system()
         if system is not None:
@@ -101,6 +101,7 @@ class ContextFactory(object):
         if env is None:
             env = dict(os.environ)
         self.system = system
+        self.default_project = default_project
         self.dry_run = dry_run
         self._env = env
         self._executor = None
@@ -422,6 +423,15 @@ class BuildContext(object):
             md5.update(block)
         return md5.hexdigest()
 
+    def read_cmake_variable_file(self, path):
+        values = dict()
+        set_re = r'(?i)SET\((\w+)\s*"(.*)"\)\s*'
+        for line in self._executor.read_file(path):
+            match = re.match(set_re, line)
+            if match:
+                values[match.group(1)] = match.group(2)
+        return values
+
     def write_property_file(self, path, values):
         """Writes a property file at given path.
 
@@ -431,6 +441,32 @@ class BuildContext(object):
         """
         contents = ''.join(['{0} = {1}\n'.format(key, value) for key, value in values.iteritems()])
         self._executor.write_file(path, contents)
+
+    def make_archive(self, path, root_dir=None, use_git=False, prefix=None):
+        """Creates a tar.gz archive.
+
+        Args:
+            path (str): Path to the archive to create without extension.
+            root_dir (str): Root directory from which the archive should be
+                created.
+        """
+        if use_git:
+            if root_dir:
+                raise ConfigurationError("archiving with root dir with git not implemented")
+            cmd = ['git', 'archive', '-o', path + '.tar.gz']
+            if prefix:
+                cmd.append('--prefix=' + prefix)
+            cmd.extend(['-9', 'HEAD'])
+            self.run_cmd(cmd)
+        else:
+            if prefix:
+                raise ConfigurationError("archiving with prefix without git not implemented")
+            root_dir, base_dir = os.path.split(root_dir)
+            if not root_dir:
+                root_dir = '.'
+            if not base_dir:
+                base_dir = '.'
+            shutil.make_archive(path, 'gztar', root_dir, base_dir)
 
     def publish_logs(self, logs, category=None):
         """Copies provided log(s) to Jenkins.
@@ -565,7 +601,7 @@ class BuildContext(object):
         try:
             workspace = factory.workspace
             workspace._init_logs_dir()
-            workspace._checkout_project(Project.GROMACS)
+            workspace._checkout_project(factory.default_project)
             build_script_path = workspace._resolve_build_input_file(build, '.py')
             script = BuildScript(factory.executor, build_script_path)
             if script.build_opts:

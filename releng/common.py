@@ -100,7 +100,7 @@ Project = Enum.create('Project',
 
 # There is no special significance with these strings.
 JobType = Enum.create('JobType',
-    'gerrit', 'nightly',
+    'gerrit', 'nightly', 'release',
     doc="""Enum to identify type/scope of the job
 
            This can be used in the build scripts to, e.g., decide on the
