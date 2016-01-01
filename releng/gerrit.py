@@ -11,6 +11,7 @@ import subprocess
 
 from common import ConfigurationError
 from common import Project
+import utils
 
 def _ref(change, patchset):
     """Constructs a Gerrit refspec for given patchset in a change.
@@ -35,8 +36,15 @@ class RefSpec(object):
 
     """Wraps handling of refspecs used to check out projects."""
 
-    def __init__(self, value):
+    def __init__(self, value, executor=None):
         self._value = value
+        self._remote = value
+        self._tar_props = None
+        if value.startswith('tarballs/'):
+            assert executor is not None
+            prop_path = os.path.join(self._value, 'package-info.log')
+            self._tar_props = utils.read_property_file(executor, prop_path)
+            self._remote = self._tar_props['HEAD_HASH']
 
     @property
     def is_no_op(self):
@@ -51,7 +59,21 @@ class RefSpec(object):
     @property
     def remote(self):
         """Git refspec used to fetch/check out the corresponding commit."""
-        return self._value
+        return self._remote
+
+    @property
+    def is_tarball(self):
+        return self._tar_props is not None
+
+    @property
+    def tarball_props(self):
+        assert self.is_tarball
+        return self._tar_props
+
+    @property
+    def tarball_path(self):
+        assert self.is_tarball
+        return os.path.join(self._value, self._tar_props['PACKAGE_FILE_NAME'])
 
     def __str__(self):
         """Value of this refspec in human-friendly format."""
@@ -69,6 +91,7 @@ class GerritIntegration(object):
         if user is None:
             user = 'jenkins'
         self._env = factory.env
+        self._executor = factory.executor
         self._user = user
         self.checked_out_project, self._checked_out_refspec = self._get_checked_out_project()
 
@@ -113,7 +136,7 @@ class GerritIntegration(object):
         refspec = self._env.get(env_name, None)
         if refspec is None:
             raise ConfigurationError(env_name + ' is not set')
-        return RefSpec(refspec)
+        return RefSpec(refspec, self._executor)
 
     def get_remote_hash(self, project, refspec):
         """Fetch hash of a refspec on the Gerrit server."""

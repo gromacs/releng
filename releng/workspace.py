@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import os.path
 import subprocess
+import tarfile
 
 from common import BuildError, ConfigurationError
 from common import Project
@@ -84,6 +85,11 @@ class Workspace(object):
             remote_sha1 = sha1
         return ProjectInfo(project_dir, refspec, sha1, title, remote_sha1)
 
+    def get_project_info(self, project):
+        if project not in self._projects:
+            raise ConfigurationError('accessing project {0} before checkout'.format(project))
+        return self._projects[project]
+
     def _ensure_empty_dir(self, path):
         """Ensures that the given directory exists and is empty."""
         self._executor.ensure_dir_exists(path, ensure_empty=True)
@@ -139,9 +145,7 @@ class Workspace(object):
         Returns:
             str: Absolute path to the project directory.
         """
-        if project not in self._projects:
-            raise ConfigurationError('accessing project {0} before checkout'.format(project))
-        return self._projects[project].root
+        return self.get_project_info(project).root
 
     def get_log_dir(self, category=None):
         """Returns directory for log files.
@@ -188,9 +192,19 @@ class Workspace(object):
         if project in self._projects:
             return
         refspec = self._gerrit.get_refspec(project)
-        if not refspec.is_no_op:
-            self._do_git_checkout(project, refspec)
-        info = self._get_git_project_info(project)
+        if refspec.is_tarball:
+            props = refspec.tarball_props
+            # TODO: Remove possible other directories from earlier extractions.
+            project_dir = os.path.join(self.root, '{0}-{1}'.format(project, props['PACKAGE_VERSION']))
+            self._ensure_empty_dir(project_dir)
+            with tarfile.open(refspec.tarball_path) as tar:
+                tar.extractall(self.root)
+            # TODO: Populate more useful information for _print_project_info()
+            info = ProjectInfo(project_dir, refspec, refspec.remote, 'From tarball', refspec.remote)
+        else:
+            if not refspec.is_no_op:
+                self._do_git_checkout(project, refspec)
+            info = self._get_git_project_info(project)
         self._projects[project] = info
 
     def _do_git_checkout(self, project, refspec):

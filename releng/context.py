@@ -21,6 +21,7 @@ from gerrit import GerritIntegration
 from options import process_build_options
 from script import BuildScript
 from workspace import Workspace
+import utils
 
 class FailureTracker(object):
     """Handles tracking and reporting of failures during the build.
@@ -424,6 +425,14 @@ class BuildContext(object):
         return md5.hexdigest()
 
     def read_cmake_variable_file(self, path):
+        """Reads a file with CMake variable declarations (set commands).
+
+        Args:
+            path (str): Path to the file to read.
+
+        Returns:
+            Dict: variables found from the file, with their values.
+        """
         values = dict()
         set_re = r'(?i)SET\((\w+)\s*"(.*)"\)\s*'
         for line in self._executor.read_file(path):
@@ -432,6 +441,30 @@ class BuildContext(object):
                 values[match.group(1)] = match.group(2)
         return values
 
+    def write_package_info(self, project, file_name, version):
+        """Writes an information file for a tar package.
+
+        The file has a specific format that allows reading the information in a
+        downstream build, and using the package instead of a git checkout.
+
+        Args:
+            project (Project): Project for which the package is done.
+            file_name (str): Name of the package file (with extension, without
+                any path).  Currently the file needs to be in the current
+                working directory.
+            version (str): Version for the package.
+        """
+        project_info = self.workspace.get_project_info(project)
+        values = {
+                'HEAD_HASH': project_info.head_hash,
+                'BUILD_NUMBER': os.environ['BUILD_NUMBER'],
+                'PACKAGE_FILE_NAME': file_name,
+                'PACKAGE_VERSION': version,
+                'MD5SUM': self.compute_md5(file_name)
+            }
+        path = self.workspace.get_path_for_logfile('package-info.log')
+        self.write_property_file(path, values)
+
     def write_property_file(self, path, values):
         """Writes a property file at given path.
 
@@ -439,8 +472,7 @@ class BuildContext(object):
             path (str): Path to the file to write.
             values (Dict): Dictionary of key/value pairs to write.
         """
-        contents = ''.join(['{0} = {1}\n'.format(key, value) for key, value in values.iteritems()])
-        self._executor.write_file(path, contents)
+        utils.write_property_file(self._executor, path, values)
 
     def make_archive(self, path, root_dir=None, use_git=False, prefix=None):
         """Creates a tar.gz archive.
@@ -455,7 +487,7 @@ class BuildContext(object):
                 raise ConfigurationError("archiving with root dir with git not implemented")
             cmd = ['git', 'archive', '-o', path + '.tar.gz']
             if prefix:
-                cmd.append('--prefix=' + prefix)
+                cmd.append('--prefix={0}/'.format(prefix))
             cmd.extend(['-9', 'HEAD'])
             self.run_cmd(cmd)
         else:
