@@ -19,7 +19,8 @@ def _ref(change, patchset):
         change (int): Number of the change.
         patchset (int): Patchset number.
     """
-    return 'refs/changes/{0}/{1}/{2}'.format(str(change)[-2:], change, patchset)
+    value = 'refs/changes/{0}/{1}/{2}'.format(str(change)[-2:], change, patchset)
+    return RefSpec(value)
 
 # These variables can be used to trigger the builds from Gerrit against changes
 # still in review, instead of the default branch head.
@@ -29,6 +30,32 @@ _OVERRIDES = {
         Project.GROMACS: None,
         Project.REGRESSIONTESTS: None
     }
+
+class RefSpec(object):
+
+    """Wraps handling of refspecs used to check out projects."""
+
+    def __init__(self, value):
+        self._value = value
+
+    @property
+    def is_no_op(self):
+        """Whether this refspec is a magic no-op refspec used for testing."""
+        return self._value == 'HEAD'
+
+    @property
+    def is_static(self):
+        """Whether this refspec specifies a static commit at the remote side."""
+        return self._value.startswith('refs/changes/')
+
+    @property
+    def remote(self):
+        """Git refspec used to fetch/check out the corresponding commit."""
+        return self._value
+
+    def __str__(self):
+        """Value of this refspec in human-friendly format."""
+        return self._value
 
 class GerritIntegration(object):
 
@@ -55,7 +82,7 @@ class GerritIntegration(object):
         For other cases, CHECKOUT_PROJECT can also be used.
 
         Returns:
-          Tuple[Project,str]: The checked out project and refspec.
+          Tuple[Project,RefSpec]: The checked out project and refspec.
         """
         checkout_project = self._env.get('CHECKOUT_PROJECT', None)
         gerrit_project = self._env.get('GERRIT_PROJECT', None)
@@ -66,13 +93,13 @@ class GerritIntegration(object):
             refspec = self._env.get('CHECKOUT_REFSPEC', None)
             if refspec is None:
                 raise ConfigurationError('CHECKOUT_REFSPEC not set')
-            return checkout_project, refspec
+            return checkout_project, RefSpec(refspec)
         if gerrit_project is not None:
             gerrit_project = Project.parse(gerrit_project)
             refspec = self._env.get('GERRIT_REFSPEC', None)
             if refspec is None:
                 raise ConfigurationError('GERRIT_REFSPEC not set')
-            return gerrit_project, refspec
+            return gerrit_project, RefSpec(refspec)
         raise ConfigurationError('Neither CHECKOUT_PROJECT nor GERRIT_PROJECT is set')
 
     def get_refspec(self, project):
@@ -86,11 +113,11 @@ class GerritIntegration(object):
         refspec = self._env.get(env_name, None)
         if refspec is None:
             raise ConfigurationError(env_name + ' is not set')
-        return refspec
+        return RefSpec(refspec)
 
     def get_remote_hash(self, project, refspec):
         """Fetch hash of a refspec on the Gerrit server."""
-        cmd = ['git', 'ls-remote', self.get_git_url(project), refspec]
+        cmd = ['git', 'ls-remote', self.get_git_url(project), refspec.remote]
         try:
             return subprocess.check_output(cmd).split(None, 1)[0].strip()
         except subprocess.CalledProcessError as e:

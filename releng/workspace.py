@@ -12,6 +12,28 @@ import subprocess
 from common import BuildError, ConfigurationError
 from common import Project
 
+class ProjectInfo(object):
+    """Information about a checked-out project.
+
+    Attributes:
+        root (str): Root directory where the project has been checked out.
+        refspec (RefSpec): Refspec from which the project has been checked out.
+        head_hash (str): SHA1 of HEAD.
+        head_title (str): Title of the HEAD commit.
+        remote_hash (str): SHA1 of the refspec at the remote repository.
+    """
+
+    def __init__(self, root, refspec, head_hash, head_title, remote_hash):
+        self.root = root
+        self.refspec = refspec
+        self.head_hash = head_hash
+        self.head_title = head_title
+        self.remote_hash = remote_hash
+
+    def has_correct_hash(self):
+        return self.head_hash == self.remote_hash
+
+
 class Workspace(object):
     """Provides access to the build workspace.
 
@@ -34,9 +56,33 @@ class Workspace(object):
         self._default_project = factory.default_project
         # The releng project is always checked out, since we are already
         # executing code from there...
-        self._projects = { Project.RELENG, self._gerrit.checked_out_project }
+        existing_projects = { Project.RELENG, self._gerrit.checked_out_project }
+        self._projects = dict()
+        for project in existing_projects:
+            info = self._get_git_project_info(project)
+            self._projects[project] = info
         self._build_dir = None
         self._logs_dir = os.path.join(self.root, 'logs')
+
+    def _get_git_project_info(self, project):
+        """Returns the project info for a project that has been checked
+        out from git."""
+        project_dir = os.path.join(self.root, project)
+        if self._skip_checkouts:
+            sha1 = ''
+            title = ''
+        else:
+            cmd = ['git', 'rev-list', '-n1', '--format=oneline', 'HEAD']
+            try:
+                sha1, title = subprocess.check_output(cmd, cwd=project_dir).strip().split(None, 1)
+            except subprocess.CalledProcessError as e:
+                raise BuildError('failed to execute: ' + ' '.join(e.cmd))
+        refspec = self._gerrit.get_refspec(project)
+        if refspec.is_static:
+            remote_sha1 = self._gerrit.get_remote_hash(project, refspec)
+        else:
+            remote_sha1 = sha1
+        return ProjectInfo(project_dir, refspec, sha1, title, remote_sha1)
 
     def _ensure_empty_dir(self, path):
         """Ensures that the given directory exists and is empty."""
@@ -69,8 +115,8 @@ class Workspace(object):
             path += extension
         if os.path.dirname(path):
             return path
-        gromacs_dir = self.get_project_dir(self._default_project)
-        path = os.path.join(gromacs_dir, 'admin', 'builds', path)
+        project_dir = self.get_project_dir(self._default_project)
+        path = os.path.join(project_dir, 'admin', 'builds', path)
         return path
 
     @property
@@ -95,7 +141,7 @@ class Workspace(object):
         """
         if project not in self._projects:
             raise ConfigurationError('accessing project {0} before checkout'.format(project))
-        return os.path.join(self.root, project)
+        return self._projects[project].root
 
     def get_log_dir(self, category=None):
         """Returns directory for log files.
@@ -139,23 +185,44 @@ class Workspace(object):
 
     def _checkout_project(self, project):
         """Checks out the given project if not yet done for this build."""
-        if project in self._projects or self._skip_checkouts:
+        if project in self._projects:
             return
-        self._projects.add(project)
-        project_dir = self.get_project_dir(project)
         refspec = self._gerrit.get_refspec(project)
-        if refspec == 'HEAD':
-            return
+        if not refspec.is_no_op:
+            self._do_git_checkout(project, refspec)
+        info = self._get_git_project_info(project)
+        self._projects[project] = info
+
+    def _do_git_checkout(self, project, refspec):
+        project_dir = os.path.join(self.root, project)
         self._executor.ensure_dir_exists(project_dir)
         try:
             if not os.path.isdir(os.path.join(project_dir, '.git')):
                 subprocess.check_call(['git', 'init'], cwd=project_dir)
-            subprocess.check_call(['git', 'fetch', self._gerrit.get_git_url(project), refspec], cwd=project_dir)
+            subprocess.check_call(['git', 'fetch', self._gerrit.get_git_url(project), refspec.remote], cwd=project_dir)
             subprocess.check_call(['git', 'checkout', '-qf', 'FETCH_HEAD'], cwd=project_dir)
             subprocess.check_call(['git', 'clean', '-ffdxq'], cwd=project_dir)
             subprocess.check_call(['git', 'gc'], cwd=project_dir)
         except subprocess.CalledProcessError as e:
             raise BuildError('failed to execute: ' + ' '.join(e.cmd))
+
+    def _print_project_info(self):
+        """Prints information about the revisions used in this build."""
+        # TODO: This is only to suppress output in tests; there should be a
+        # better mechanism.
+        if self._skip_checkouts:
+            return
+        print('-----------------------------------------------------------')
+        print('Building using versions:')
+        for project in sorted(self._projects.iterkeys()):
+            project_info = self._projects[project]
+            correct_info = ''
+            if not project_info.has_correct_hash():
+                correct_info = ' (WRONG)'
+            print('{0:16} {1:26} {2}{3}\n{4:19}{5}'.format(
+                project + ':', project_info.refspec, project_info.head_hash, correct_info,
+                '', project_info.head_title))
+        print('-----------------------------------------------------------')
 
     def _check_projects(self):
         """Checks that all checked-out projects are at correct revisions.
@@ -164,35 +231,12 @@ class Workspace(object):
         correctly checked out.  It is unknown whether this was a Jenkins bug
         or something else, and whether the issue still exists.
         """
-        if self._skip_checkouts:
-            return
-        project_info = []
         all_correct = True
-        for project in sorted(self._projects):
-            project_dir = self.get_project_dir(project)
-            cmd = ['git', 'rev-list', '-n1', '--format=oneline', 'HEAD']
-            try:
-                sha1, title = subprocess.check_output(cmd, cwd=project_dir).strip().split(None, 1)
-            except subprocess.CalledProcessError as e:
-                raise BuildError('failed to execute: ' + ' '.join(e.cmd))
-            refspec = self._gerrit.get_refspec(project)
-            correct = True
-            if refspec.startswith('refs/changes/'):
-                correct_sha1 = self._gerrit.get_remote_hash(project, refspec)
-                if sha1 != correct_sha1:
-                    print('Checkout of {0} failed: HEAD is {1}, expected {2}'.format(
-                        project, sha1, correct_sha1))
-                    correct = False
-                    all_correct = False
-            project_info.append((project, refspec, sha1, title, correct))
-        print('-----------------------------------------------------------')
-        print('Building using versions:')
-        for project, refspec, sha1, title, correct in project_info:
-            correct_info = ''
-            if not correct:
-                correct_info = ' (WRONG)'
-            print('{0:16} {1:26} {2}{3}\n{4:19}{5}'.format(
-                project + ':', refspec, sha1, correct_info, '', title))
-        print('-----------------------------------------------------------')
+        for project in sorted(self._projects.iterkeys()):
+            project_info = self._projects[project]
+            if not project_info.has_correct_hash():
+                print('Checkout of {0} failed: HEAD is {1}, expected {2}'.format(
+                    project, project_info.head_hash, project_info.remote_hash))
+                all_correct = False
         if not all_correct:
             raise BuildError('Checkout failed (Jenkins issue)')

@@ -611,6 +611,7 @@ class BuildContext(object):
             context = factory.create_context(job_type, opts, script.extra_options)
             for project in script.extra_projects:
                 workspace._checkout_project(project)
+            workspace._print_project_info()
             workspace._check_projects()
             workspace._init_build_dir(script.build_out_of_source)
             executor.chdir(workspace.build_dir)

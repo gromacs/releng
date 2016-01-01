@@ -23,6 +23,12 @@ class TestHelper(object):
                 env['CHECKOUT_PROJECT'] = Project.GROMACS
             if 'CHECKOUT_REFSPEC' not in env:
                 env['CHECKOUT_REFSPEC'] = 'HEAD'
+            if 'GROMACS_REFSPEC' not in env:
+                env['GROMACS_REFSPEC'] = 'HEAD'
+            if 'RELENG_REFSPEC' not in env:
+                env['RELENG_REFSPEC'] = 'HEAD'
+            if 'REGRESSIONTESTS_REFSPEC' not in env:
+                env['REGRESSIONTESTS_REFSPEC'] = 'HEAD'
         self.factory = ContextFactory(env=env)
         self.factory.init_executor(self.executor)
         if workspace:

@@ -16,6 +16,7 @@ def prepare_build_matrix(factory, configfile, outputfile):
     executor = factory.executor
     workspace = factory.workspace
     workspace._checkout_project(Project.GROMACS)
+    workspace._print_project_info()
     workspace._check_projects()
     workspace._init_build_dir(out_of_source=True)
 
