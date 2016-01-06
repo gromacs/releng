@@ -63,9 +63,35 @@ def runPythonScript(contents)
     sh 'python build.py'
 }
 
+def runRelengScript(contents, propagate = true)
+{
+    // TODO: This is not really general, but works for the current limited workflow.
+    def checkoutScript = """\
+        import os
+        import subprocess
+        if not os.path.isdir('releng'):
+            os.makedirs('releng')
+        os.chdir('releng')
+        subprocess.check_call(['git', 'init'])
+        subprocess.check_call(['git', 'fetch',
+            'ssh://jenkins@gerrit.gromacs.org/releng.git', os.environ['RELENG_REFSPEC']])
+        subprocess.check_call(['git', 'checkout', '-qf', os.environ['RELENG_HASH']])
+        subprocess.check_call(['git', 'clean', '-ffdxq'])
+        subprocess.check_call(['git', 'gc'])
+        os.chdir('..')
+        """
+    runRelengScriptInternal(checkoutScript, contents, propagate)
+}
+
 def runRelengScriptNoCheckout(contents, propagate = true)
 {
-    def script = """\
+    runRelengScriptInternal('', contents, propagate)
+}
+
+def runRelengScriptInternal(prepareScript, contents, propagate)
+{
+    def script = prepareScript.stripIndent()
+    script += """\
         import os
         import sys
         os.environ['STATUS_FILE'] = 'logs/status.json'
@@ -162,6 +188,14 @@ def processMatrixConfigsToBuildAxis(filename)
         releng.prepare_multi_configuration_build('${filename}', 'matrix.txt')
         """)
     return readPropertyFile('build/matrix.txt').OPTIONS
+}
+
+def processMatrixConfigs(filename)
+{
+    runRelengScriptNoCheckout("""\
+        releng.prepare_multi_configuration_build('${filename}', 'matrix.json')
+        """)
+    return readJsonFile('build/matrix.json')
 }
 
 def readPropertyFile(path)
