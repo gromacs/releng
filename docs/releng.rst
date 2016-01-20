@@ -103,6 +103,8 @@ determined by the build script.
 
 build-jobs=N
   Use the specified number of parallel jobs for building.
+out-of-source
+  Do the build out-of-source, even if an in-source build would be supported.
 cmake-X.Y.Z
   Use the specified CMake version to generate the build system.
 gcc-X.Y

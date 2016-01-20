@@ -31,6 +31,10 @@ class ProjectInfo(object):
         self.head_title = head_title
         self.remote_hash = remote_hash
 
+    @property
+    def is_tarball(self):
+        return self.refspec.is_tarball
+
     def has_correct_hash(self):
         return self.head_hash == self.remote_hash
 
@@ -48,6 +52,7 @@ class Workspace(object):
 
     Attributes:
         root (str): Root directory of the workspace.
+        install_dir (str): Directory for test installation.
     """
     def __init__(self, factory, skip_checkouts=False):
         self.root = factory.env['WORKSPACE']
@@ -63,7 +68,9 @@ class Workspace(object):
             info = self._get_git_project_info(project)
             self._projects[project] = info
         self._build_dir = None
+        self._out_of_source = None
         self._logs_dir = os.path.join(self.root, 'logs')
+        self.install_dir = os.path.join(self.root, 'test-install')
 
     def _get_git_project_info(self, project):
         """Returns the project info for a project that has been checked
@@ -96,15 +103,29 @@ class Workspace(object):
 
     def _init_build_dir(self, out_of_source):
         """Initializes the build directory."""
+        self._out_of_source = out_of_source
         if out_of_source:
             self._build_dir = os.path.join(self.root, 'build')
             self._ensure_empty_dir(self._build_dir)
         else:
             self._build_dir = self.get_project_dir(self._default_project)
 
-    def _init_logs_dir(self):
-        """Initializes the logs directory."""
-        self._ensure_empty_dir(self._logs_dir)
+    def _clear_workspace_dirs(self):
+        """Clears directories that get generated for each build."""
+        self._executor.remove_path(self._logs_dir)
+        self._executor.remove_path(self.install_dir)
+
+    def clean_build_dir(self):
+        """Ensures that the current build dir is in the initial state (empty)."""
+        if self._out_of_source:
+            self._ensure_empty_dir(self.build_dir)
+        else:
+            project_info = self.get_project_info(self._default_project)
+            if project_info.is_tarball:
+                self._executor.remove_path(project_info.project_dir)
+                self._extract_tarball(project_info.refspec.tarball_path)
+            elif not project_info.refspec.is_no_op:
+                self._run_git_clean(project_info.project_dir)
 
     def _resolve_build_input_file(self, path, extension=None):
         """Resolves the name of a build input file.
@@ -196,9 +217,8 @@ class Workspace(object):
             props = refspec.tarball_props
             # TODO: Remove possible other directories from earlier extractions.
             project_dir = os.path.join(self.root, '{0}-{1}'.format(project, props['PACKAGE_VERSION']))
-            self._ensure_empty_dir(project_dir)
-            with tarfile.open(refspec.tarball_path) as tar:
-                tar.extractall(self.root)
+            self._executor.remove_path(project_dir)
+            self._extract_tarball(refspec.tarball_path)
             # TODO: Populate more useful information for _print_project_info()
             info = ProjectInfo(project_dir, refspec, refspec.remote, 'From tarball', refspec.remote)
         else:
@@ -206,6 +226,10 @@ class Workspace(object):
                 self._do_git_checkout(project, refspec)
             info = self._get_git_project_info(project)
         self._projects[project] = info
+
+    def _extract_tarball(self, tarball_path):
+        with tarfile.open(tarball_path) as tar:
+            tar.extractall(self.root)
 
     def _do_git_checkout(self, project, refspec):
         project_dir = os.path.join(self.root, project)
@@ -219,6 +243,13 @@ class Workspace(object):
             subprocess.check_call(['git', 'gc'], cwd=project_dir)
         except subprocess.CalledProcessError as e:
             raise BuildError('failed to execute: ' + ' '.join(e.cmd))
+
+    def _run_git_clean(self, project_dir):
+        try:
+            subprocess.check_call(['git', 'clean', '-ffdxq'], cwd=project_dir)
+        except subprocess.CalledProcessError as e:
+            cmd_string = ' '.join([pipes.quote(x) for x in e.cmd])
+            raise BuildError('failed to execute: ' + cmd_string)
 
     def _print_project_info(self):
         """Prints information about the revisions used in this build."""

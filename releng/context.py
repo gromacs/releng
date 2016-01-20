@@ -340,6 +340,7 @@ class BuildContext(object):
         options = options.copy()
         options['CMAKE_C_COMPILER'] = self.env.c_compiler
         options['CMAKE_CXX_COMPILER'] = self.env.cxx_compiler
+        options['CMAKE_INSTALL_PREFIX'] = self.workspace.install_dir
         options.update(self.env.extra_cmake_options)
         cmake_args = [self.env.cmake_command, self.workspace.get_project_dir(Project.GROMACS)]
         if self.env.cmake_generator is not None:
@@ -651,7 +652,7 @@ class BuildContext(object):
         executor = factory.executor
         try:
             workspace = factory.workspace
-            workspace._init_logs_dir()
+            workspace._clear_workspace_dirs()
             workspace._checkout_project(factory.default_project)
             build_script_path = workspace._resolve_build_input_file(build, '.py')
             script = BuildScript(factory.executor, build_script_path)
@@ -664,7 +665,8 @@ class BuildContext(object):
                 workspace._checkout_project(project)
             workspace._print_project_info()
             workspace._check_projects()
-            workspace._init_build_dir(script.build_out_of_source)
+            out_of_source = script.build_out_of_source or context.opts.out_of_source
+            workspace._init_build_dir(out_of_source)
             context.chdir(workspace.build_dir)
             context._flush_output()
             script.do_build(context)

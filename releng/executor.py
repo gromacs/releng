@@ -45,12 +45,19 @@ class Executor(object):
     def exit(self, exitcode):
         sys.exit(exitcode)
 
+    def remove_path(self, path):
+        """Deletes a file or a directory at a given path if it exists."""
+        path = _ensure_abs_path(path, self._cwd.cwd)
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        elif os.path.exists(path):
+            os.remove(path)
+
     def ensure_dir_exists(self, path, ensure_empty=False):
         """Ensures that a directory exists and optionally that it is empty."""
         path = _ensure_abs_path(path, self._cwd.cwd)
         if ensure_empty:
-            if os.path.exists(path):
-                shutil.rmtree(path)
+            self.remove_path(path)
         elif os.path.isdir(path):
             return
         os.makedirs(path)
@@ -78,6 +85,9 @@ class DryRunExecutor(object):
 
     def exit(self, exitcode):
         sys.exit(exitcode)
+
+    def remove_path(self, path):
+        print('delete: ' + path)
 
     def ensure_dir_exists(self, path, ensure_empty=False):
         pass
