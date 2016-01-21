@@ -53,7 +53,7 @@ factory = ContextFactory(default_project=project, system=args.system,
         env=env, dry_run=not args.run)
 if not args.run:
     from executor import DryRunExecutor
-    factory.init_executor(DryRunExecutor())
+    factory.init_executor(cls=DryRunExecutor)
 factory.init_gerrit_integration(user=args.user)
 if args.matrix:
     prepare_build_matrix(factory, args.matrix, os.path.basename(args.matrix))

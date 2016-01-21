@@ -30,7 +30,7 @@ class TestHelper(object):
             if 'REGRESSIONTESTS_REFSPEC' not in env:
                 env['REGRESSIONTESTS_REFSPEC'] = 'HEAD'
         self.factory = ContextFactory(env=env)
-        self.factory.init_executor(self.executor)
+        self.factory.init_executor(instance=self.executor)
         if workspace:
             self.factory.init_workspace(skip_checkouts=True)
         self._input_files = dict()

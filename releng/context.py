@@ -16,7 +16,7 @@ import sys
 
 from common import BuildError, ConfigurationError
 from common import JobType, Project, System
-from executor import Executor
+from executor import CurrentDirectoryTracker, Executor
 from gerrit import GerritIntegration
 from options import process_build_options
 from script import BuildScript
@@ -105,6 +105,7 @@ class ContextFactory(object):
         self.default_project = default_project
         self.dry_run = dry_run
         self._env = env
+        self._cwd = CurrentDirectoryTracker()
         self._executor = None
         self._failure_tracker = None
         self._gerrit = None
@@ -117,6 +118,11 @@ class ContextFactory(object):
         The caller should not modify the returned dictionary.
         """
         return self._env
+
+    @property
+    def cwd(self):
+        """Returns a CurrentDirectoryTracker instance for the build."""
+        return self._cwd
 
     @property
     def executor(self):
@@ -146,14 +152,17 @@ class ContextFactory(object):
             self.init_workspace()
         return self._workspace
 
-    def init_executor(self, instance=None):
-        """Sets an executor instance to be used.
+    def init_executor(self, cls=None, instance=None):
+        """Sets an executor instance/class to be used.
 
-        If not called, a default instance is created.
+        If not called, a default instance of Executor is created.
         """
         assert self._executor is None
         if instance is None:
-            instance = Executor()
+            if cls is None:
+                instance = Executor(self)
+            else:
+                instance = cls(self)
         self._executor = instance
 
     def _init_failure_tracker(self):
@@ -207,6 +216,7 @@ class BuildContext(object):
         self.job_type = job_type
         self.is_dry_run = factory.dry_run
         self._failure_tracker = factory.failure_tracker
+        self._cwd = factory.cwd
         self._executor = factory.executor
         self.workspace = factory.workspace
         self.env, self.opts = process_build_options(factory, opts, extra_options)
@@ -234,7 +244,7 @@ class BuildContext(object):
 
     def chdir(self, path):
         """Changes the working directory for subsequent run_cmd() calls."""
-        self._executor.chdir(path)
+        self._cwd.chdir(path)
 
     def _cmd_to_string(self, cmd, shell):
         """Converts a shell command from a string/list into properly escaped string."""
@@ -280,7 +290,9 @@ class BuildContext(object):
             return 0
         if shell:
             kwargs.update(self.env.shell_call_opts)
-            kwargs['shell']=True
+            kwargs['shell'] = True
+        if not 'cwd' in kwargs:
+            kwargs['cwd'] = self._cwd.cwd
         self._flush_output()
         if use_return_code:
             return subprocess.call(cmd, **kwargs)
@@ -340,9 +352,7 @@ class BuildContext(object):
         self.run_cmd_with_env(cmake_args,
                 failure_message='CMake configuration failed')
 
-    # TODO: Pass keep_going = True from builds where it makes most sense (in
-    # particular, gromacs.py), and make the default False.
-    def build_target(self, target=None, parallel=True, keep_going=True,
+    def build_target(self, target=None, parallel=True, keep_going=False,
             target_descr=None, failure_string=None, continue_on_failure=False):
         """Builds a given target.
 
@@ -482,23 +492,32 @@ class BuildContext(object):
             root_dir (str): Root directory from which the archive should be
                 created.
         """
+        if prefix:
+            prefix += '/'
         if use_git:
             if root_dir:
                 raise ConfigurationError("archiving with root dir with git not implemented")
             cmd = ['git', 'archive', '-o', path + '.tar.gz']
-            if prefix:
-                cmd.append('--prefix={0}/'.format(prefix))
+            cmd.append('--prefix=' + prefix)
             cmd.extend(['-9', 'HEAD'])
             self.run_cmd(cmd)
         else:
-            if prefix:
-                raise ConfigurationError("archiving with prefix without git not implemented")
+            # TODO: Check that root_dir is a subdirectory of the workspace
+            # (this all does not work if it is the workspace itself).
+            if not os.path.isabs(root_dir):
+                root_dir = os.path.join(self._cwd.cwd, root_dir)
+            org_dir = root_dir
             root_dir, base_dir = os.path.split(root_dir)
-            if not root_dir:
-                root_dir = '.'
+            # TODO: Instead of renaming the directory twice, we could use
+            # tarfile directly to create the archive.
+            if prefix:
+                base_dir = prefix
+                shutil.move(org_dir, os.path.join(root_dir, prefix))
             if not base_dir:
                 base_dir = '.'
             shutil.make_archive(path, 'gztar', root_dir, base_dir)
+            if prefix:
+                shutil.move(os.path.join(root_dir, prefix), org_dir)
 
     def publish_logs(self, logs, category=None):
         """Copies provided log(s) to Jenkins.
@@ -646,7 +665,7 @@ class BuildContext(object):
             workspace._print_project_info()
             workspace._check_projects()
             workspace._init_build_dir(script.build_out_of_source)
-            executor.chdir(workspace.build_dir)
+            context.chdir(workspace.build_dir)
             context._flush_output()
             script.do_build(context)
         except BuildError as e:

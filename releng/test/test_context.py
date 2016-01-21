@@ -52,7 +52,7 @@ class TestFailureTracker(unittest.TestCase):
 
 class TestRunBuild(unittest.TestCase):
     def setUp(self):
-        self.helper = TestHelper(self, workspace='ws')
+        self.helper = TestHelper(self, workspace='/ws')
 
     def test_NoOptions(self):
         executor = self.helper.executor
