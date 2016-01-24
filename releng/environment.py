@@ -5,7 +5,6 @@ This file contains all the code that hardcodes details about the Jenkins build
 slave environment, such as paths to various executables.
 """
 
-from distutils.spawn import find_executable
 import os
 
 from common import ConfigurationError
@@ -18,12 +17,6 @@ import slaves
 # TODO: Clean up the different mechanisms used here; even for the ~same thing,
 # different approaches may be used (some might set an environment variable,
 # others use an absolute path, or set a CMake option).
-
-def append_to_env(var, string):
-    if var in os.environ and os.environ[var]:
-        os.environ[var] += ' ' + string
-    else:
-        os.environ[var] = string
 
 class BuildEnvironment(object):
     """Provides access to the build environment.
@@ -43,9 +36,6 @@ class BuildEnvironment(object):
        system (System): Operating system of the build node.
        compiler (Compiler or None): Selected compiler.
        compiler_version (string): Version number for the selected compiler.
-       shell_call_opts (Dict[str, str]):
-       env_cmd (str or None): Command that sets environment variables required
-           by the compiler (Visual Studio and Intel uses this).
        c_compiler (str or None): Name of the C compiler executable.
        cxx_compiler (str or None): Name of the C++ compiler executable.
        cmake_command (str): Name of the CMake executable.
@@ -65,8 +55,6 @@ class BuildEnvironment(object):
         self.system = factory.system
         self.compiler = None
         self.compiler_version = None
-        self.shell_call_opts = dict()
-        self.env_cmd = None
         self.c_compiler = None
         self.cxx_compiler = None
         self.cmake_command = 'cmake'
@@ -80,6 +68,7 @@ class BuildEnvironment(object):
 
         self._build_jobs = 1
         self._build_prefix_cmd = None
+        self._cmd_runner = factory.cmd_runner
         self._workspace = factory.workspace
 
         if self.system is not None:
@@ -118,7 +107,7 @@ class BuildEnvironment(object):
             cmd.append('-k')
         return cmd
 
-    def add_env_var(self, variable, value):
+    def set_env_var(self, variable, value):
         """Sets environment variable to be used for further commands.
 
         All subsequent commands run with BuildContext.run_cmd() etc. will use
@@ -129,27 +118,33 @@ class BuildEnvironment(object):
             value (str): Value to set the variable to.  As a convenience, if
                 the value is None, nothing is done.
         """
-        if value is not None:
-            os.environ[variable] = value
+        self._cmd_runner.set_env_var(variable, value)
+
+    # TODO: Remove once replaced with set_env_var() in build scripts.
+    def add_env_var(self, variable, value):
+        """Sets environment variable to be used for further commands."""
+        self._cmd_runner.set_env_var(variable, value)
+
+    def append_to_env_var(self, variable, value):
+        self._cmd_runner.append_to_env_var(variable, value)
 
     def prepend_path_env(self, path):
         """Prepends a path to the executable search path (PATH)."""
-        os.environ['PATH'] = os.pathsep.join((os.path.expanduser(path), os.environ['PATH']))
+        self._cmd_runner.prepend_to_env_var('PATH', os.path.expanduser(path), sep=os.pathsep)
 
     def append_path_env(self, path):
         """Appends a path to the executable search path (PATH)."""
-        os.environ['PATH'] += os.pathsep + os.path.expanduser(path)
+        self._cmd_runner.append_to_env_var('PATH', os.path.expanduser(path), sep=os.pathsep)
 
     def _init_system(self):
         if self.system == System.WINDOWS:
             self.cmake_generator = 'NMake Makefiles JOM'
             self._build_jobs = 4
         else:
-            self.shell_call_opts['executable'] = '/bin/bash'
             self._build_jobs = 2
             self.prepend_path_env('~/bin')
             if self.system == System.OSX:
-                os.environ['CMAKE_PREFIX_PATH'] = '/opt/local'
+                self.set_env_var('CMAKE_PREFIX_PATH', '/opt/local')
             self._init_core_dump()
 
     def _init_core_dump(self):
@@ -204,8 +199,8 @@ class BuildEnvironment(object):
 
         if gcctoolchainpath:
             stdlibflag=format_for_stdlib_flag.format(gcctoolchain=gcctoolchainpath)
-            append_to_env('CFLAGS', stdlibflag)
-            append_to_env('CXXFLAGS', stdlibflag)
+            self.append_to_env_var('CFLAGS', stdlibflag)
+            self.append_to_env_var('CXXFLAGS', stdlibflag)
             format_for_linker_flags="-Wl,-rpath,{gcctoolchain}/lib64 -L{gcctoolchain}/lib64"
             self.extra_cmake_options['CMAKE_CXX_LINK_FLAGS'] = format_for_linker_flags.format(gcctoolchain=gcctoolchainpath)
 
@@ -235,7 +230,7 @@ class BuildEnvironment(object):
                 # Note that installing icc 16 over icc 15 uninstalled
                 # the latter, so it is likely not possible to have
                 # multiple icc versions installed on Windows.
-                self.env_cmd += r' && "C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs' + self.compiler_version
+                self._import_env(r'"C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs' + self.compiler_version)
                 self.c_compiler = 'icl'
                 self.cxx_compiler = 'icl'
                 self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/machine:x64"'
@@ -245,15 +240,15 @@ class BuildEnvironment(object):
             self.c_compiler = 'icc'
             self.cxx_compiler = 'icpc'
             if version == '16.0':
-                self.env_cmd = '. /opt/intel/compilers_and_libraries_2016/linux/bin/compilervars.sh intel64'
+                self._import_env('. /opt/intel/compilers_and_libraries_2016/linux/bin/compilervars.sh intel64')
             elif version == '15.0':
-                self.env_cmd = '. /opt/intel/composer_xe_2015/bin/compilervars.sh intel64'
+                self._import_env('. /opt/intel/composer_xe_2015/bin/compilervars.sh intel64')
             elif version == '14.0':
-                self.env_cmd = '. /opt/intel/composer_xe_2013_sp1/bin/compilervars.sh intel64'
+                self._import_env('. /opt/intel/composer_xe_2013_sp1/bin/compilervars.sh intel64')
             elif version == '13.0':
-                self.env_cmd = '. /opt/intel/composer_xe_2013/bin/compilervars.sh intel64'
+                self._import_env('. /opt/intel/composer_xe_2013/bin/compilervars.sh intel64')
             elif version == '12.1':
-                self.env_cmd = '. /opt/intel/composer_xe_2011_sp1/bin/compilervars.sh intel64'
+                self._import_env('. /opt/intel/composer_xe_2011_sp1/bin/compilervars.sh intel64')
             else:
                 raise ConfigurationError('only icc 12.1, 13.0, 14.0, 15.0, 16.0 are supported, got icc-' + version)
 
@@ -265,15 +260,18 @@ class BuildEnvironment(object):
         self.compiler = Compiler.INTEL
         self.compiler_version = version
 
+    def _import_env(self, env_cmd):
+        self._cmd_runner.import_env(env_cmd, self.cmake_command)
+
     def _init_msvc(self, version):
         self.compiler = Compiler.MSVC
         self.compiler_version = version
         if version == '2010':
-            self.env_cmd = r'"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat" amd64'
+            self._import_env(r'"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat" amd64')
         elif version == '2013':
-            self.env_cmd = r'"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" amd64'
+            self._import_env(r'"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" amd64')
         elif version == '2015':
-            self.env_cmd = r'"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64'
+            self._import_env(r'"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64')
         else:
             raise ConfigurationError('only Visual Studio 2010, 2013, and 2013 are supported, got msvc-' + version)
 
@@ -283,19 +281,13 @@ class BuildEnvironment(object):
         if html_output_dir is None:
             html_output_dir = self._workspace.get_log_dir(category='scan_html')
         self.clang_analyzer_output_dir = html_output_dir
-        analyzer = self._find_executable(self.c_compiler)
-        os.environ['CCC_CC'] = self.c_compiler
-        os.environ['CCC_CXX'] = self.cxx_compiler
+        analyzer = self._cmd_runner.find_executable(self.c_compiler)
+        self.set_env_var('CCC_CC', self.c_compiler)
+        self.set_env_var('CCC_CXX', self.cxx_compiler)
         scan_build_path = os.path.expanduser('~/bin/scan-build-path')
         self.cxx_compiler = os.path.join(scan_build_path, 'c++-analyzer')
         self._build_prefix_cmd = [scan_build_path + '/scan-build',
                 '--use-analyzer', analyzer, '-o', html_output_dir]
-
-    def _find_executable(self, name):
-        """Returns the full path to the given executable."""
-        # If we at some point require Python 3.3, shutil.which() would be
-        # more obvious.
-        return find_executable(name)
 
     def _init_cuda(self, version):
         self.cuda_root = '/opt/cuda_' + version
@@ -307,10 +299,10 @@ class BuildEnvironment(object):
         self.extra_cmake_options['CMAKE_PREFIX_PATH'] = os.path.expanduser('~/utils/libxml2')
 
     def _init_tsan(self):
-        os.environ['LD_LIBRARY_PATH'] = os.path.expanduser('~/tools/gcc-nofutex/lib64')
+        self.set_env_var('LD_LIBRARY_PATH', os.path.expanduser('~/tools/gcc-nofutex/lib64'))
 
     def _init_atlas(self):
-        os.environ['CMAKE_LIBRARY_PATH'] = '/usr/lib/atlas-base'
+        self.set_env_var('CMAKE_LIBRARY_PATH', '/usr/lib/atlas-base')
 
     def _init_mpi(self):
         # Set the host compiler to the underlying compiler.
@@ -318,11 +310,11 @@ class BuildEnvironment(object):
         # recognize icpc, only icc, so for simplicity the C compiler is used
         # for all cases, as it works as well.
         if self.compiler in (Compiler.GCC, Compiler.INTEL) and self.system != System.WINDOWS:
-            c_compiler_path = self._find_executable(self.c_compiler)
+            c_compiler_path = self._cmd_runner.find_executable(self.c_compiler)
             if not c_compiler_path:
                 raise ConfigurationError("Could not determine the full path to the compiler ({0})".format(self.c_compiler))
             self.cuda_host_compiler = c_compiler_path
-        os.environ['OMPI_CC'] = self.c_compiler
-        os.environ['OMPI_CXX'] = self.cxx_compiler
+        self.set_env_var('OMPI_CC', self.c_compiler)
+        self.set_env_var('OMPI_CXX', self.cxx_compiler)
         self.c_compiler = 'mpicc'
         self.cxx_compiler = 'mpic++'

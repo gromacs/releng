@@ -17,6 +17,13 @@ class BuildError(Exception):
 
     Reason for termination is provided as the exception args."""
 
+class CommandError(BuildError):
+    """Exception to signal failure to execute an external command."""
+
+    def __init__(self, cmd_string):
+        BuildError.__init__(self, 'failed to execute: ' + cmd_string)
+        self.cmd = cmd_string
+
 class ConfigurationError(Exception):
     """Exception to signal errors in the build configuration
 

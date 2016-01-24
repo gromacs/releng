@@ -2,6 +2,18 @@
 Misc. utility functions.
 """
 
+import sys
+
+def flush_output():
+    """Ensures all output is flushed before an external process is started.
+
+    Without calls to this at appropriate places, it might happen that
+    output from the external process comes before earlier output from this
+    script in the Jenkins console log.
+    """
+    sys.stdout.flush()
+    sys.stderr.flush()
+
 def read_property_file(executor, path):
     """Reads a property file written by write_property_file().
 

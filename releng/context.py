@@ -7,16 +7,14 @@ from __future__ import print_function
 import os
 import glob
 import hashlib
-import pipes
 import platform
 import re
 import shutil
-import subprocess
 import sys
 
-from common import BuildError, ConfigurationError
+from common import BuildError, CommandError, ConfigurationError
 from common import JobType, Project, System
-from executor import CurrentDirectoryTracker, Executor
+from executor import CommandRunner, CurrentDirectoryTracker, Executor
 from gerrit import GerritIntegration
 from options import process_build_options
 from script import BuildScript
@@ -107,6 +105,7 @@ class ContextFactory(object):
         self._env = env
         self._cwd = CurrentDirectoryTracker()
         self._executor = None
+        self._cmd_runner = None
         self._failure_tracker = None
         self._gerrit = None
         self._workspace = None
@@ -130,6 +129,13 @@ class ContextFactory(object):
         if self._executor is None:
             self.init_executor()
         return self._executor
+
+    @property
+    def cmd_runner(self):
+        """Returns a CommandRunner instance for this build."""
+        if self._cmd_runner is None:
+            self._init_cmd_runner()
+        return self._cmd_runner
 
     @property
     def failure_tracker(self):
@@ -164,6 +170,10 @@ class ContextFactory(object):
             else:
                 instance = cls(self)
         self._executor = instance
+
+    def _init_cmd_runner(self):
+        assert self._cmd_runner is None
+        self._cmd_runner = CommandRunner(self)
 
     def _init_failure_tracker(self):
         assert self._failure_tracker is None
@@ -218,18 +228,9 @@ class BuildContext(object):
         self._failure_tracker = factory.failure_tracker
         self._cwd = factory.cwd
         self._executor = factory.executor
+        self._cmd_runner = factory.cmd_runner
         self.workspace = factory.workspace
         self.env, self.opts = process_build_options(factory, opts, extra_options)
-
-    def _flush_output(self):
-        """Ensures all output is flushed before an external process is started.
-
-        Without calls to this at appropriate places, it might happen that
-        output from the external process comes before earlier output from this
-        script in the Jenkins console log.
-        """
-        sys.stdout.flush()
-        sys.stderr.flush()
 
     # TODO: Consider if these would be better set in the build script, and
     # just the values queried.
@@ -246,17 +247,8 @@ class BuildContext(object):
         """Changes the working directory for subsequent run_cmd() calls."""
         self._cwd.chdir(path)
 
-    def _cmd_to_string(self, cmd, shell):
-        """Converts a shell command from a string/list into properly escaped string."""
-        if shell:
-            return cmd
-        elif self.env.system == System.WINDOWS:
-            return subprocess.list2cmdline(cmd)
-        else:
-            return ' '.join([pipes.quote(x) for x in cmd])
-
-    def run_cmd(self, cmd, shell=False, ignore_failure=False, use_return_code=False,
-            failure_message=None, echo=True, **kwargs):
+    def run_cmd(self, cmd, ignore_failure=False, use_return_code=False,
+            failure_message=None, **kwargs):
         """Runs a command.
 
         This wraps subprocess.call() and check_call() with error-handling code
@@ -268,7 +260,6 @@ class BuildContext(object):
 
         Args:
             cmd (str/list): Command to execute (as for subprocess.call()).
-            shell (Optional[bool]): Whether cmd is a shell command as a string.
             ignore_failure (Optional[bool]): If ``True``, failure to run the
                 command is ignored.
             use_return_code (Optional[bool]): If ``True``, exit code from the
@@ -277,49 +268,24 @@ class BuildContext(object):
             failure_message (Optional[str]): If set, provides a friendly
                 message about what in the build fails if this command fails.
                 This will be reported back to Gerrit.
-            echo (Optional[bool]): If ``True``, the command is echoed to stdout
-                before executing.
 
         Returns:
             int: Command return code (if ``use_return_code=True``).
         """
-        cmd_string = self._cmd_to_string(cmd, shell)
-        if echo:
-            print('+ ' + cmd_string)
-        if self.is_dry_run:
-            return 0
-        if shell:
-            kwargs.update(self.env.shell_call_opts)
-            kwargs['shell'] = True
-        if not 'cwd' in kwargs:
-            kwargs['cwd'] = self._cwd.cwd
-        self._flush_output()
         if use_return_code:
-            return subprocess.call(cmd, **kwargs)
+            return self._cmd_runner.call(cmd, **kwargs)
         try:
-            subprocess.check_call(cmd, **kwargs)
-        except subprocess.CalledProcessError as e:
+            self._cmd_runner.check_call(cmd, **kwargs)
+        except CommandError as e:
             if not ignore_failure:
                 if failure_message is None:
-                    failure_message = 'failed to execute: ' + cmd_string
+                    failure_message = 'failed to execute: ' + e.cmd
                 raise BuildError(failure_message)
 
-    def run_cmd_with_env(self, cmd, shell=False, **kwargs):
-        """Runs a command that requires build environment variables.
-
-        Works the same as run_cmd(), but additionally ensures that the
-        compilation environment variables are set for compilers that need it.
-        This method needs to be called for any command that deals with
-        compilation or running the compiled binaries to ensure that the
-        environment is set up properly for compilers that require scripts to be
-        executed in the shell.
-        """
-        if self.env.env_cmd is None:
-            return self.run_cmd(cmd, shell=shell, **kwargs)
-        else:
-            cmd_string = self._cmd_to_string(cmd, shell)
-            print('+ ' + cmd_string)
-            return self.run_cmd(self.env.env_cmd + ' && ' + cmd_string, shell=True, echo=False, **kwargs)
+    # TODO: Remove after build scripts have been adapted
+    def run_cmd_with_env(self, cmd, **kwargs):
+        """Runs a command."""
+        return self.run_cmd(cmd, **kwargs)
 
     def run_cmake(self, options):
         """Runs CMake with the provided options.
@@ -350,8 +316,7 @@ class BuildContext(object):
                     for key, value in sorted(options.iteritems())
                     if value is not None])
         self.run_cmd([self.env.cmake_command, '--version'])
-        self.run_cmd_with_env(cmake_args,
-                failure_message='CMake configuration failed')
+        self.run_cmd(cmake_args, failure_message='CMake configuration failed')
 
     def build_target(self, target=None, parallel=True, keep_going=False,
             target_descr=None, failure_string=None, continue_on_failure=False):
@@ -381,7 +346,7 @@ class BuildContext(object):
         """
         cmd = self.env._get_build_cmd(target=target, parallel=parallel, keep_going=keep_going)
         try:
-            self.run_cmd_with_env(cmd)
+            self.run_cmd(cmd)
         except BuildError:
             if failure_string is None:
                 if target_descr is not None:
@@ -413,10 +378,10 @@ class BuildContext(object):
         cmd = [self.env.ctest_command, '-D', dtype]
         cmd.extend(args)
         try:
-            self.run_cmd_with_env(cmd)
-        except BuildError:
+            self._cmd_runner.check_call(cmd)
+        except CommandError as e:
             if failure_string is None:
-                failure_string = 'failed test: ' + self._cmd_to_string(cmd, shell=False)
+                failure_string = 'failed test: ' + e.cmd
             self.mark_unstable(failure_string)
         if memcheck:
             self.run_cmd('xsltproc -o Testing/Temporary/valgrind_unit.xml ../releng/ctest_valgrind_to_junit.xsl Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml', shell=True)
@@ -668,7 +633,7 @@ class BuildContext(object):
             out_of_source = script.build_out_of_source or context.opts.out_of_source
             workspace._init_build_dir(out_of_source)
             context.chdir(workspace.build_dir)
-            context._flush_output()
+            utils.flush_output()
             script.do_build(context)
         except BuildError as e:
             failure_tracker.mark_failed(str(e))
