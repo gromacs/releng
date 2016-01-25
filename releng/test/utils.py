@@ -11,11 +11,12 @@ from releng.executor import Executor
 class TestHelper(object):
     def __init__(self, test, workspace=None, env=dict()):
         self._test = test
-        self._console = StringIO()
+        self._console = None
         self.executor = mock.create_autospec(Executor, spec_set=True, instance=True)
-        type(self.executor).console = mock.PropertyMock(return_value=self._console)
+        self.executor.check_output.side_effect = self._check_output
         self.executor.read_file.side_effect = self._read_file
         self.executor.write_file.side_effect = self._write_file
+        self.reset_console_output()
 
         if workspace:
             env['WORKSPACE'] = workspace
@@ -32,9 +33,22 @@ class TestHelper(object):
         self.factory = ContextFactory(env=env)
         self.factory.init_executor(instance=self.executor)
         if workspace:
-            self.factory.init_workspace(skip_checkouts=True)
+            self.factory.init_workspace()
+            self.executor.reset_mock()
+            self.reset_console_output()
         self._input_files = dict()
         self._output_files = dict()
+
+    def reset_console_output(self):
+        self._console = StringIO()
+        type(self.executor).console = mock.PropertyMock(return_value=self._console)
+
+    def _check_output(self, cmd, **kwargs):
+        if cmd == ['git', 'rev-list', '-n1', '--format=oneline', 'HEAD']:
+            sha1 = '1234567890abcdef0123456789abcdef01234567'
+            title = 'Mock title'
+            return '{0} {1}\n'.format(sha1, title)
+        return None
 
     def _read_file(self, path):
         if path not in self._input_files:

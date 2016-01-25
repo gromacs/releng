@@ -78,6 +78,13 @@ class Executor(object):
             return
         os.makedirs(path)
 
+    def copy_file(self, source, dest):
+        """Copies a file."""
+        source = _ensure_abs_path(source, self._cwd.cwd)
+        dest = _ensure_abs_path(dest, self._cwd.cwd)
+        if os.path.isfile(source):
+            shutil.copy(source, dest)
+
     def read_file(self, path, binary=False):
         """Iterates over lines in a file."""
         path = _ensure_abs_path(path, self._cwd.cwd)
@@ -109,13 +116,18 @@ class DryRunExecutor(object):
         pass
 
     def check_output(self, cmd, **kwargs):
-        pass
+        return subprocess.check_output(cmd, **kwargs)
 
     def remove_path(self, path):
         print('delete: ' + path)
 
     def ensure_dir_exists(self, path, ensure_empty=False):
         pass
+
+    def copy_file(self, source, dest):
+        print('copy {0} -> {1}'.format(source, dest))
+        if os.path.isfile(source):
+            shutil.copy(source, dest)
 
     def read_file(self, path, binary=False):
         path = _ensure_abs_path(path, self._cwd.cwd)

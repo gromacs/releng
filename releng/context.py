@@ -92,7 +92,7 @@ class ContextFactory(object):
     generally needs to have more control.
     """
 
-    def __init__(self, default_project=Project.GROMACS, system=None, env=None, dry_run=False):
+    def __init__(self, default_project=Project.GROMACS, system=None, env=None):
         if system is None:
             system = platform.system()
         if system is not None:
@@ -101,7 +101,6 @@ class ContextFactory(object):
             env = dict(os.environ)
         self.system = system
         self.default_project = default_project
-        self.dry_run = dry_run
         self._env = env
         self._cwd = CurrentDirectoryTracker()
         self._executor = None
@@ -187,13 +186,13 @@ class ContextFactory(object):
         assert self._gerrit is None
         self._gerrit = GerritIntegration(factory=self, **kwargs)
 
-    def init_workspace(self, **kwargs):
+    def init_workspace(self):
         """Initializes Workspace with given parameters.
 
         If not called, the object will be created with default parameters.
         """
         assert self._workspace is None
-        self._workspace = Workspace(factory=self, **kwargs)
+        self._workspace = Workspace(self)
 
     def create_context(self, *args):
         """Creates a BuildContext with given arguments."""
@@ -205,11 +204,6 @@ class BuildContext(object):
     Attributes:
         job_type (JobType): Type/scope of the build job (e.g., per-patchset,
             nightly).
-        is_dry_run (bool): Whether actual execution of commands should be
-            skipped.
-            Mainly for internal use, but if the build script executes some
-            commands with large side effects directly, it may want to respect
-            this.
         env (BuildEnvironment): Access to build environment details like
             paths to executables.  Many of the environment properties, such as
             selecting the compiler, are handled by the build context
@@ -224,7 +218,6 @@ class BuildContext(object):
         if job_type is not None:
             JobType.validate(job_type)
         self.job_type = job_type
-        self.is_dry_run = factory.dry_run
         self._failure_tracker = factory.failure_tracker
         self._cwd = factory.cwd
         self._executor = factory.executor
@@ -505,10 +498,7 @@ class BuildContext(object):
         """
         for log in logs:
             dest = self.workspace.get_path_for_logfile(os.path.basename(log), category=category)
-            if self.is_dry_run:
-                print('- publish {0} -> {1}'.format(log, dest))
-            elif os.path.isfile(log):
-                shutil.copy(log, dest)
+            self._executor.copy_file(log, dest)
 
     @property
     def failed(self):

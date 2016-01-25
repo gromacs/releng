@@ -39,18 +39,18 @@ project = Project.GROMACS
 if args.project is not None:
     project = Project.parse(args.project)
 
-env = {
+env = dict(os.environ)
+env.update({
         'CHECKOUT_PROJECT': Project.RELENG,
         'CHECKOUT_REFSPEC': 'HEAD',
         'GROMACS_REFSPEC': 'HEAD',
         'RELENG_REFSPEC': 'HEAD',
         'REGRESSIONTESTS_REFSPEC': 'HEAD',
         'WORKSPACE': workspace_root
-}
+    })
 
 # Please ensure that run_build() in __init__.py stays in sync.
-factory = ContextFactory(default_project=project, system=args.system,
-        env=env, dry_run=not args.run)
+factory = ContextFactory(default_project=project, system=args.system, env=env)
 if not args.run:
     from executor import DryRunExecutor
     factory.init_executor(cls=DryRunExecutor)

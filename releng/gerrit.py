@@ -7,7 +7,6 @@ related to what to check out.
 """
 
 import os
-import subprocess
 
 from common import ConfigurationError
 from common import Project
@@ -92,6 +91,7 @@ class GerritIntegration(object):
             user = 'jenkins'
         self._env = factory.env
         self._executor = factory.executor
+        self._cmd_runner = factory.cmd_runner
         self._user = user
         self.checked_out_project, self._checked_out_refspec = self._get_checked_out_project()
 
@@ -140,11 +140,11 @@ class GerritIntegration(object):
 
     def get_remote_hash(self, project, refspec):
         """Fetch hash of a refspec on the Gerrit server."""
-        cmd = ['git', 'ls-remote', self.get_git_url(project), refspec.remote]
-        try:
-            return subprocess.check_output(cmd).split(None, 1)[0].strip()
-        except subprocess.CalledProcessError as e:
-            raise BuildError('failed to execute: ' + ' '.join(e.cmd))
+        cmd = ['git', 'ls-remote', self.get_git_url(project), str(refspec)]
+        output = self._cmd_runner.check_output(cmd).split(None, 1)
+        if len(output) < 2:
+            return BuildError('failed to find refspec {0} for {1}'.format(str(refspec), project))
+        return output[0].strip()
 
     def get_git_url(self, project):
         """Returns the URL for git to access the given project."""

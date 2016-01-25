@@ -7,7 +7,6 @@ commands related to setting up and inspecting the workspace.
 from __future__ import print_function
 
 import os.path
-import subprocess
 import tarfile
 
 from common import BuildError, ConfigurationError
@@ -54,11 +53,11 @@ class Workspace(object):
         root (str): Root directory of the workspace.
         install_dir (str): Directory for test installation.
     """
-    def __init__(self, factory, skip_checkouts=False):
+    def __init__(self, factory):
         self.root = factory.env['WORKSPACE']
         self._executor = factory.executor
+        self._cmd_runner = factory.cmd_runner
         self._gerrit = factory.gerrit
-        self._skip_checkouts = skip_checkouts
         self._default_project = factory.default_project
         # The releng project is always checked out, since we are already
         # executing code from there...
@@ -76,15 +75,8 @@ class Workspace(object):
         """Returns the project info for a project that has been checked
         out from git."""
         project_dir = os.path.join(self.root, project)
-        if self._skip_checkouts:
-            sha1 = ''
-            title = ''
-        else:
-            cmd = ['git', 'rev-list', '-n1', '--format=oneline', 'HEAD']
-            try:
-                sha1, title = subprocess.check_output(cmd, cwd=project_dir).strip().split(None, 1)
-            except subprocess.CalledProcessError as e:
-                raise BuildError('failed to execute: ' + ' '.join(e.cmd))
+        cmd = ['git', 'rev-list', '-n1', '--format=oneline', 'HEAD']
+        sha1, title = self._cmd_runner.check_output(cmd, cwd=project_dir).strip().split(None, 1)
         refspec = self._gerrit.get_refspec(project)
         if refspec.is_static:
             remote_sha1 = self._gerrit.get_remote_hash(project, refspec)
@@ -234,40 +226,33 @@ class Workspace(object):
     def _do_git_checkout(self, project, refspec):
         project_dir = os.path.join(self.root, project)
         self._executor.ensure_dir_exists(project_dir)
-        try:
-            if not os.path.isdir(os.path.join(project_dir, '.git')):
-                subprocess.check_call(['git', 'init'], cwd=project_dir)
-            subprocess.check_call(['git', 'fetch', self._gerrit.get_git_url(project), refspec.remote], cwd=project_dir)
-            subprocess.check_call(['git', 'checkout', '-qf', 'FETCH_HEAD'], cwd=project_dir)
-            subprocess.check_call(['git', 'clean', '-ffdxq'], cwd=project_dir)
-            subprocess.check_call(['git', 'gc'], cwd=project_dir)
-        except subprocess.CalledProcessError as e:
-            raise BuildError('failed to execute: ' + ' '.join(e.cmd))
+        runner = self._cmd_runner
+        if not os.path.isdir(os.path.join(project_dir, '.git')):
+            runner.check_call(['git', 'init'], cwd=project_dir)
+        runner.check_call(['git', 'fetch', self._gerrit.get_git_url(project), str(refspec)], cwd=project_dir)
+        runner.check_call(['git', 'checkout', '-qf', 'FETCH_HEAD'], cwd=project_dir)
+        runner.check_call(['git', 'gc'], cwd=project_dir)
+        self._run_git_clean(project_dir)
 
     def _run_git_clean(self, project_dir):
-        try:
-            subprocess.check_call(['git', 'clean', '-ffdxq'], cwd=project_dir)
-        except subprocess.CalledProcessError as e:
-            cmd_string = ' '.join([pipes.quote(x) for x in e.cmd])
-            raise BuildError('failed to execute: ' + cmd_string)
+        self._cmd_runner.check_call(['git', 'clean', '-ffdxq'], cwd=project_dir)
 
     def _print_project_info(self):
         """Prints information about the revisions used in this build."""
-        # TODO: This is only to suppress output in tests; there should be a
-        # better mechanism.
-        if self._skip_checkouts:
-            return
-        print('-----------------------------------------------------------')
-        print('Building using versions:')
+        console = self._executor.console
+        print('-----------------------------------------------------------', file=console)
+        print('Building using versions:', file=console)
         for project in sorted(self._projects.iterkeys()):
             project_info = self._projects[project]
             correct_info = ''
             if not project_info.has_correct_hash():
                 correct_info = ' (WRONG)'
-            print('{0:16} {1:26} {2}{3}\n{4:19}{5}'.format(
-                project + ':', project_info.refspec, project_info.head_hash, correct_info,
-                '', project_info.head_title))
-        print('-----------------------------------------------------------')
+            print('{0:16} {1:26} {2}{3}'.format(
+                project + ':', project_info.refspec, project_info.head_hash, correct_info),
+                file=console)
+            if project_info.head_title:
+                print('{0:19}{1}'.format('', project_info.head_title), file=console)
+        print('-----------------------------------------------------------', file=console)
 
     def _check_projects(self):
         """Checks that all checked-out projects are at correct revisions.
