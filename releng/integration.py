@@ -1,10 +1,11 @@
 """
-Gerrit interfacing
+Interfacing with other systems (Gerrit, Jenkins)
 
-This module should contain all code related to interacting with Gerrit.
-It also currently contains code to interact with the Jenkins configuration
-related to what to check out.
+This module should contain all code related to interacting with Gerrit
+and as much as possible of the code related to interacting with the Jenkins job
+configuration.
 """
+from __future__ import print_function
 
 import os
 
@@ -152,3 +153,59 @@ class GerritIntegration(object):
 
     def _get_ssh_url(self):
         return self._user + '@gerrit.gromacs.org'
+
+
+class FailureTracker(object):
+    """Handles tracking and reporting of failures during the build.
+
+    Attributes:
+        failed (bool): Whether the build has already failed.
+    """
+
+    def __init__(self, factory):
+        self._executor = factory.executor
+        self.failed = False
+        self._unsuccessful_reason = []
+
+    def mark_failed(self, reason):
+        """Marks the build failed.
+
+        Args:
+            reason (str): Reason printed to the build log for the failure.
+        """
+        self.failed = True
+        self._unsuccessful_reason.append(reason)
+
+    def mark_unstable(self, reason, details=None):
+        """Marks the build unstable.
+
+        Args:
+            reason (str): Reason printed to the build console log for the failure.
+            details (Optional[List[str]]): Reason(s) reported back to Gerrit.
+                If not provided, reason is used.
+        """
+        print('FAILED: ' + reason, file=self._executor.console)
+        if details is None:
+            self._unsuccessful_reason.append(reason)
+        else:
+            self._unsuccessful_reason.extend(details)
+
+    def report(self, workspace):
+        """Reports possible failures at the end of the build.
+
+        Args:
+            workspace (Workspace): Workspace to put the failure log into.
+        """
+        if self._unsuccessful_reason:
+            console = self._executor.console
+            print('Build FAILED:', file=console)
+            for line in self._unsuccessful_reason:
+                print('  ' + line, file=console)
+            # Only severe configuration errors can cause workspace to be None,
+            # so skip the log for simplicity.
+            if workspace is not None:
+                path = workspace.get_path_for_logfile('unsuccessful-reason.log')
+                contents = '\n'.join(self._unsuccessful_reason) + '\n'
+                self._executor.write_file(path, contents)
+        if self.failed:
+            assert self._unsuccessful_reason, "Failed build did not produce an unsuccessful reason"

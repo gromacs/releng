@@ -5,8 +5,8 @@ import textwrap
 import mock
 
 from releng.common import Project
-from releng.context import ContextFactory
 from releng.executor import Executor
+from releng.factory import ContextFactory
 
 class TestHelper(object):
     def __init__(self, test, workspace=None, env=dict()):

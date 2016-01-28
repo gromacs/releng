@@ -34,7 +34,8 @@ def run_build(build, job_type, opts, project=Project.GROMACS):
             Build scripts not intended for such builds may simply ignore most
             of the parameters that can be influenced by these options.
     """
-    from context import BuildContext, ContextFactory
+    from context import BuildContext
+    from factory import ContextFactory
     # Please ensure that __main__.py stays in sync.
     factory = ContextFactory(default_project=project)
     BuildContext._run_build(factory, build, job_type, opts)
@@ -55,7 +56,7 @@ def prepare_multi_configuration_build(configfile, outputfile):
             :file:`gromacs/admin/builds/{configfile}.txt`.
         outputfile (str): File to write the configurations to, under build/.
     """
-    from context import ContextFactory
+    from factory import ContextFactory
     from matrixbuild import prepare_build_matrix
     factory = ContextFactory()
     prepare_build_matrix(factory, configfile, outputfile)
@@ -72,7 +73,7 @@ def write_triggered_build_url_file(varname, filename):
         varname (str): Variable to set.
         filename (str): File (including path) to write the properties to.
     """
-    from context import ContextFactory
+    from factory import ContextFactory
     from matrixbuild import write_triggered_build_url_file
     factory = ContextFactory()
     write_triggered_build_url_file(factory, varname, filename)

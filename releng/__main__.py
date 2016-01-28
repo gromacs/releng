@@ -12,7 +12,8 @@ import argparse
 import os
 
 from common import Project
-from context import BuildContext, ContextFactory
+from context import BuildContext
+from factory import ContextFactory
 from matrixbuild import prepare_build_matrix
 
 parser = argparse.ArgumentParser(description="""\
