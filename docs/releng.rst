@@ -9,10 +9,13 @@ package in the ``releng`` repository.
 Build overview
 --------------
 
-Builds using the releng scripts use the following sequence:
+Python build script
+^^^^^^^^^^^^^^^^^^^
 
-1. Jenkins does some preparatory steps (see :doc:`jenkins-config`),
-   including checking out the ``releng`` repo.
+Builds using the releng Python scripts use the following sequence:
+
+1. Jenkins (or the workflow script) does some preparatory steps (see
+   :doc:`jenkins-config`), including checking out the ``releng`` repo.
 2. Jenkins imports the releng Python package, and calls run_build().
 3. The releng script checks out the ``gromacs`` repo if not yet done by
    Jenkins.
@@ -50,13 +53,52 @@ Builds using the releng scripts use the following sequence:
     from the common log location, and using the unsuccessful reason reported
     from the script as the failure message to report back to Gerrit.
 
+Workflow builds
+^^^^^^^^^^^^^^^
+
+The subdirectory :file:`workflow/` contains Groovy scripts for use with the
+Jenkins Pipeline plugin.  The general sequence for these builds is as follows:
+
+1. Jenkins allocates a node for loading the Groovy script.
+2. Jenkins checks out the ``releng`` repo using a shell script.
+   We do not use an SCM step here to avoid showing this checkout on the build
+   summary page.  The summary page only works reasonably with at most one Git
+   checkout within the workflow, and the workflow script should be in control
+   of what this checkout is.
+3. Jenkins loads the desired workflow script.
+4. Typically, the workflow script further loads ``utils.groovy`` as its first
+   statement. Any other statements at the top level of the workflow script are
+   also executed in the context of the node/workspace where the script is being
+   loaded.
+   The workflow script should do a ``return this`` as its last statement.
+5. Depending on the workflow script, Jenkins may also call other functions
+   defined in the workflow script in this node/workspace context.  This is
+   necessary if some values need to be passed from Jenkins configuration to the
+   workflow script for code that runs in this context.
+6. Jenkins calls ``doBuild()`` defined by the workflow script outside of any
+   node/workspace context.  Depending on the workflow script, some parameters
+   may be passed.
+7. The workflow script has full control over the build from now on, until the
+   end.
+
+See :doc:`jenkins-config` for more details on the configuration.
+
+See :doc:`workflow` for more details on what kinds of builds the workflow
+scripts are currently used for.
+
 Matrix builds
 ^^^^^^^^^^^^^
 
-The releng scripts also provide helpers for creating Jenkins builds that load
-the configuration matrix from the ``gromacs`` repository.  The format of such
-matrix files is one configuration per line.  Empty lines are ignored, and
-comments can be started with ``#``.
+The releng scripts also support creating Jenkins matrix builds that load
+the configuration matrix from the ``gromacs`` repository.  These files are
+located under :file:`admin/builds/`.  The format of such matrix files is one
+configuration per line.  Empty lines are ignored, and comments can be started
+with ``#``.
+
+The build host assignment happens through a set of labels: build options that affect
+the possible host for building the configuration map to labels (the mapping is
+defined in :file:`options.py`), and the set of labels supported by each build
+slave is defined in :file:`slaves.py`.
 
 The preparatory steps for these builds are similar as described above, but
 instead of calling run_build(), the sequence is as follows:
@@ -81,10 +123,49 @@ instead of calling run_build(), the sequence is as follows:
 
 See :doc:`jenkins-config` for more details.
 
-The build host assignment happens through a set of labels: build options that affect
-the possible host for building the configuration map to labels (the mapping is
-defined in :file:`options.py`), and the set of labels supported by each build
-slave is defined in :file:`slaves.py`.
+There also exists a workflow build that loads and preprocesses the
+configuration matrix, and then triggers a matrix build that takes the
+configuration axis values as a build parameter.  The matrix build uses the
+standard sequence with releng Python scripts.  However, reporting the results
+back to Jenkins does not work well for that build because of limitations in the
+workflow plugin, so it is unused.  Reporting the results to Gerrit should work
+such that the user sees link to the matrix build instead of the parent workflow
+build, unless the workflow script actually fails.
+
+See :doc:`workflow` and :doc:`jenkins-config` for more details.
+
+.. _releng-input-env-vars:
+
+Input environment variables
+---------------------------
+
+The following environment variables are used by the releng scripts for input
+from the Jenkins job (or from a workflow build script):
+
+``GROMACS_REFSPEC``
+``REGRESSIONTESTS_REFSPEC``
+``RELENG_REFSPEC``
+  Refspecs for the repositories used for checking them out.  Note that they
+  will not always be used for an actual checkout; for example, Jenkins always
+  needs to do the checkout for ``releng``.
+``CHECKOUT_PROJECT``
+  Needs to be set to the project (``gromacs``, ``regressiontests``, or
+  ``releng``) that Jenkins has checked out.  Needs to be set, unless
+  ``GERRIT_PROJECT`` is set.
+``CHECKOUT_REFSPEC``
+  Refspec used to checkout ``CHECKOUT_PROJECT``.  This will override the
+  project-specific refspec for that project.
+``GERRIT_PROJECT``
+``GERRIT_REFSPEC``
+  These are set by Gerrit Trigger, and can be used for simplicity instead of
+  ``CHECKOUT_PROJECT`` and ``CHECKOUT_REFSPEC``.
+``NODE_NAME``
+  Name of the host where the build is running.  This is used for some
+  host-specific logic in configuring the compilation.
+  This is set by Jenkins automatically.
+``WORKSPACE``
+  Path to the root of the Jenkins workspace where the build is running.
+  This is set by Jenkins automatically, except for workflow builds.
 
 .. _releng-jenkins-build-opts:
 
@@ -243,7 +324,7 @@ clear-cut, but the general approach should be well covered.
 Testing releng scripts
 ----------------------
 
-Currently, there are limited unit tests for some parts of the scripts.
+Currently, there are limited unit tests for some parts of the Python scripts.
 They require a backport of ``unittest.mock`` to be installed, and can be
 executed with ::
 

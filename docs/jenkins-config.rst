@@ -6,31 +6,27 @@ Configuration for Jenkins projects that use the releng scripts are described her
 General configuration
 ---------------------
 
-SCM checkout configuration and related environment variables:
+SCM checkout configuration:
 
-* Jenkins SCM configuration is used to check out the repository from where the
+* Jenkins SCM configuration should be used to check out the repository from where the
   build is triggered as a subdirectory of the workspace, with the same name as
   the repository.  This is necessary for the Git Plugin to show reasonable
   change lists for the builds etc., although the build in reality always starts
-  from the releng repository.
-* The build script will then check out the :file:`releng` repository if it did
+  from the releng repository.  In a workflow build, this checkout can be done
+  in the workflow script.
+* The build script always needs to check out the :file:`releng` repository if it did
   not trigger the build, and start the build from there.
 * The releng script will check out remaining repositories if necessary.
-* The refspecs for repositories that did not cause the build to trigger should
-  be specified in ``GROMACS_REFSPEC``, ``REGRESSIONTESTS_REFSPEC``, and
-  ``RELENG_REFSPEC`` environment variables, respectively (whether regression
-  tests will actually be checked out is determined by the build script; see
-  below).
-* The project that triggers the build (and the refspec) should be specified in
-  ``CHECKOUT_PROJECT`` and ``CHECKOUT_REFSPEC`` environment variables (for
-  simplicity, it is also possible to use ``GERRIT_PROJECT`` and
-  ``GERRIT_REFSPEC``).
+* Various ``*_REFSPEC`` environment variables (see
+  :ref:`releng-input-env-vars`) need to be set in one way or another (see below
+  for the suggested approach).
 
 To create a build that allows both intuitive parameterized builds with given
 refspecs and Gerrit Trigger builds, the following configuration is recommended:
 
 * Use ``GROMACS_REFSPEC``, ``RELENG_REFSPEC``, and ``REGRESSIONTESTS_REFSPEC``
-  as build parameters.
+  as build parameters, with ``refs/heads/master`` (or another branch ref) as
+  the default.
 * Use "Prepare environment for the run" and the following Groovy script::
 
     if (!binding.variables.containsKey('GERRIT_PROJECT')) {
@@ -49,8 +45,8 @@ variables).  Note that the SCM checkout behavior cannot use
 ``CHECKOUT_PROJECT`` in the git address, because the injected variables are not
 available for SCM polling.
 
-Normal builds
--------------
+Normal/matrix builds
+--------------------
 
 Builds that call run_build() should use the following post-build steps:
 
@@ -121,6 +117,39 @@ The folder structure in the build workspace looks like this::
       [unsuccessful-reason.log]
       [<category>/]*
 
+Workflow builds
+---------------
+
+Workflow builds should use a bootstrapping script like this::
+
+  def script
+  node('!windows') {
+      def checkout_refspec = RELENG_REFSPEC
+      if (binding.variables.containsKey('GERRIT_PROJECT')) {
+          if (GERRIT_PROJECT == 'releng') {
+              checkout_refspec = GERRIT_REFSPEC
+          }
+      }
+      sh """\
+          set -e
+          mkdir -p releng
+          cd releng
+          git init
+          git fetch ssh://jenkins@gerrit.gromacs.org/releng.git ${checkout_refspec}
+          git checkout -qf FETCH_HEAD
+          git clean -ffdxq
+          git gc
+          """.stripIndent()
+      script = load 'releng/workflow/<workflow-name>.groovy'
+      <possible additional calls as needed by the workflow>
+  }
+  script.doBuild(<possible additional parameters>)
+
+where expressions in angle brackets depend on the workflow.
+The workflow script will take care of most other tasks; the Jenkins
+configuration may only need to specify some build parameters (typically,
+``GROMACS_REFSPEC`` etc., as for normal builds) and the possible build triggers.
+
 Matrix builds with dynamic matrix
 ---------------------------------
 
@@ -163,7 +192,7 @@ The build that is triggered from Gerrit is configured slightly differently:
     releng.write_triggered_build_url_file('URL_TO_POST', 'build/url-to-post.txt')
 
 * The last step injects environment varibles from the file specified above.
-  
+
 The last two steps make it possible to post the link to the downstream build to
 Gerrit, avoiding additional clicks to get to the actual build.  If the build
 fails without actually triggering the downstream build, the initial value set
