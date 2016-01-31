@@ -77,3 +77,17 @@ def write_triggered_build_url_file(varname, filename):
     from matrixbuild import write_triggered_build_url_file
     factory = ContextFactory()
     write_triggered_build_url_file(factory, varname, filename)
+
+def get_build_revisions(filename):
+    """Writes out information about revisions used in the build.
+
+    Information is written as JSON.
+
+    Args:
+        filename (str): File to write the information, under logs/.
+    """
+    from factory import ContextFactory
+    factory = ContextFactory()
+    workspace = factory.workspace
+    workspace._clear_workspace_dirs()
+    workspace._get_build_revisions(workspace.get_path_for_logfile(filename))

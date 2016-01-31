@@ -34,14 +34,25 @@ def checkoutDefaultProject()
 @NonCPS
 def currentBuildParametersForJenkins()
 {
-    def parameters = [
-            [$class: 'StringParameterValue', name: 'GROMACS_REFSPEC', value: GROMACS_REFSPEC],
-            [$class: 'StringParameterValue', name: 'REGRESSIONTESTS_REFSPEC', value: REGRESSIONTESTS_REFSPEC],
-            [$class: 'StringParameterValue', name: 'RELENG_REFSPEC', value: RELENG_REFSPEC]
-        ]
+    def parameters = []
+    parameters = addBuildParameterIfExists(parameters, 'GROMACS_REFSPEC')
+    parameters = addBuildParameterIfExists(parameters, 'GROMACS_HASH')
+    parameters = addBuildParameterIfExists(parameters, 'REGRESSIONTESTS_REFSPEC')
+    parameters = addBuildParameterIfExists(parameters, 'REGRESSIONTESTS_HASH')
+    parameters = addBuildParameterIfExists(parameters, 'RELENG_REFSPEC')
+    parameters = addBuildParameterIfExists(parameters, 'RELENG_HASH')
     binding.variables.findAll { it.key.startsWith('GERRIT_') }.each {
         key, value ->
             parameters += [$class: 'StringParameterValue', name: key, value: value]
+    }
+    return parameters
+}
+
+@NonCPS
+def addBuildParameterIfExists(parameters, name)
+{
+    if (env."$name") {
+        parameters += [$class: 'StringParameterValue', name: name, value: env."$name"]
     }
     return parameters
 }
@@ -63,6 +74,57 @@ def runRelengScriptNoCheckout(contents)
         """.stripIndent()
     def script = importScript + contents.stripIndent()
     runPythonScript(script)
+}
+
+def readBuildRevisions()
+{
+    runRelengScriptNoCheckout("""\
+        releng.get_build_revisions('build-revisions.json')
+        """)
+    def revisionList = readJsonFile('logs/build-revisions.json')
+    setRevisionHashesToEnv(revisionList)
+    addBuildRevisionsSummary(revisionList)
+    return revisionListToRevisionMap(revisionList)
+}
+
+@NonCPS
+def setRevisionHashesToEnv(revisionList)
+{
+    revisionList.each { env."${it.hash_env}" = it.hash }
+}
+
+def addBuildRevisionsSummary(revisionList)
+{
+    def text = """\
+        Built revisions:
+        <table>
+        """.stripIndent()
+    for (int i = 0; i != revisionList.size(); ++i) {
+        def rev = revisionList[i]
+        text += """\
+            <tr>
+              <td>${rev.project}:</td>
+              <td>${rev.refspec}</td>
+              <td>${rev.hash}</td>
+            </tr>
+            """.stripIndent()
+        if (rev.title) {
+            text += """\
+                <tr>
+                  <td />
+                  <td colspan=2>${rev.title}</td>
+                </tr>
+                """.stripIndent()
+        }
+    }
+    text += "</table>"
+    manager.createSummary('notepad').appendText(text, false)
+}
+
+@NonCPS
+def revisionListToRevisionMap(revisionList)
+{
+    return revisionList.collectEntries { [(it.project): it] }
 }
 
 def processMatrixConfigsToBuildAxis(filename)
@@ -88,6 +150,19 @@ def parseProperties(contents)
     for (def name : props.stringPropertyNames())
         map.put(name, props.getProperty(name));
     return map
+}
+
+def readJsonFile(path)
+{
+    def contents = readFile path
+    return parseJson(contents)
+}
+
+@NonCPS
+def parseJson(contents)
+{
+    def slurper = new groovy.json.JsonSlurper()
+    return slurper.parseText(contents)
 }
 
 return this

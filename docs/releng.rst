@@ -145,9 +145,17 @@ from the Jenkins job (or from a workflow build script):
 ``GROMACS_REFSPEC``
 ``REGRESSIONTESTS_REFSPEC``
 ``RELENG_REFSPEC``
-  Refspecs for the repositories used for checking them out.  Note that they
-  will not always be used for an actual checkout; for example, Jenkins always
-  needs to do the checkout for ``releng``.
+  Refspecs for the repositories used for fetching the change to build.
+  Note that they will not always be used for an actual checkout; for example,
+  Jenkins always needs to do the checkout for ``releng``.
+``GROMACS_HASH``
+``REGRESSIONTESTS_HASH``
+``RELENG_HASH``
+  If set, these provide hashes to check out, corresponding to the refspecs.
+  Thees can be used to build a fixed commit from a refspec such as
+  ``refs/heads/master``, even if multiple checkouts are done at different
+  times.  It is assumed that fetching the corresponding refspec will make the
+  commit with the provided hash available.
 ``CHECKOUT_PROJECT``
   Needs to be set to the project (``gromacs``, ``regressiontests``, or
   ``releng``) that Jenkins has checked out.  Needs to be set, unless

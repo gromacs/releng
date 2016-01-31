@@ -1,3 +1,4 @@
+import json
 from StringIO import StringIO
 import textwrap
 # With Python 2.7, this needs to be separately installed.
@@ -48,6 +49,10 @@ class TestHelper(object):
             sha1 = '1234567890abcdef0123456789abcdef01234567'
             title = 'Mock title'
             return '{0} {1}\n'.format(sha1, title)
+        elif cmd[:2] == ['git', 'ls-remote']:
+            sha1 = '1234567890abcdef0123456789abcdef01234567'
+            refspec = cmd[3]
+            return '{0} {1}\n'.format(sha1, refspec)
         return None
 
     def _read_file(self, path):
@@ -71,3 +76,9 @@ class TestHelper(object):
             self._test.fail('output file not produced: ' + path)
         text = textwrap.dedent(expected)
         self._test.assertEqual(text, self._output_files[path])
+
+    def assertOutputJsonFile(self, path, expected):
+        if path not in self._output_files:
+            self._test.fail('output file not produced: ' + path)
+        contents = json.loads(self._output_files[path])
+        self._test.assertEqual(contents, expected)

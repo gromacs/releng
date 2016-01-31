@@ -6,6 +6,7 @@ commands related to setting up and inspecting the workspace.
 """
 from __future__ import print_function
 
+import json
 import os.path
 import tarfile
 
@@ -23,7 +24,8 @@ class ProjectInfo(object):
         remote_hash (str): SHA1 of the refspec at the remote repository.
     """
 
-    def __init__(self, root, refspec, head_hash, head_title, remote_hash):
+    def __init__(self, project, root, refspec, head_hash, head_title, remote_hash):
+        self.project = project
         self.root = root
         self.refspec = refspec
         self.head_hash = head_hash
@@ -36,6 +38,15 @@ class ProjectInfo(object):
 
     def has_correct_hash(self):
         return self.head_hash == self.remote_hash
+
+    def to_dict(self):
+        return {
+                'project': self.project,
+                'refspec': str(self.refspec),
+                'hash': self.head_hash,
+                'title': self.head_title,
+                'hash_env': '{0}_HASH'.format(self.project.upper())
+            }
 
 
 class Workspace(object):
@@ -82,7 +93,7 @@ class Workspace(object):
             remote_sha1 = self._gerrit.get_remote_hash(project, refspec)
         else:
             remote_sha1 = sha1
-        return ProjectInfo(project_dir, refspec, sha1, title, remote_sha1)
+        return ProjectInfo(project, project_dir, refspec, sha1, title, remote_sha1)
 
     def get_project_info(self, project):
         if project not in self._projects:
@@ -200,6 +211,23 @@ class Workspace(object):
         path = self.get_log_dir(category=category)
         return os.path.join(path, name)
 
+    def _get_build_revisions(self, filename):
+        projects = []
+        for project in Project._values:
+            if project in self._projects:
+                info = self._projects[project]
+            else:
+                refspec = self._gerrit.get_refspec(project, allow_none=True)
+                if refspec is None:
+                    continue
+                # TODO: Get the commit title? That would make the build summary
+                # page nicer, but can require some magic, or a real checkout...
+                sha1 = self._gerrit.get_remote_hash(project, refspec)
+                info = ProjectInfo(project, None, refspec, sha1, None, sha1)
+            projects.append(info)
+        contents = json.dumps([project.to_dict() for project in projects])
+        self._executor.write_file(filename, contents)
+
     def _checkout_project(self, project):
         """Checks out the given project if not yet done for this build."""
         if project in self._projects:
@@ -212,7 +240,7 @@ class Workspace(object):
             self._executor.remove_path(project_dir)
             self._extract_tarball(refspec.tarball_path)
             # TODO: Populate more useful information for _print_project_info()
-            info = ProjectInfo(project_dir, refspec, refspec.remote, 'From tarball', refspec.remote)
+            info = ProjectInfo(project, project_dir, refspec, refspec.checkout, 'From tarball', refspec.checkout)
         else:
             if not refspec.is_no_op:
                 self._do_git_checkout(project, refspec)
@@ -229,8 +257,8 @@ class Workspace(object):
         runner = self._cmd_runner
         if not os.path.isdir(os.path.join(project_dir, '.git')):
             runner.check_call(['git', 'init'], cwd=project_dir)
-        runner.check_call(['git', 'fetch', self._gerrit.get_git_url(project), str(refspec)], cwd=project_dir)
-        runner.check_call(['git', 'checkout', '-qf', 'FETCH_HEAD'], cwd=project_dir)
+        runner.check_call(['git', 'fetch', self._gerrit.get_git_url(project), refspec.fetch], cwd=project_dir)
+        runner.check_call(['git', 'checkout', '-qf', refspec.checkout], cwd=project_dir)
         runner.check_call(['git', 'gc'], cwd=project_dir)
         self._run_git_clean(project_dir)
 
@@ -240,15 +268,15 @@ class Workspace(object):
     def _print_project_info(self):
         """Prints information about the revisions used in this build."""
         console = self._executor.console
+        projects = [self._projects[p] for p in sorted(self._projects.iterkeys())]
         print('-----------------------------------------------------------', file=console)
         print('Building using versions:', file=console)
-        for project in sorted(self._projects.iterkeys()):
-            project_info = self._projects[project]
+        for project_info in projects:
             correct_info = ''
             if not project_info.has_correct_hash():
                 correct_info = ' (WRONG)'
             print('{0:16} {1:26} {2}{3}'.format(
-                project + ':', project_info.refspec, project_info.head_hash, correct_info),
+                project_info.project + ':', project_info.refspec, project_info.head_hash, correct_info),
                 file=console)
             if project_info.head_title:
                 print('{0:19}{1}'.format('', project_info.head_title), file=console)

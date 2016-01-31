@@ -4,6 +4,7 @@ env.URL_TO_POST = env.BUILD_URL
 utils = load 'releng/workflow/utils.groovy'
 utils.setEnvForRelengFromBuildParameters('gromacs')
 utils.checkoutDefaultProject()
+utils.readBuildRevisions()
 
 def loadMatrixConfigs(filename)
 {
