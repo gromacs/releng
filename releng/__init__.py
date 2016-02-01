@@ -38,7 +38,8 @@ def run_build(build, job_type, opts, project=Project.GROMACS):
     from factory import ContextFactory
     # Please ensure that __main__.py stays in sync.
     factory = ContextFactory(default_project=project)
-    BuildContext._run_build(factory, build, job_type, opts)
+    with factory.status_reporter:
+        BuildContext._run_build(factory, build, job_type, opts)
 
 def prepare_multi_configuration_build(configfile, outputfile):
     """Main entry point for preparing matrix builds.
@@ -59,7 +60,8 @@ def prepare_multi_configuration_build(configfile, outputfile):
     from factory import ContextFactory
     from matrixbuild import prepare_build_matrix
     factory = ContextFactory()
-    prepare_build_matrix(factory, configfile, outputfile)
+    with factory.status_reporter:
+        prepare_build_matrix(factory, configfile, outputfile)
 
 def write_triggered_build_url_file(varname, filename):
     """Extracts the URL for a build triggered with Parameterized Trigger.
@@ -88,6 +90,7 @@ def get_build_revisions(filename):
     """
     from factory import ContextFactory
     factory = ContextFactory()
-    workspace = factory.workspace
-    workspace._clear_workspace_dirs()
-    workspace._get_build_revisions(workspace.get_path_for_logfile(filename))
+    with factory.status_reporter:
+        workspace = factory.workspace
+        workspace._clear_workspace_dirs()
+        workspace._get_build_revisions(workspace.get_path_for_logfile(filename))

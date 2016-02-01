@@ -1,7 +1,7 @@
 import os.path
 import unittest
 
-from releng.common import Project
+from releng.common import BuildError, Project
 from releng.integration import RefSpec
 from releng.test.utils import TestHelper
 
@@ -87,23 +87,21 @@ class TestGerritIntegration(unittest.TestCase):
         self.assertEqual(gerrit.get_refspec(Project.RELENG).checkout, '5678abcd')
 
 
-class TestFailureTracker(unittest.TestCase):
+class TestStatusReporter(unittest.TestCase):
     def setUp(self):
         self.helper = TestHelper(self, workspace='ws')
 
     def test_Success(self):
         executor = self.helper.executor
-        failure_tracker = self.helper.factory.failure_tracker
-        self.assertFalse(failure_tracker.failed)
-        failure_tracker.report(self.helper.factory.workspace)
-        self.assertFalse(failure_tracker.failed)
+        with self.helper.factory.status_reporter as status_reporter:
+            self.assertFalse(status_reporter.failed)
+        self.assertFalse(status_reporter.failed)
         self.assertFalse(executor.mock_calls)
 
     def test_Failure(self):
-        failure_tracker = self.helper.factory.failure_tracker
-        failure_tracker.mark_failed('Failure reason')
-        self.assertTrue(failure_tracker.failed)
-        failure_tracker.report(self.helper.factory.workspace)
+        with self.helper.factory.status_reporter as status_reporter:
+            status_reporter.mark_failed('Failure reason')
+            self.assertTrue(status_reporter.failed)
         self.helper.assertConsoleOutput("""\
                 Build FAILED:
                   Failure reason
@@ -114,10 +112,9 @@ class TestFailureTracker(unittest.TestCase):
                 """)
 
     def test_Unstable(self):
-        failure_tracker = self.helper.factory.failure_tracker
-        failure_tracker.mark_unstable('Unstable reason')
-        self.assertFalse(failure_tracker.failed)
-        failure_tracker.report(self.helper.factory.workspace)
+        with self.helper.factory.status_reporter as status_reporter:
+            status_reporter.mark_unstable('Unstable reason')
+            self.assertFalse(status_reporter.failed)
         self.helper.assertConsoleOutput("""\
                 FAILED: Unstable reason
                 Build FAILED:
@@ -126,6 +123,32 @@ class TestFailureTracker(unittest.TestCase):
         self.helper.assertOutputFile('ws/logs/unsuccessful-reason.log',
                 """\
                 Unstable reason
+                """)
+
+    def test_BuildError(self):
+        self.helper.factory.init_status_reporter(tracebacks=False)
+        with self.helper.factory.status_reporter:
+            raise BuildError('Mock build error')
+        self.assertTrue(self.helper.factory.status_reporter.failed)
+        self.helper.assertConsoleOutput("""\
+                BuildError: Mock build error
+                Build FAILED:
+                  Mock build error
+                """)
+        self.helper.assertOutputFile('ws/logs/unsuccessful-reason.log',
+                """\
+                Mock build error
+                """)
+
+    def test_OtherError(self):
+        self.helper.factory.init_status_reporter(tracebacks=False)
+        with self.assertRaises(ValueError):
+            with self.helper.factory.status_reporter:
+                raise ValueError('Mock Python error')
+        self.helper.assertConsoleOutput('')
+        self.helper.assertOutputFile('ws/logs/unsuccessful-reason.log',
+                """\
+                ValueError: Mock Python error
                 """)
 
 if __name__ == '__main__':

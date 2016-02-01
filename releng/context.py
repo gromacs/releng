@@ -33,7 +33,7 @@ class BuildContext(object):
         if job_type is not None:
             JobType.validate(job_type)
         self.job_type = job_type
-        self._failure_tracker = factory.failure_tracker
+        self._status_reporter = factory.status_reporter
         self._cwd = factory.cwd
         self._executor = factory.executor
         self._cmd_runner = factory.cmd_runner
@@ -165,7 +165,7 @@ class BuildContext(object):
                     what = target + ' target'
                 failure_string = '{0} failed to build'.format(what)
             if continue_on_failure:
-                self._failure_tracker.mark_failed(failure_string)
+                self._status_reporter.mark_failed(failure_string)
             else:
                 raise BuildError(failure_string)
 
@@ -326,7 +326,7 @@ class BuildContext(object):
         simply return; the build will always be marked failed if this
         property is ``True``.
         """
-        return self._failure_tracker.failed
+        return self._status_reporter.failed
 
     def mark_unstable(self, reason, details=None):
         """Marks the build unstable.
@@ -336,7 +336,7 @@ class BuildContext(object):
             details (Optional[List[str]]): Reason(s) reported back to Gerrit.
                 If not provided, reason is used.
         """
-        return self._failure_tracker.mark_unstable(reason, details)
+        return self._status_reporter.mark_unstable(reason, details)
 
     def process_cppcheck_results(self, xml_pattern):
         """Processes results from cppcheck.
@@ -417,33 +417,22 @@ class BuildContext(object):
         """Runs the actual build.
 
         This method is the top-level driver for the build."""
-        workspace = None
-        failure_tracker = factory.failure_tracker
-        executor = factory.executor
-        try:
-            workspace = factory.workspace
-            workspace._clear_workspace_dirs()
-            workspace._checkout_project(factory.default_project)
-            build_script_path = workspace._resolve_build_input_file(build, '.py')
-            script = BuildScript(factory.executor, build_script_path)
-            if script.build_opts:
-                if opts is None:
-                    opts = []
-                opts.extend(script.build_opts)
-            context = factory.create_context(job_type, opts, script.extra_options)
-            for project in script.extra_projects:
-                workspace._checkout_project(project)
-            workspace._print_project_info()
-            workspace._check_projects()
-            out_of_source = script.build_out_of_source or context.opts.out_of_source
-            workspace._init_build_dir(out_of_source)
-            context.chdir(workspace.build_dir)
-            utils.flush_output()
-            script.do_build(context)
-        except BuildError as e:
-            failure_tracker.mark_failed(str(e))
-        except ConfigurationError as e:
-            failure_tracker.mark_failed('Jenkins configuration error: ' + str(e))
-        failure_tracker.report(workspace)
-        if failure_tracker.failed:
-            executor.exit(1)
+        workspace = factory.workspace
+        workspace._clear_workspace_dirs()
+        workspace._checkout_project(factory.default_project)
+        build_script_path = workspace._resolve_build_input_file(build, '.py')
+        script = BuildScript(factory.executor, build_script_path)
+        if script.build_opts:
+            if opts is None:
+                opts = []
+            opts.extend(script.build_opts)
+        context = factory.create_context(job_type, opts, script.extra_options)
+        for project in script.extra_projects:
+            workspace._checkout_project(project)
+        workspace._print_project_info()
+        workspace._check_projects()
+        out_of_source = script.build_out_of_source or context.opts.out_of_source
+        workspace._init_build_dir(out_of_source)
+        context.chdir(workspace.build_dir)
+        utils.flush_output()
+        script.do_build(context)

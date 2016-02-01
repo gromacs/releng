@@ -8,7 +8,7 @@ import platform
 from common import Project, System
 from context import BuildContext
 from executor import CommandRunner, CurrentDirectoryTracker, Executor
-from integration import GerritIntegration, FailureTracker
+from integration import GerritIntegration, StatusReporter
 from workspace import Workspace
 
 class ContextFactory(object):
@@ -40,7 +40,7 @@ class ContextFactory(object):
         self._cwd = CurrentDirectoryTracker()
         self._executor = None
         self._cmd_runner = None
-        self._failure_tracker = None
+        self._status_reporter = None
         self._gerrit = None
         self._workspace = None
 
@@ -72,11 +72,11 @@ class ContextFactory(object):
         return self._cmd_runner
 
     @property
-    def failure_tracker(self):
-        """Returns the FailureTracker instance for the build."""
-        if self._failure_tracker is None:
-            self._init_failure_tracker()
-        return self._failure_tracker
+    def status_reporter(self):
+        """Returns the StatusReporter instance for the build."""
+        if self._status_reporter is None:
+            self.init_status_reporter()
+        return self._status_reporter
 
     @property
     def gerrit(self):
@@ -109,9 +109,13 @@ class ContextFactory(object):
         assert self._cmd_runner is None
         self._cmd_runner = CommandRunner(self)
 
-    def _init_failure_tracker(self):
-        assert self._failure_tracker is None
-        self._failure_tracker = FailureTracker(self)
+    def init_status_reporter(self, **kwargs):
+        """Initializes StatusReporter with given parameters.
+
+        If not called, the object will be created with default parameters.
+        """
+        assert self._status_reporter is None
+        self._status_reporter = StatusReporter(factory=self, **kwargs)
 
     def init_gerrit_integration(self, **kwargs):
         """Initializes GerritIntegration with given parameters.

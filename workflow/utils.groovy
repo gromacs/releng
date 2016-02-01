@@ -73,7 +73,29 @@ def runRelengScriptNoCheckout(contents)
         import releng
         """.stripIndent()
     def script = importScript + contents.stripIndent()
-    runPythonScript(script)
+    try {
+        runPythonScript(script)
+    } catch (err) {
+        def reason = null
+        if (fileExists('logs/unsuccessful-reason.log')) {
+            reason = readFile 'logs/unsuccessful-reason.log'
+        }
+        addRelengErrorSummary(reason)
+        throw err
+    }
+}
+
+def addRelengErrorSummary(reason)
+{
+    def summary = manager.createSummary('error')
+    summary.appendText("""\
+        Unexpected failure in releng Python script:
+        <pre>
+        """.stripIndent(), false)
+    if (reason) {
+        summary.appendText(reason, true)
+    }
+    summary.appendText("</pre>", false)
 }
 
 def readBuildRevisions()

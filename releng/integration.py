@@ -8,8 +8,9 @@ configuration.
 from __future__ import print_function
 
 import os
+import traceback
 
-from common import ConfigurationError
+from common import BuildError, ConfigurationError
 from common import Project
 import utils
 
@@ -170,17 +171,44 @@ class GerritIntegration(object):
         return self._user + '@gerrit.gromacs.org'
 
 
-class FailureTracker(object):
+class StatusReporter(object):
     """Handles tracking and reporting of failures during the build.
 
     Attributes:
         failed (bool): Whether the build has already failed.
     """
 
-    def __init__(self, factory):
+    def __init__(self, factory, tracebacks=True):
         self._executor = factory.executor
+        self._workspace = factory.workspace
         self.failed = False
         self._unsuccessful_reason = []
+        self._tracebacks = tracebacks
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        if exc_type is not None:
+            console = self._executor.console
+            if not self._tracebacks:
+                tb = None
+            if issubclass(exc_type, ConfigurationError):
+                traceback.print_exception(exc_type, exc_value, tb, file=console)
+                self.mark_failed('Jenkins configuration error: ' + str(exc_value))
+            elif issubclass(exc_type, BuildError):
+                traceback.print_exception(exc_type, exc_value, tb, file=console)
+                self.mark_failed(str(exc_value))
+            else:
+                lines = traceback.format_exception(exc_type, exc_value, tb)
+                lines = [x.rstrip() for x in lines]
+                self._unsuccessful_reason.extend(lines)
+                self._report_on_exception()
+                return False
+        self._report()
+        if self.failed:
+            self._executor.exit(1)
+        return True
 
     def mark_failed(self, reason):
         """Marks the build failed.
@@ -205,22 +233,23 @@ class FailureTracker(object):
         else:
             self._unsuccessful_reason.extend(details)
 
-    def report(self, workspace):
-        """Reports possible failures at the end of the build.
+    def _report_on_exception(self):
+        console = self._executor.console
+        try:
+            self._report(to_console=False)
+        except:
+            traceback.print_exc(file=console)
 
-        Args:
-            workspace (Workspace): Workspace to put the failure log into.
-        """
+    def _report(self, to_console=True):
+        """Reports possible failures at the end of the build."""
         if self._unsuccessful_reason:
-            console = self._executor.console
-            print('Build FAILED:', file=console)
-            for line in self._unsuccessful_reason:
-                print('  ' + line, file=console)
-            # Only severe configuration errors can cause workspace to be None,
-            # so skip the log for simplicity.
-            if workspace is not None:
-                path = workspace.get_path_for_logfile('unsuccessful-reason.log')
-                contents = '\n'.join(self._unsuccessful_reason) + '\n'
-                self._executor.write_file(path, contents)
+            if to_console:
+                console = self._executor.console
+                print('Build FAILED:', file=console)
+                for line in self._unsuccessful_reason:
+                    print('  ' + line, file=console)
+            path = self._workspace.get_path_for_logfile('unsuccessful-reason.log')
+            contents = '\n'.join(self._unsuccessful_reason) + '\n'
+            self._executor.write_file(path, contents)
         if self.failed:
             assert self._unsuccessful_reason, "Failed build did not produce an unsuccessful reason"

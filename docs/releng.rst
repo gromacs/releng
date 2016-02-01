@@ -175,6 +175,24 @@ from the Jenkins job (or from a workflow build script):
   Path to the root of the Jenkins workspace where the build is running.
   This is set by Jenkins automatically, except for workflow builds.
 
+Output
+------
+
+To communicate back to the Jenkins job (or the workflow build script), the
+releng scripts use the following mechanisms:
+
+* They exit with a non-zero exit code if the build fails.
+* They raise an exception on unexpected errors (which in turn causes a non-zero
+  exit code from the whole Python process).
+* If the build fails or is unstable, a :file:`logs/unsuccessful-reason.log` is
+  produced, and contains the reason for the failure.  If producing this file
+  fails, it is treated as an unexpected error.
+* If the build is unstable, it also ensures that the word ``FAILED`` appears in
+  the console log.
+* The build script can produce other relevant output in :file:`logs/` folder
+  and in the build folder (which is typically :file:`gromacs/` for in-source
+  builds and :file:`build/` for out-of-source builds).
+
 .. _releng-jenkins-build-opts:
 
 Build options
