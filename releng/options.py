@@ -378,16 +378,18 @@ def select_build_hosts(factory, configs):
 
     Args:
         factory (ContextFactory): Factory to access other objects.
-        List[List[str]]: List of build options for each configuration.
+        List[MatrixConfig]: List of build options for each configuration.
 
     Returns:
-        List[List[str]]: The input configurations with ``host=`` or ``label=``
+        List[MatrixConfig]: The input configurations with ``host=`` or ``label=``
             option added/replaced.
     """
     e = BuildEnvironment(factory)
     handlers = _define_handlers(e, None)
     result = []
-    for opts in configs:
+    for config in configs:
+        config.opts = _remove_host_option(config.opts)
+        opts = config.opts
         labels = set()
         for handler in handlers:
             found_opts = [x for x in opts if handler.matches(x)]
@@ -396,11 +398,7 @@ def select_build_hosts(factory, configs):
                 label = handler.label(found_opt, value)
                 if label:
                     labels.add(label)
-        result_opts = _remove_host_option(opts)
-        host = slaves.pick_host(labels, result_opts)
-        if slaves.is_label(host):
-            result_opts.append('label=' + host)
-        else:
-            result_opts.append('host=' + host)
-        result.append(list(result_opts))
+        config.labels = list(labels)
+        config.host = slaves.pick_host(labels, config.opts)
+        result.append(config)
     return result

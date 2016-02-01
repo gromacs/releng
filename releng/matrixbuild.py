@@ -5,12 +5,27 @@ See __init__.py for documentation (the functions are called essentially
 directly from there).
 """
 
+import json
 import os.path
 import pipes
 import shlex
 
 from common import Project
 from options import select_build_hosts
+import slaves
+
+class MatrixConfig(object):
+    def __init__(self, opts):
+        self.opts = opts
+        self.host = None
+        self.labels = None
+
+    def to_dict(self):
+        return {
+                'opts': self.opts,
+                'host': self.host,
+                'labels': ' && '.join(self.labels)
+            }
 
 def prepare_build_matrix(factory, configfile, outputfile):
     executor = factory.executor
@@ -36,14 +51,23 @@ def _read_matrix_configs(executor, path):
         line = line.strip()
         if line:
             opts = shlex.split(line)
-            configs.append(opts)
+            configs.append(MatrixConfig(opts))
     return configs
 
 def _write_matrix_configs(executor, path, configs):
-    contents = 'OPTIONS'
-    for opts in configs:
-        quoted_opts = [pipes.quote(x) for x in opts]
-        contents += ' "{0}"'.format(' '.join(quoted_opts))
+    ext = os.path.splitext(path)[1]
+    if ext == '.json':
+        contents = json.dumps([config.to_dict() for config in configs])
+    else:
+        contents = 'OPTIONS'
+        for config in configs:
+            opts = list(config.opts)
+            if slaves.is_label(config.host):
+                opts.append('label=' + config.host)
+            else:
+                opts.append('host=' + config.host)
+            quoted_opts = [pipes.quote(x) for x in opts]
+            contents += ' "{0}"'.format(' '.join(quoted_opts))
     contents += '\n'
     executor.write_file(path, contents)
 
