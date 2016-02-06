@@ -63,26 +63,31 @@ def runPythonScript(contents)
     sh 'python build.py'
 }
 
-def runRelengScriptNoCheckout(contents)
+def runRelengScriptNoCheckout(contents, propagate = true)
 {
-    def importScript = """\
+    def script = """\
         import os
         import sys
+        os.environ['STATUS_FILE'] = 'logs/status.json'
         os.environ['WORKSPACE'] = os.getcwd()
         sys.path.append(os.path.abspath('releng'))
         import releng
         """.stripIndent()
-    def script = importScript + contents.stripIndent()
+    if (!propagate) {
+        script += "os.environ['NO_PROPAGATE_FAILURE'] = '1'\n"
+    }
+    script += contents.stripIndent()
     try {
         runPythonScript(script)
     } catch (err) {
         def reason = null
-        if (fileExists('logs/unsuccessful-reason.log')) {
-            reason = readFile 'logs/unsuccessful-reason.log'
+        if (fileExists('logs/status.json')) {
+            reason = readJsonFile('logs/status.json').reason
         }
         addRelengErrorSummary(reason)
         throw err
     }
+    return readJsonFile('logs/status.json')
 }
 
 def addRelengErrorSummary(reason)
@@ -94,6 +99,8 @@ def addRelengErrorSummary(reason)
         """.stripIndent(), false)
     if (reason) {
         summary.appendText(reason, true)
+    } else {
+        summary.appendText('Not available. See console log.', true)
     }
     summary.appendText("</pre>", false)
 }

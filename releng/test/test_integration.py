@@ -1,5 +1,8 @@
 import os.path
 import unittest
+# With Python 2.7, this needs to be separately installed.
+# With Python 3.3 and up, this should change to unittest.mock.
+import mock
 
 from releng.common import BuildError, Project
 from releng.integration import RefSpec
@@ -92,11 +95,12 @@ class TestStatusReporter(unittest.TestCase):
         self.helper = TestHelper(self, workspace='ws')
 
     def test_Success(self):
-        executor = self.helper.executor
         with self.helper.factory.status_reporter as status_reporter:
             self.assertFalse(status_reporter.failed)
         self.assertFalse(status_reporter.failed)
-        self.assertFalse(executor.mock_calls)
+        self.assertEqual(self.helper.executor.mock_calls,
+                [mock.call.remove_path('logs/unsuccessful-reason.log')])
+        self.helper.assertConsoleOutput('')
 
     def test_Failure(self):
         with self.helper.factory.status_reporter as status_reporter:
@@ -150,6 +154,49 @@ class TestStatusReporter(unittest.TestCase):
                 """\
                 ValueError: Mock Python error
                 """)
+
+
+class TestStatusReporterJson(unittest.TestCase):
+    def setUp(self):
+        env = {
+                'STATUS_FILE': 'logs/status.json'
+            }
+        self.helper = TestHelper(self, workspace='ws', env=env)
+
+    def test_Success(self):
+        with self.helper.factory.status_reporter as status_reporter:
+            self.assertFalse(status_reporter.failed)
+        self.assertFalse(status_reporter.failed)
+        self.helper.assertConsoleOutput('')
+        self.helper.assertOutputJsonFile('ws/logs/status.json', {
+                'result': 'SUCCESS',
+                'reason': None
+            })
+
+    def test_Failure(self):
+        with self.helper.factory.status_reporter as status_reporter:
+            status_reporter.mark_failed('Failure reason')
+        self.helper.assertConsoleOutput("""\
+                Build FAILED:
+                  Failure reason
+                """)
+        self.helper.assertOutputJsonFile('ws/logs/status.json', {
+                'result': 'FAILURE',
+                'reason': 'Failure reason'
+            })
+
+    def test_Unstable(self):
+        with self.helper.factory.status_reporter as status_reporter:
+            status_reporter.mark_unstable('Unstable reason')
+        self.helper.assertConsoleOutput("""\
+                FAILED: Unstable reason
+                Build FAILED:
+                  Unstable reason
+                """)
+        self.helper.assertOutputJsonFile('ws/logs/status.json', {
+                'result': 'UNSTABLE',
+                'reason': 'Unstable reason'
+            })
 
 if __name__ == '__main__':
     unittest.main()

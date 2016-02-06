@@ -7,6 +7,7 @@ configuration.
 """
 from __future__ import print_function
 
+import json
 import os
 import traceback
 
@@ -179,8 +180,13 @@ class StatusReporter(object):
     """
 
     def __init__(self, factory, tracebacks=True):
+        self._status_file = factory.env.get('STATUS_FILE', 'logs/unsuccessful-reason.log')
+        self._propagate_failure = bool(factory.env.get('NO_PROPAGATE_FAILURE', True))
         self._executor = factory.executor
+        self._executor.remove_path(self._status_file)
         self._workspace = factory.workspace
+        if not os.path.isabs(self._status_file):
+            self._status_file = os.path.join(self._workspace.root, self._status_file)
         self.failed = False
         self._unsuccessful_reason = []
         self._tracebacks = tracebacks
@@ -206,7 +212,7 @@ class StatusReporter(object):
                 self._report_on_exception()
                 return False
         self._report()
-        if self.failed:
+        if self.failed and self._propagate_failure:
             self._executor.exit(1)
         return True
 
@@ -242,14 +248,30 @@ class StatusReporter(object):
 
     def _report(self, to_console=True):
         """Reports possible failures at the end of the build."""
+        result = 'SUCCESS'
+        reason = None
+        if self.failed:
+            result = 'FAILURE'
+        elif self._unsuccessful_reason:
+            result = 'UNSTABLE'
         if self._unsuccessful_reason:
-            if to_console:
-                console = self._executor.console
-                print('Build FAILED:', file=console)
-                for line in self._unsuccessful_reason:
-                    print('  ' + line, file=console)
-            path = self._workspace.get_path_for_logfile('unsuccessful-reason.log')
-            contents = '\n'.join(self._unsuccessful_reason) + '\n'
-            self._executor.write_file(path, contents)
+            reason = '\n'.join(self._unsuccessful_reason)
+        if reason and to_console:
+            console = self._executor.console
+            print('Build FAILED:', file=console)
+            for line in self._unsuccessful_reason:
+                print('  ' + line, file=console)
+        contents = None
+        ext = os.path.splitext(self._status_file)[1]
+        if ext == '.json':
+            contents = json.dumps({
+                    'result': result,
+                    'reason': reason
+                })
+        elif reason:
+            contents = reason + '\n'
+        if contents:
+            self._executor.ensure_dir_exists(os.path.dirname(self._status_file))
+            self._executor.write_file(self._status_file, contents)
         if self.failed:
             assert self._unsuccessful_reason, "Failed build did not produce an unsuccessful reason"

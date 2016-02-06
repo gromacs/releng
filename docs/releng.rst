@@ -174,6 +174,18 @@ from the Jenkins job (or from a workflow build script):
 ``WORKSPACE``
   Path to the root of the Jenkins workspace where the build is running.
   This is set by Jenkins automatically, except for workflow builds.
+``STATUS_FILE``
+  Path to the file to write on completion of the build, containing the build
+  status and the reason for failed builds.
+  Defaults to :file:`logs/unsuccessful-reason.log`.
+  If the extension is :file:`.json`, the file is written as JSON, which is
+  useful for further use from a workflow build.
+``NO_PROPAGATE_FAILURE``
+  If set to a non-empty value, the build script will exit with a zero exit code
+  even if the build fails because of a BuildError or ConfigurationError.
+  Only unexpected exceptions will cause a non-zero exit code.
+  The information in ``STATUS_FILE`` can be used to determine whether the build
+  failed or not.
 
 Output
 ------
@@ -181,15 +193,24 @@ Output
 To communicate back to the Jenkins job (or the workflow build script), the
 releng scripts use the following mechanisms:
 
-* They exit with a non-zero exit code if the build fails.
-* They raise an exception on unexpected errors (which in turn causes a non-zero
-  exit code from the whole Python process).
-* If the build fails or is unstable, a :file:`logs/unsuccessful-reason.log` is
-  produced, and contains the reason for the failure.  If producing this file
-  fails, it is treated as an unexpected error.
-* If the build is unstable, it also ensures that the word ``FAILED`` appears in
-  the console log.
-* The build script can produce other relevant output in :file:`logs/` folder
+exit code
+  The script exits with a non-zero exit code if the build fails, unless
+  ``NO_PROPAGATE_FAILURE`` is set.  If it is set, only an unexpected exception
+  will cause a non-zero exit code.
+status file
+  A file that contains the build result is written to ``STATUS_FILE`` (or to
+  :file:`logs/unsuccessful-reason.log` if none is specified).
+  A reasonable effort is done to try to delete this file at the start of the
+  script, so that old versions would not be left if the script fails.
+  Even on unexpected errors, a reasonable effort is made to produce the file
+  and include the exception information in it.
+  If producing this file fails, it is treated as an unexpected error.
+console outout
+  If the build is unstable, it also ensures that the word ``FAILED`` appears in
+  the console log.  This can be used in non-workflow builds to mark the build
+  unstable.
+other files (specific to build scripts)
+  The build script can produce other relevant output in :file:`logs/` folder
   and in the build folder (which is typically :file:`gromacs/` for in-source
   builds and :file:`build/` for out-of-source builds).
 
