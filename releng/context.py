@@ -9,6 +9,7 @@ import shutil
 
 from common import BuildError, CommandError, ConfigurationError
 from common import JobType, Project
+from integration import BuildParameters
 from options import process_build_options
 from script import BuildScript
 import utils
@@ -24,6 +25,8 @@ class BuildContext(object):
             selecting the compiler, are handled by the build context
             transparently, without the build script needing to access this.
         opts (BuildOptions): Access to all build options.
+        params (BuildParameters): Access to Jenkins build parameters (through
+            environment variables).
         workspace (Workspace): Access to the build workspace.
             Can be used to get paths to various parts in the workspace for
             changing directories and for producing log files.
@@ -39,6 +42,7 @@ class BuildContext(object):
         self._cmd_runner = factory.cmd_runner
         self.workspace = factory.workspace
         self.env, self.opts = process_build_options(factory, opts, extra_options)
+        self.params = BuildParameters(factory)
 
     # TODO: Consider if these would be better set in the build script, and
     # just the values queried.

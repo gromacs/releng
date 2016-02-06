@@ -5,7 +5,7 @@ import unittest
 import mock
 
 from releng.common import BuildError, Project
-from releng.integration import RefSpec
+from releng.integration import BuildParameters, ParameterTypes, RefSpec
 from releng.test.utils import TestHelper
 
 class TestRefSpec(unittest.TestCase):
@@ -88,6 +88,24 @@ class TestGerritIntegration(unittest.TestCase):
         self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, '1234abcd')
         self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
         self.assertEqual(gerrit.get_refspec(Project.RELENG).checkout, '5678abcd')
+
+
+class TestBuildParameters(unittest.TestCase):
+    def test_Unknown(self):
+        helper = TestHelper(self)
+        params = BuildParameters(helper.factory)
+        self.assertIsNone(params.get('FOO', ParameterTypes.bool))
+
+    def test_Boolean(self):
+        helper = TestHelper(self, env={ 'FOO': 'true', 'BAR': 'false' })
+        params = BuildParameters(helper.factory)
+        self.assertEqual(params.get('FOO', ParameterTypes.bool), True)
+        self.assertEqual(params.get('BAR', ParameterTypes.bool), False)
+
+    def test_String(self):
+        helper = TestHelper(self, env={ 'FOO': 'text' })
+        params = BuildParameters(helper.factory)
+        self.assertEqual(params.get('FOO', ParameterTypes.string), 'text')
 
 
 class TestStatusReporter(unittest.TestCase):

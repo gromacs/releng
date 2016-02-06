@@ -172,6 +172,40 @@ class GerritIntegration(object):
         return self._user + '@gerrit.gromacs.org'
 
 
+class BuildParameters(object):
+    """Access to build parameters."""
+
+    def __init__(self, factory):
+        self._env = factory.env
+
+    def get(self, name, handler):
+        """Gets the value of a build parameter/environment variable.
+
+        If the parameter/environment variable is not set, None is returned.
+
+        Args:
+            name (str): Name of the parameter/environment variable to read.
+            handler (function): Handler function that parses/converts the value.
+        """
+        value = self._env.get(name, None)
+        if value is not None:
+            value = handler(value)
+        return value
+
+
+class ParameterTypes(object):
+    """Methods to pass to BuildParameters.get() for parsing build parameters."""
+
+    @staticmethod
+    def bool(value):
+        """Parses a Jenkins boolean build parameter."""
+        return value.lower() == 'true'
+
+    @staticmethod
+    def string(value):
+        return value
+
+
 class StatusReporter(object):
     """Handles tracking and reporting of failures during the build.
 

@@ -9,6 +9,7 @@ import os.path
 from common import BuildError, ConfigurationError
 from common import Enum
 from common import BuildType, Compiler, FftLibrary, JobType, Project, Simd, System
+from integration import ParameterTypes
 from options import OptionTypes
 
 class BuildScript(object):
@@ -38,6 +39,7 @@ class BuildScript(object):
         build_globals['BuildError'] = BuildError
         build_globals['Enum'] = Enum
         build_globals['Option'] = OptionTypes
+        build_globals['Parameter'] = ParameterTypes
 
         build_globals['BuildType'] = BuildType
         build_globals['Compiler'] = Compiler
