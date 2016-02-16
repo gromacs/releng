@@ -273,7 +273,7 @@ class BuildEnvironment(object):
         elif version == '2015':
             self._import_env(r'"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64')
         else:
-            raise ConfigurationError('only Visual Studio 2010, 2013, and 2013 are supported, got msvc-' + version)
+            raise ConfigurationError('only Visual Studio 2010, 2013, and 2015 are supported, got msvc-' + version)
 
     def _init_clang_analyzer(self, clang_version=None, html_output_dir=None):
         if clang_version is not None:
