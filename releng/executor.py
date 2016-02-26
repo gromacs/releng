@@ -24,11 +24,6 @@ import sys
 from common import CommandError, System
 import utils
 
-def _ensure_abs_path(path, cwd):
-    if not os.path.isabs(path):
-        path = os.path.join(cwd, path)
-    return path
-
 def _read_file(path, binary):
     if binary:
         with open(path, 'rb') as fp:
@@ -63,7 +58,7 @@ class Executor(object):
 
     def remove_path(self, path):
         """Deletes a file or a directory at a given path if it exists."""
-        path = _ensure_abs_path(path, self._cwd.cwd)
+        path = self._cwd.to_abs_path(path)
         if os.path.isdir(path):
             shutil.rmtree(path)
         elif os.path.exists(path):
@@ -71,7 +66,7 @@ class Executor(object):
 
     def ensure_dir_exists(self, path, ensure_empty=False):
         """Ensures that a directory exists and optionally that it is empty."""
-        path = _ensure_abs_path(path, self._cwd.cwd)
+        path = self._cwd.to_abs_path(path)
         if ensure_empty:
             self.remove_path(path)
         elif os.path.isdir(path):
@@ -80,19 +75,19 @@ class Executor(object):
 
     def copy_file(self, source, dest):
         """Copies a file."""
-        source = _ensure_abs_path(source, self._cwd.cwd)
-        dest = _ensure_abs_path(dest, self._cwd.cwd)
+        source = self._cwd.to_abs_path(source)
+        dest = self._cwd.to_abs_path(dest)
         if os.path.isfile(source):
             shutil.copy(source, dest)
 
     def read_file(self, path, binary=False):
         """Iterates over lines in a file."""
-        path = _ensure_abs_path(path, self._cwd.cwd)
+        path = self._cwd.to_abs_path(path)
         return _read_file(path, binary)
 
     def write_file(self, path, contents):
         """Writes a file with the given contents."""
-        path = _ensure_abs_path(path, self._cwd.cwd)
+        path = self._cwd.to_abs_path(path)
         with open(path, 'w') as fp:
             fp.write(contents)
 
@@ -130,7 +125,7 @@ class DryRunExecutor(object):
             shutil.copy(source, dest)
 
     def read_file(self, path, binary=False):
-        path = _ensure_abs_path(path, self._cwd.cwd)
+        path = self._cwd.to_abs_path(path)
         return _read_file(path, binary)
 
     def write_file(self, path, contents):
@@ -146,6 +141,11 @@ class CurrentDirectoryTracker(object):
     def chdir(self, path):
         assert os.path.isabs(path)
         self.cwd = path
+
+    def to_abs_path(self, path):
+        if not os.path.isabs(path):
+            return os.path.join(self.cwd, path)
+        return path
 
 class CommandRunner(object):
 

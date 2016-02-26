@@ -358,11 +358,10 @@ class BuildContext(object):
         # change on all the resulting .xml files to fix it so that the
         # plugin finds the file in the slave workspace. Thus:
         output_with_prefix = '\\1{dir}/'.format(dir=Project.GROMACS)
-        for xml_filename in glob.glob(xml_pattern):
-            with open(xml_filename, "r") as xml_file:
-                lines = xml_file.read()
-            with open(xml_filename, "w") as xml_file:
-                xml_file.write(re.sub('(<location file=")', output_with_prefix, lines))
+        for xml_filename in glob.glob(self._cwd.to_abs_path(xml_pattern)):
+            contents = ''.join(self._executor.read_file(xml_filename))
+            contents = re.sub('(<location file=")', output_with_prefix, contents)
+            self._executor.write_file(xml_filename, contents)
 
         # TODO: Consider providing an analysis/summary of the results.
         pass
@@ -375,6 +374,7 @@ class BuildContext(object):
         """
         if html_dir is None:
             html_dir = self.env.clang_analyzer_output_dir
+        html_dir = self._cwd.to_abs_path(html_dir)
         # The analyzer produces a subdirectory for each run with a dynamic name.
         # To make it easier to process in Jenkins, we rename it to a fixed name.
         subdirs = os.listdir(html_dir)
