@@ -3,4 +3,5 @@ set(RELENG_SPHINX_FILES
     jenkins-config.rst
     releng.rst
     releng-api.rst
+    workflow.rst
     )
