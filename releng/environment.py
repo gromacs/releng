@@ -275,6 +275,7 @@ class BuildEnvironment(object):
         else:
             raise ConfigurationError('only Visual Studio 2010, 2013, and 2015 are supported, got msvc-' + version)
 
+# TODO this is deprecated, but retained during transition from analyzer version 3.4 to 3.8
     def _init_clang_analyzer(self):
         html_output_dir = self._workspace.get_log_dir(category='scan_html')
         self.clang_analyzer_output_dir = html_output_dir
@@ -285,6 +286,19 @@ class BuildEnvironment(object):
         self.cxx_compiler = os.path.join(scan_build_path, 'c++-analyzer')
         self._build_prefix_cmd = [scan_build_path + '/scan-build',
                 '--use-analyzer', analyzer, '-o', html_output_dir]
+
+    def _init_clang_static_analyzer(self, version):
+        scan_build = 'scan-build-' + version
+        cxx_analyzer = 'c++-analyzer-' + version
+        html_output_dir = self._workspace.get_log_dir(category='scan_html')
+        self.clang_analyzer_output_dir = html_output_dir
+        self.set_env_var('CCC_CC', self.c_compiler)
+        self.set_env_var('CCC_CXX', self.cxx_compiler)
+        self.cxx_compiler = cxx_analyzer
+        self._build_prefix_cmd = [scan_build,
+                '-o', html_output_dir]
+        self.extra_cmake_options['GMX_STDLIB_CXX_FLAGS'] = '-stdlib=libc++'
+        self.extra_cmake_options['GMX_STDLIB_LIBRARIES'] = '-lc++abi -lc++'
 
     def _init_cuda(self, version):
         self.cuda_root = '/opt/cuda_' + version
