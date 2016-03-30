@@ -215,7 +215,7 @@ class StatusReporter(object):
 
     def __init__(self, factory, tracebacks=True):
         self._status_file = factory.env.get('STATUS_FILE', 'logs/unsuccessful-reason.log')
-        self._propagate_failure = bool(factory.env.get('NO_PROPAGATE_FAILURE', True))
+        self._propagate_failure = not bool(factory.env.get('NO_PROPAGATE_FAILURE', False))
         self._executor = factory.executor
         self._executor.remove_path(self._status_file)
         self._workspace = factory.workspace

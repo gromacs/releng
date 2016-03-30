@@ -194,6 +194,7 @@ class TestStatusReporterJson(unittest.TestCase):
     def test_Failure(self):
         with self.helper.factory.status_reporter as status_reporter:
             status_reporter.mark_failed('Failure reason')
+        self.helper.executor.exit.assert_called_with(1)
         self.helper.assertConsoleOutput("""\
                 Build FAILED:
                   Failure reason
@@ -206,6 +207,7 @@ class TestStatusReporterJson(unittest.TestCase):
     def test_Unstable(self):
         with self.helper.factory.status_reporter as status_reporter:
             status_reporter.mark_unstable('Unstable reason')
+        self.assertFalse(self.helper.executor.exit.called)
         self.helper.assertConsoleOutput("""\
                 FAILED: Unstable reason
                 Build FAILED:
@@ -214,6 +216,28 @@ class TestStatusReporterJson(unittest.TestCase):
         self.helper.assertOutputJsonFile('ws/logs/status.json', {
                 'result': 'UNSTABLE',
                 'reason': 'Unstable reason'
+            })
+
+
+class TestStatusReporterNoPropagate(unittest.TestCase):
+    def setUp(self):
+        env = {
+                'STATUS_FILE': 'logs/status.json',
+                'NO_PROPAGATE_FAILURE': '1'
+            }
+        self.helper = TestHelper(self, workspace='ws', env=env)
+
+    def test_Failure(self):
+        with self.helper.factory.status_reporter as status_reporter:
+            status_reporter.mark_failed('Failure reason')
+        self.assertFalse(self.helper.executor.exit.called)
+        self.helper.assertConsoleOutput("""\
+                Build FAILED:
+                  Failure reason
+                """)
+        self.helper.assertOutputJsonFile('ws/logs/status.json', {
+                'result': 'FAILURE',
+                'reason': 'Failure reason'
             })
 
 if __name__ == '__main__':
