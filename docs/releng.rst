@@ -126,11 +126,7 @@ See :doc:`jenkins-config` for more details.
 There also exists a workflow build that loads and preprocesses the
 configuration matrix, and then triggers a matrix build that takes the
 configuration axis values as a build parameter.  The matrix build uses the
-standard sequence with releng Python scripts.  However, reporting the results
-back to Jenkins does not work well for that build because of limitations in the
-workflow plugin, so it is unused.  Reporting the results to Gerrit should work
-such that the user sees link to the matrix build instead of the parent workflow
-build, unless the workflow script actually fails.
+standard sequence with releng Python scripts.
 
 See :doc:`workflow` and :doc:`jenkins-config` for more details.
 

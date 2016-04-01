@@ -21,15 +21,13 @@ workflow does these things:
    parameter.
 4. After the matrix build finishes, the workflow adds a link to the matrix
    build to the build summary page (while the build is running, the link can be
-   found from the console log).
-
-The workflow script sets an environment variable ``URL_TO_POST`` to be used
-with Gerrit Trigger.  This will contain the URL of the matrix build, unless
-there is a problem in the workflow itself, in which case it contains the URL of
-the workflow build.  This makes it possible for the user to click on the link
-in Gerrit and get directly to the build that caused the failure.
-However, this does not currently work because of JENKINS-32692, so the workflow
-is not used in production.
+   found from the console log).  The build status of the matrix build is also
+   propagated to the status of the workflow job.
+5. Also, as the last step in the workflow, it sets the URL to post back to
+   Gerrit to point to the matrix build.  This means that the presence of this
+   launcher job is mostly invisible during normal usage.  Only if the workflow
+   itself fails before reaching this step, you actually see a link to the
+   launcher job in Gerrit.
 
 Build & test release tarballs
 -----------------------------
