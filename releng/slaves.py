@@ -38,6 +38,7 @@ _HOST_LABELS = {
                               'valgrind' },
             BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2',
                               'clang-3.4',
+                              'clang-analyzer',
                               'icc-14.0', 'icc-16.0',
                               'phi',
                               'cmake-2.8.12.2', 'cmake-3.3.2',

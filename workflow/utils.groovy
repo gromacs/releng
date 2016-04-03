@@ -65,7 +65,10 @@ def runPythonScript(contents)
 
 def runRelengScript(contents, propagate = true)
 {
-    // TODO: This is not really general, but works for the current limited workflow.
+    def refspec = RELENG_REFSPEC
+    if (env.CHECKOUT_PROJECT == 'releng') {
+        refspec = env.CHECKOUT_REFSPEC
+    }
     def checkoutScript = """\
         import os
         import subprocess
@@ -74,7 +77,7 @@ def runRelengScript(contents, propagate = true)
         os.chdir('releng')
         subprocess.check_call(['git', 'init'])
         subprocess.check_call(['git', 'fetch',
-            'ssh://jenkins@gerrit.gromacs.org/releng.git', os.environ['RELENG_REFSPEC']])
+            'ssh://jenkins@gerrit.gromacs.org/releng.git', '${refspec}'])
         subprocess.check_call(['git', 'checkout', '-qf', os.environ['RELENG_HASH']])
         subprocess.check_call(['git', 'clean', '-ffdxq'])
         subprocess.check_call(['git', 'gc'])
@@ -180,6 +183,14 @@ def addBuildRevisionsSummary(revisionList)
 def revisionListToRevisionMap(revisionList)
 {
     return revisionList.collectEntries { [(it.project): it] }
+}
+
+def processBuildScriptConfig(script)
+{
+    runRelengScriptNoCheckout("""\
+        releng.read_build_script_config('${script}', 'config.json')
+        """)
+    return readJsonFile('build/config.json')
 }
 
 def processMatrixConfigsToBuildAxis(filename)

@@ -11,21 +11,8 @@ import pipes
 import shlex
 
 from common import Project
-from options import select_build_hosts
+from options import BuildConfig, select_build_hosts
 import slaves
-
-class MatrixConfig(object):
-    def __init__(self, opts):
-        self.opts = opts
-        self.host = None
-        self.labels = None
-
-    def to_dict(self):
-        return {
-                'opts': self.opts,
-                'host': self.host,
-                'labels': ' && '.join(self.labels)
-            }
 
 def prepare_build_matrix(factory, configfile, outputfile):
     executor = factory.executor
@@ -51,7 +38,7 @@ def _read_matrix_configs(executor, path):
         line = line.strip()
         if line:
             opts = shlex.split(line)
-            configs.append(MatrixConfig(opts))
+            configs.append(BuildConfig(opts))
     return configs
 
 def _write_matrix_configs(executor, path, configs):

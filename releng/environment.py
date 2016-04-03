@@ -275,11 +275,8 @@ class BuildEnvironment(object):
         else:
             raise ConfigurationError('only Visual Studio 2010, 2013, and 2015 are supported, got msvc-' + version)
 
-    def _init_clang_analyzer(self, clang_version=None, html_output_dir=None):
-        if clang_version is not None:
-            self._init_clang(clang_version)
-        if html_output_dir is None:
-            html_output_dir = self._workspace.get_log_dir(category='scan_html')
+    def _init_clang_analyzer(self):
+        html_output_dir = self._workspace.get_log_dir(category='scan_html')
         self.clang_analyzer_output_dir = html_output_dir
         analyzer = self._cmd_runner.find_executable(self.c_compiler)
         self.set_env_var('CCC_CC', self.c_compiler)

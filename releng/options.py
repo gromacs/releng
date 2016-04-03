@@ -16,6 +16,19 @@ from common import BuildType, FftLibrary, Simd
 from environment import BuildEnvironment
 import slaves
 
+class BuildConfig(object):
+    def __init__(self, opts):
+        self.opts = opts
+        self.host = None
+        self.labels = None
+
+    def to_dict(self):
+        return {
+                'opts': self.opts,
+                'host': self.host,
+                'labels': ' && '.join(sorted(self.labels))
+            }
+
 class BuildOptions(object):
     """Values for all build options.
 
@@ -323,7 +336,7 @@ def _define_handlers(e, extra_options):
             _VersionOptionHandler('cmake', e._init_cmake, label=OPT),
             _VersionOptionHandler('gcc', e._init_gcc, label=OPT),
             _VersionOptionHandler('clang', e._init_clang, label=OPT),
-            _SimpleOptionHandler('clang-analyzer', e._init_clang_analyzer),
+            _SimpleOptionHandler('clang-analyzer', e._init_clang_analyzer, label=OPT),
             _VersionOptionHandler('msvc', e._init_msvc, label=OPT),
             _VersionOptionHandler('icc', e._init_icc, label=OPT),
             _VersionOptionHandler('cuda', e._init_cuda, label=OPT),

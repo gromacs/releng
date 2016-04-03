@@ -4,13 +4,14 @@ Top-level interface for build scripts to the releng package.
 import os
 import glob
 import hashlib
+import json
 import re
 import shutil
 
 from common import BuildError, CommandError, ConfigurationError
 from common import JobType, Project
 from integration import BuildParameters
-from options import process_build_options
+from options import BuildConfig, process_build_options, select_build_hosts
 from script import BuildScript
 import utils
 
@@ -440,3 +441,17 @@ class BuildContext(object):
         context.chdir(workspace.build_dir)
         utils.flush_output()
         script.do_build(context)
+
+    @staticmethod
+    def _read_build_script_config(factory, script_name, outputfile):
+        workspace = factory.workspace
+        workspace._clear_workspace_dirs()
+        workspace._checkout_project(factory.default_project)
+        build_script_path = workspace._resolve_build_input_file(script_name, '.py')
+        script = BuildScript(factory.executor, build_script_path)
+        config = BuildConfig(script.build_opts)
+        config = select_build_hosts(factory, [config])[0]
+        workspace._init_build_dir(out_of_source=True)
+        outputpath = os.path.join(workspace.build_dir, outputfile)
+        contents = json.dumps(config.to_dict())
+        factory.executor.write_file(outputpath, contents)

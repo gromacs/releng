@@ -29,6 +29,29 @@ workflow does these things:
    itself fails before reaching this step, you actually see a link to the
    launcher job in Gerrit.
 
+Clang static analysis
+---------------------
+
+The workflow build in :file:`clang-analyzer.groovy` is a simple workflow that
+performs static analysis using Clang.  The main reason for using a workflow
+build instead of a freestyle job is to make it easy to dynamically decide the
+node where the analysis runs, depending on which version of the analyzer should
+be used.  The workflow sequence is this:
+
+1. The workflow does a normal git checkout to show Changes and other git data
+   on the build page.  This happens in the initial node context where the
+   workflow script is loaded.
+2. Also in the initial node context, the workflow calls
+   ``read_build_script_config()`` Python function to get the build options
+   defined in the :file:`clang-analyzer.py` build script in the source repo.
+   This is stored in a local variable.
+3. The Jenkins job calls ``doBuild()`` without parameters.
+   The workflow allocates a node based on the build options, and
+   runs the :file:`clang-analyzer.py` build script there with releng.
+4. After the releng script finishes, the workflow publishes a HTML report
+   produced by the analyzer (if it exists), and scans for compiler warnings
+   from the console log to show them on the build page.
+
 Build & test release tarballs
 -----------------------------
 

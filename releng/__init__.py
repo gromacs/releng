@@ -41,6 +41,13 @@ def run_build(build, job_type, opts, project=Project.GROMACS):
     with factory.status_reporter:
         BuildContext._run_build(factory, build, job_type, opts)
 
+def read_build_script_config(script_name, outputfile):
+    from context import BuildContext
+    from factory import ContextFactory
+    factory = ContextFactory()
+    with factory.status_reporter:
+        BuildContext._read_build_script_config(factory, script_name, outputfile)
+
 def prepare_multi_configuration_build(configfile, outputfile):
     """Main entry point for preparing matrix builds.
 
