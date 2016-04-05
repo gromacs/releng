@@ -3,7 +3,9 @@ def setEnvForRelengFromBuildParameters(defaultProject)
 {
     // Most of this becomes unnecessary if JENKINS-30910 is resolved.
     env.GROMACS_REFSPEC = GROMACS_REFSPEC
-    env.REGRESSIONTESTS_REFSPEC = REGRESSIONTESTS_REFSPEC
+    if (binding.variables.containsKey('REGRESSIONTESTS_REFSPEC')) {
+        env.REGRESSIONTESTS_REFSPEC = REGRESSIONTESTS_REFSPEC
+    }
     env.RELENG_REFSPEC = RELENG_REFSPEC
     if (binding.variables.containsKey('GERRIT_PROJECT')) {
         binding.variables.findAll { it.key.startsWith('GERRIT_') }.each {
@@ -14,6 +16,16 @@ def setEnvForRelengFromBuildParameters(defaultProject)
     } else {
         env.CHECKOUT_PROJECT = defaultProject
         env.CHECKOUT_REFSPEC = env."${defaultProject.toUpperCase()}_REFSPEC"
+    }
+}
+
+def setEnvForRelengSecondaryCheckouts()
+{
+    // If CHECKOUT_PROJECT is already releng, the refspec may come from GERRIT_REFSPEC,
+    // so we should preserve it.  In all other cases, RELENG_REFSPEC is correct.
+    if (env.CHECKOUT_PROJECT != 'releng') {
+        env.CHECKOUT_PROJECT = 'releng'
+        env.CHECKOUT_REFSPEC = RELENG_REFSPEC
     }
 }
 
@@ -65,10 +77,7 @@ def runPythonScript(contents)
 
 def runRelengScript(contents, propagate = true)
 {
-    def refspec = RELENG_REFSPEC
-    if (env.CHECKOUT_PROJECT == 'releng') {
-        refspec = env.CHECKOUT_REFSPEC
-    }
+    assert env.CHECKOUT_PROJECT == 'releng'
     def checkoutScript = """\
         import os
         import subprocess
@@ -77,7 +86,7 @@ def runRelengScript(contents, propagate = true)
         os.chdir('releng')
         subprocess.check_call(['git', 'init'])
         subprocess.check_call(['git', 'fetch',
-            'ssh://jenkins@gerrit.gromacs.org/releng.git', '${refspec}'])
+            'ssh://jenkins@gerrit.gromacs.org/releng.git', os.environ['CHECKOUT_REFSPEC']])
         subprocess.check_call(['git', 'checkout', '-qf', os.environ['RELENG_HASH']])
         subprocess.check_call(['git', 'clean', '-ffdxq'])
         subprocess.check_call(['git', 'gc'])

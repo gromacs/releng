@@ -6,6 +6,7 @@ config = utils.processBuildScriptConfig('clang-analyzer')
 
 def doBuild()
 {
+    utils.setEnvForRelengSecondaryCheckouts()
     node (config.labels)
     {
         wrap([$class: 'TimestamperBuildWrapper']) {

@@ -13,6 +13,9 @@ def doBuild(sourcePackageJob, regressiontestsPackageJob)
             regressiontests: [ dir: 'regressiontests', revision: buildRevisions.regressiontests, jobName: regressiontestsPackageJob ]
         ]
     tarballBuilds = getOrGenerateTarballs(tarballBuilds)
+    utils.setEnvForRelengSecondaryCheckouts()
+    // TODO: The tarball refspecs probably do not work as expected if the build
+    // gets triggered from Gerrit for non-releng changes.
     setTarballEnvironmentVariablesForReleng()
     if (testTarballs(tarballBuilds, testConfigs)) {
         createWebsitePackage(tarballBuilds)

@@ -124,8 +124,6 @@ class GerritIntegration(object):
         gerrit_project = self._env.get('GERRIT_PROJECT', None)
         if checkout_project is not None:
             checkout_project = Project.parse(checkout_project)
-            if gerrit_project is not None and gerrit_project != checkout_project:
-                raise ConfigurationError('Inconsistent CHECKOUT_PROJECT and GERRIT_PROJECT')
             refspec = self._env.get('CHECKOUT_REFSPEC', None)
             if refspec is None:
                 raise ConfigurationError('CHECKOUT_REFSPEC not set')
@@ -143,15 +141,24 @@ class GerritIntegration(object):
         """Returns the refspec that is being built for the given project."""
         if self.checked_out_project == project:
             return self._checked_out_refspec
-        if self.checked_out_project == Project.RELENG:
-            if _OVERRIDES.get(project, None) is not None:
-                return _OVERRIDES[project]
-        env_name = '{0}_REFSPEC'.format(project.upper())
-        refspec = self._env.get(env_name, None)
+        refspec = None
+        gerrit_project = self._env.get('GERRIT_PROJECT', None)
+        if gerrit_project is not None:
+            gerrit_project = Project.parse(gerrit_project)
+            if gerrit_project == project:
+                refspec = self._env.get('GERRIT_REFSPEC', None)
+                if refspec is None:
+                    raise ConfigurationError('GERRIT_REFSPEC not set')
+            elif gerrit_project == Project.RELENG:
+                if _OVERRIDES.get(project, None) is not None:
+                    return RefSpec(_OVERRIDES[project])
         if refspec is None:
-            if allow_none:
-                return None
-            raise ConfigurationError(env_name + ' is not set')
+            env_name = '{0}_REFSPEC'.format(project.upper())
+            refspec = self._env.get(env_name, None)
+            if refspec is None:
+                if allow_none:
+                    return None
+                raise ConfigurationError(env_name + ' is not set')
         env_name = '{0}_HASH'.format(project.upper())
         sha1 = self._env.get(env_name, None)
         return RefSpec(refspec, sha1, executor=self._executor)
