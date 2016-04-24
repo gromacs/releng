@@ -136,6 +136,9 @@ class BuildEnvironment(object):
         """Appends a path to the executable search path (PATH)."""
         self._cmd_runner.append_to_env_var('PATH', os.path.expanduser(path), sep=os.pathsep)
 
+    def run_env_script(self, env_cmd):
+        self._cmd_runner.import_env(env_cmd, self.cmake_command)
+
     def _init_system(self):
         if self.system == System.WINDOWS:
             self.cmake_generator = 'NMake Makefiles JOM'
@@ -230,7 +233,7 @@ class BuildEnvironment(object):
                 # Note that installing icc 16 over icc 15 uninstalled
                 # the latter, so it is likely not possible to have
                 # multiple icc versions installed on Windows.
-                self._import_env(r'"C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs' + self.compiler_version)
+                self.run_env_script(r'"C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs' + self.compiler_version)
                 self.c_compiler = 'icl'
                 self.cxx_compiler = 'icl'
                 self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/machine:x64"'
@@ -240,15 +243,15 @@ class BuildEnvironment(object):
             self.c_compiler = 'icc'
             self.cxx_compiler = 'icpc'
             if version == '16.0':
-                self._import_env('. /opt/intel/compilers_and_libraries_2016/linux/bin/compilervars.sh intel64')
+                self.run_env_script('. /opt/intel/compilers_and_libraries_2016/linux/bin/compilervars.sh intel64')
             elif version == '15.0':
-                self._import_env('. /opt/intel/composer_xe_2015/bin/compilervars.sh intel64')
+                self.run_env_script('. /opt/intel/composer_xe_2015/bin/compilervars.sh intel64')
             elif version == '14.0':
-                self._import_env('. /opt/intel/composer_xe_2013_sp1/bin/compilervars.sh intel64')
+                self.run_env_script('. /opt/intel/composer_xe_2013_sp1/bin/compilervars.sh intel64')
             elif version == '13.0':
-                self._import_env('. /opt/intel/composer_xe_2013/bin/compilervars.sh intel64')
+                self.run_env_script('. /opt/intel/composer_xe_2013/bin/compilervars.sh intel64')
             elif version == '12.1':
-                self._import_env('. /opt/intel/composer_xe_2011_sp1/bin/compilervars.sh intel64')
+                self.run_env_script('. /opt/intel/composer_xe_2011_sp1/bin/compilervars.sh intel64')
             else:
                 raise ConfigurationError('only icc 12.1, 13.0, 14.0, 15.0, 16.0 are supported, got icc-' + version)
 
@@ -260,18 +263,15 @@ class BuildEnvironment(object):
         self.compiler = Compiler.INTEL
         self.compiler_version = version
 
-    def _import_env(self, env_cmd):
-        self._cmd_runner.import_env(env_cmd, self.cmake_command)
-
     def _init_msvc(self, version):
         self.compiler = Compiler.MSVC
         self.compiler_version = version
         if version == '2010':
-            self._import_env(r'"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat" amd64')
+            self.run_env_script(r'"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\vcvarsall.bat" amd64')
         elif version == '2013':
-            self._import_env(r'"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" amd64')
+            self.run_env_script(r'"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" amd64')
         elif version == '2015':
-            self._import_env(r'"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64')
+            self.run_env_script(r'"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64')
         else:
             raise ConfigurationError('only Visual Studio 2010, 2013, and 2015 are supported, got msvc-' + version)
 
