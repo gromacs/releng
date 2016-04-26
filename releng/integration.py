@@ -38,13 +38,19 @@ class RefSpec(object):
 
     """Wraps handling of refspecs used to check out projects."""
 
+    @staticmethod
+    def is_tarball_refspec(value):
+        if value is None:
+            return False
+        return value.startswith('tarballs/')
+
     def __init__(self, value, remote_hash=None, executor=None):
         self._value = value
         self._remote = value
         if remote_hash is not None:
             self._remote = remote_hash
         self._tar_props = None
-        if value.startswith('tarballs/'):
+        if self.is_tarball_refspec(value):
             assert executor is not None
             prop_path = os.path.join(self._value, 'package-info.log')
             self._tar_props = utils.read_property_file(executor, prop_path)
@@ -141,9 +147,12 @@ class GerritIntegration(object):
         """Returns the refspec that is being built for the given project."""
         if self.checked_out_project == project:
             return self._checked_out_refspec
-        refspec = None
+        env_name = '{0}_REFSPEC'.format(project.upper())
+        refspec = self._env.get(env_name, None)
+        env_name = '{0}_HASH'.format(project.upper())
+        sha1 = self._env.get(env_name, None)
         gerrit_project = self._env.get('GERRIT_PROJECT', None)
-        if gerrit_project is not None:
+        if not RefSpec.is_tarball_refspec(refspec) and gerrit_project is not None:
             gerrit_project = Project.parse(gerrit_project)
             if gerrit_project == project:
                 refspec = self._env.get('GERRIT_REFSPEC', None)
@@ -153,14 +162,9 @@ class GerritIntegration(object):
                 if _OVERRIDES.get(project, None) is not None:
                     return RefSpec(_OVERRIDES[project])
         if refspec is None:
-            env_name = '{0}_REFSPEC'.format(project.upper())
-            refspec = self._env.get(env_name, None)
-            if refspec is None:
-                if allow_none:
-                    return None
-                raise ConfigurationError(env_name + ' is not set')
-        env_name = '{0}_HASH'.format(project.upper())
-        sha1 = self._env.get(env_name, None)
+            if allow_none:
+                return None
+            raise ConfigurationError(env_name + ' is not set')
         return RefSpec(refspec, sha1, executor=self._executor)
 
     def get_remote_hash(self, project, refspec):

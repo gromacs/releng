@@ -45,6 +45,19 @@ class TestRefSpec(unittest.TestCase):
         self.assertEqual(refspec.checkout, '1234abcd')
         self.assertEqual(str(refspec), value)
 
+    def test_TarballRef(self):
+        helper = TestHelper(self)
+        helper.add_input_file('tarballs/gromacs/package-info.log', """\
+                PACKAGE_FILE_NAME = gromacs-xyz-dev.tar.gz
+                HEAD_HASH = 1234abcd
+                """)
+        refspec = RefSpec('tarballs/gromacs', executor=helper.executor)
+        self.assertFalse(refspec.is_no_op)
+        self.assertTrue(refspec.is_tarball)
+        self.assertFalse(refspec.is_static)
+        self.assertEqual(refspec.tarball_path, 'tarballs/gromacs/gromacs-xyz-dev.tar.gz')
+        self.assertEqual(str(refspec), 'tarballs/gromacs')
+
 
 class TestGerritIntegration(unittest.TestCase):
     def test_ManualTrigger(self):
@@ -102,6 +115,38 @@ class TestGerritIntegration(unittest.TestCase):
         self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, '1234abcd')
         self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
         self.assertEqual(gerrit.get_refspec(Project.RELENG).checkout, '5678abcd')
+
+    def test_TarballsWithManualTrigger(self):
+        helper = TestHelper(self, env={
+                'CHECKOUT_PROJECT': 'releng',
+                'CHECKOUT_REFSPEC': 'refs/heads/master',
+                'GROMACS_REFSPEC': 'tarballs/gromacs',
+                'RELENG_REFSPEC': 'refs/heads/master'
+            })
+        helper.add_input_file('tarballs/gromacs/package-info.log', """\
+                HEAD_HASH = 1234abcd
+                """)
+        gerrit = helper.factory.gerrit
+        self.assertEqual(gerrit.checked_out_project, Project.RELENG)
+        self.assertTrue(gerrit.get_refspec(Project.GROMACS).is_tarball)
+        self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+
+    def test_TarballsWithGerritTrigger(self):
+        helper = TestHelper(self, env={
+                'CHECKOUT_PROJECT': 'releng',
+                'CHECKOUT_REFSPEC': 'refs/heads/master',
+                'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_REFSPEC': 'refs/changes/34/1234/5',
+                'GROMACS_REFSPEC': 'tarballs/gromacs',
+                'RELENG_REFSPEC': 'refs/heads/master'
+            })
+        helper.add_input_file('tarballs/gromacs/package-info.log', """\
+                HEAD_HASH = 1234abcd
+                """)
+        gerrit = helper.factory.gerrit
+        self.assertEqual(gerrit.checked_out_project, Project.RELENG)
+        self.assertTrue(gerrit.get_refspec(Project.GROMACS).is_tarball)
+        self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
 
 class TestBuildParameters(unittest.TestCase):

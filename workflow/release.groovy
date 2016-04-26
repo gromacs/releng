@@ -1,5 +1,6 @@
 utils = load 'releng/workflow/utils.groovy'
 utils.setEnvForRelengFromBuildParameters('releng')
+utils.checkoutDefaultProject()
 buildRevisions = utils.readBuildRevisions()
 testConfigs = utils.processMatrixConfigs('release-matrix.txt')
 
@@ -14,8 +15,6 @@ def doBuild(sourcePackageJob, regressiontestsPackageJob)
         ]
     tarballBuilds = getOrGenerateTarballs(tarballBuilds)
     utils.setEnvForRelengSecondaryCheckouts()
-    // TODO: The tarball refspecs probably do not work as expected if the build
-    // gets triggered from Gerrit for non-releng changes.
     setTarballEnvironmentVariablesForReleng()
     if (testTarballs(tarballBuilds, testConfigs)) {
         createWebsitePackage(tarballBuilds)
