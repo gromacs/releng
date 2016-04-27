@@ -13,6 +13,7 @@ from common import JobType, Project
 from integration import BuildParameters
 from options import BuildConfig, process_build_options, select_build_hosts
 from script import BuildScript
+import cmake
 import utils
 
 class BuildContext(object):
@@ -196,8 +197,7 @@ class BuildContext(object):
             if failure_string is None:
                 failure_string = 'failed test: ' + e.cmd
             self.mark_unstable(failure_string)
-        if memcheck:
-            self.run_cmd('xsltproc -o Testing/Temporary/valgrind_unit.xml ../releng/ctest_valgrind_to_junit.xsl Testing/`head -n1 Testing/TAG`/DynamicAnalysis.xml', shell=True)
+        cmake.process_ctest_xml(self._executor, memcheck)
 
     def compute_md5(self, path):
         """Computes MD5 hash of a file.
