@@ -99,5 +99,3 @@ from scripts in Jenkins build configuration (see :doc:`jenkins-config`).
 .. autofunction:: run_build
 
 .. autofunction:: prepare_multi_configuration_build
-
-.. autofunction:: write_triggered_build_url_file

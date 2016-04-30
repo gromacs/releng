@@ -57,13 +57,3 @@ def _write_matrix_configs(executor, path, configs):
             contents += ' "{0}"'.format(' '.join(quoted_opts))
     contents += '\n'
     executor.write_file(path, contents)
-
-def write_triggered_build_url_file(factory, varname, filename):
-    url = _get_last_triggered_build_url(factory.env)
-    factory.executor.write_file(filename, '{0} = {1}\n'.format(varname, url))
-
-def _get_last_triggered_build_url(env):
-    job = env['LAST_TRIGGERED_JOB_NAME']
-    number = env['TRIGGERED_BUILD_NUMBER_' + job]
-    jenkins_url = env['JENKINS_URL']
-    return '{0}job/{1}/{2}/'.format(jenkins_url, job, number)

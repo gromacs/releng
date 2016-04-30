@@ -100,31 +100,8 @@ the possible host for building the configuration map to labels (the mapping is
 defined in :file:`options.py`), and the set of labels supported by each build
 slave is defined in :file:`slaves.py`.
 
-The preparatory steps for these builds are similar as described above, but
-instead of calling run_build(), the sequence is as follows:
-
-1. After preparatory steps, Jenkins calls prepare_multi_configuration_build().
-2. The releng script checks out the ``gromacs`` repo if not yet done by
-   Jenkins.
-3. The releng script locates the configuration list from the ``gromacs`` repo
-   based on the file name given to prepare_multi_configuration_build().
-   It processes it into a form that is suitable for Jenkins to use in the next
-   step, and writes this into a file.  The script also assigns build hosts
-   for each configuration (see below).
-4. Jenkins triggers a sub-build with the configuration matrix as a parameter.
-   The sub-build is a matrix build that uses the sequence described above.
-5. Once the sub-build completes (whether it failed or not), Jenkins calls
-   write_triggered_build_url_file().  The releng script reads environment
-   variables set by the trigger step, and writes a file that contains the
-   URL for the sub-build.
-6. Jenkins reads the file written in the previous step to get the sub-build URL
-   into an environment variable, which it can then use for reporting back to
-   Gerrit.
-
-See :doc:`jenkins-config` for more details.
-
-There also exists a workflow build that loads and preprocesses the
-configuration matrix, and then triggers a matrix build that takes the
+The building is orchestrated by a workflow build that loads and preprocesses
+the configuration matrix, and then triggers a matrix build that takes the
 configuration axis values as a build parameter.  The matrix build uses the
 standard sequence with releng Python scripts.
 
@@ -138,15 +115,11 @@ Input environment variables
 The following environment variables are used by the releng scripts for input
 from the Jenkins job (or from a workflow build script):
 
-``GROMACS_REFSPEC``
-``REGRESSIONTESTS_REFSPEC``
-``RELENG_REFSPEC``
+``GROMACS_REFSPEC`` ``REGRESSIONTESTS_REFSPEC`` ``RELENG_REFSPEC``
   Refspecs for the repositories used for fetching the change to build.
   Note that they will not always be used for an actual checkout; for example,
   Jenkins always needs to do the checkout for ``releng``.
-``GROMACS_HASH``
-``REGRESSIONTESTS_HASH``
-``RELENG_HASH``
+``GROMACS_HASH`` ``REGRESSIONTESTS_HASH`` ``RELENG_HASH``
   If set, these provide hashes to check out, corresponding to the refspecs.
   Thees can be used to build a fixed commit from a refspec such as
   ``refs/heads/master``, even if multiple checkouts are done at different
@@ -159,8 +132,7 @@ from the Jenkins job (or from a workflow build script):
 ``CHECKOUT_REFSPEC``
   Refspec used to checkout ``CHECKOUT_PROJECT``.  This will override the
   project-specific refspec for that project.
-``GERRIT_PROJECT``
-``GERRIT_REFSPEC``
+``GERRIT_PROJECT`` ``GERRIT_REFSPEC``
   These are set by Gerrit Trigger, and can be used for simplicity instead of
   ``CHECKOUT_PROJECT`` and ``CHECKOUT_REFSPEC``.
 ``NODE_NAME``
@@ -235,50 +207,33 @@ gcc-X.Y
   Use the specified gcc version as the compiler.
 clang-X.Y
   Use the specified clang version as the compiler.
+clang-analyzer
+  Obsolete way of specifying the use of clang static analyzer (in combination
+  with clang-X.Y).
+clang-static-analyzer-X.Y
+  Use the specified clang static analyzer as the compiler.
 icc-X.Y
   Use Intel compiler (version is currently ignored; it is for informational
   purposes only and should match whatever is installed on the build nodes).
 msvc-YYYY
   Use the specified MSVC version as the compiler.
 cuda-X.Y
-  Use the specified CUDA version (only has effect in combination with ``gpu=native`` or ``gpu=opencl``).
+  Use the specified CUDA version.
 amdappsdk-X.Y
-  Use the specified AMD SDK version (only has effect in combination with ``gpu=opencl``).
+  Use the specified AMD SDK version.
 phi
   Build for Xeon Phi.
-mdrun-only
-  Do an mdrun-only build.
-reference
-  Do a reference (``CMAKE_BUILD_TYPE=Reference``) build.
-release
-  Do a release (optimized) build.
-asan
-  Use address sanitizer for the build.
 tsan
   Use thread sanitizer for the build.
 atlas
   Use ATLAS as an external BLAS/LAPACK library.
-mkl
-  Use MKL as FFT and BLAS/LAPACK libraries.
-fftpack
-  Use FFTPACK as the FFT library.
-double
-  Do a double-precision build.
 x11
   Build also ``gmx view`` (i.e., use ``GMX_X11=ON``).
 simd=SIMD
   Use the specified SIMD instruction set.
   If not set, SIMD is not used.
-no-thread-mpi
-  Build without thread-MPI.
 mpi
   Do an MPI build.
-gpu=none/native/opencl
-  Do a GPU-enabled build if set and equal to ``native`` or ``opencl``. Requires a valid ``cuda`` or ``amdappsdk``.
-openmp[=on/off]
-  Do a build with/without OpenMP.
-valgrind
-  Use valgrind for running (some of the) tests.
 
 Build scripts can define additional options that only influence the behavior of
 the build scripts.  This is used for matrix builds in :file:`gromacs.py` for

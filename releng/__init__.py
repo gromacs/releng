@@ -70,23 +70,6 @@ def prepare_multi_configuration_build(configfile, outputfile):
     with factory.status_reporter:
         prepare_build_matrix(factory, configfile, outputfile)
 
-def write_triggered_build_url_file(varname, filename):
-    """Extracts the URL for a build triggered with Parameterized Trigger.
-
-    Writes a Java properties file suitable for injecting an environment
-    variable named ``varname`` into the build, containing the URL of the last
-    job triggered with Parameterized Trigger (requires that the triggering
-    build step was blocking).
-
-    Args:
-        varname (str): Variable to set.
-        filename (str): File (including path) to write the properties to.
-    """
-    from factory import ContextFactory
-    from matrixbuild import write_triggered_build_url_file
-    factory = ContextFactory()
-    write_triggered_build_url_file(factory, varname, filename)
-
 def get_build_revisions(filename):
     """Writes out information about revisions used in the build.
 

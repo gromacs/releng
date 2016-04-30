@@ -6,27 +6,8 @@ import mock
 
 from releng.common import Project
 from releng.matrixbuild import prepare_build_matrix
-from releng.matrixbuild import write_triggered_build_url_file
 
 from releng.test.utils import TestHelper
-
-class TestTriggeredBuildUrl(unittest.TestCase):
-    def setUp(self):
-        env = {
-                'JENKINS_URL': 'http://jenkins.gromacs.org/',
-                'LAST_TRIGGERED_JOB_NAME': 'Test_Job',
-                'TRIGGERED_BUILD_NUMBER_Test_Job': 42
-        }
-        self.helper = TestHelper(self, env=env)
-
-    def test_TriggeredBuildUrl(self):
-        factory = self.helper.factory
-        executor = self.helper.executor
-        write_triggered_build_url_file(factory, 'URL_TO_POST', 'build/url-to-post.txt')
-        self.assertEqual(executor.method_calls, [
-                mock.call.write_file('build/url-to-post.txt',
-                    'URL_TO_POST = http://jenkins.gromacs.org/job/Test_Job/42/\n')
-            ])
 
 class TestPrepareBuildMatrix(unittest.TestCase):
     def setUp(self):
