@@ -8,6 +8,8 @@ releng repository
    workflow
    releng-api
    jenkins-config
+   jenkins-ui
+   jenkins-howto
 
 Separate ``releng`` repository hosts various development-time scripts for
 |Gromacs|.  Currently, this is used for build scripts on the Jenkins CI system,

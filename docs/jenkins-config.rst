@@ -1,10 +1,13 @@
-Jenkins job configuration
-=========================
+Jenkins configuration
+=====================
+
+Job configuration
+-----------------
 
 Configuration for Jenkins projects that use the releng scripts are described here.
 
 General configuration
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
 SCM checkout configuration:
 
@@ -46,7 +49,7 @@ variables).  Note that the SCM checkout behavior cannot use
 available for SCM polling.
 
 Normal/matrix builds
---------------------
+^^^^^^^^^^^^^^^^^^^^
 
 Builds that call run_build() should use the following post-build steps:
 
@@ -118,12 +121,12 @@ The folder structure in the build workspace looks like this::
       [<category>/]*
 
 Workflow builds
----------------
+^^^^^^^^^^^^^^^
 
 Workflow builds should use a bootstrapping script like this::
 
   def script
-  node('!windows') {
+  node('bs_nix-matrix_master') {
       def checkout_refspec = RELENG_REFSPEC
       if (binding.variables.containsKey('GERRIT_PROJECT')) {
           if (GERRIT_PROJECT == 'releng') {
@@ -149,3 +152,15 @@ where expressions in angle brackets depend on the workflow.
 The workflow script will take care of most other tasks; the Jenkins
 configuration may only need to specify some build parameters (typically,
 ``GROMACS_REFSPEC`` etc., as for normal builds) and the possible build triggers.
+
+Jenkins plugins
+---------------
+
+The following Jenkins plugins are used in |Gromacs| builds:
+
+TODO
+
+Build slave labels
+------------------
+
+TODO

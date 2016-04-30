@@ -1,6 +1,8 @@
 Workflow build overview
 =======================
 
+.. _releng-workflow-matrix-launcher:
+
 Matrix build launcher
 ---------------------
 
@@ -51,6 +53,8 @@ be used.  The workflow sequence is this:
 4. After the releng script finishes, the workflow publishes a HTML report
    produced by the analyzer (if it exists), and scans for compiler warnings
    from the console log to show them on the build page.
+
+.. _releng-workflow-release:
 
 Build & test release tarballs
 -----------------------------

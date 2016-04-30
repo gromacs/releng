@@ -303,6 +303,9 @@ clear-cut, but the general approach should be well covered.
    and/or Jenkins cause old builds to break.  As soon as the changes in releng
    are merged, all old changes in Gerrit need to be rebased.
 
+.. TODO: The matrix-in-source-repo approach makes the example below incorrect,
+   move it elsewhere and find a new one here.
+
    An example of this type of change would be introduction of a new build
    parameter that does not compile cleanly without a corresponding change in
    the main repo (e.g., introduction of a new compiler version that produces
