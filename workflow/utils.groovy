@@ -121,11 +121,16 @@ def runRelengScriptInternal(prepareScript, contents, propagate)
         def reason = null
         if (fileExists('logs/status.json')) {
             reason = readJsonFile('logs/status.json').reason
+            setGerritReview unsuccessfulMessage: reason
         }
         addRelengErrorSummary(reason)
         throw err
     }
-    return readJsonFile('logs/status.json')
+    def status = readJsonFile('logs/status.json')
+    if (propagate) {
+        processRelengStatus(status)
+    }
+    return status
 }
 
 def addRelengErrorSummary(reason)
@@ -141,6 +146,23 @@ def addRelengErrorSummary(reason)
         summary.appendText('Not available. See console log.', true)
     }
     summary.appendText("</pre>", false)
+}
+
+def processRelengStatus(status)
+{
+    def result = hudson.model.Result.fromString(status.result)
+    if (result.isWorseThan(hudson.model.Result.SUCCESS) && status.reason) {
+        def summary = manager.createSummary('empty')
+        summary.appendText("<pre>\n",false)
+        summary.appendText(status.reason, true)
+        summary.appendText("</pre>", false)
+        setGerritReview unsuccessfulMessage: status.reason
+    }
+    if (currentBuild.result) {
+        def prevResult = hudson.model.Result.fromString(currentBuild.result)
+        result = prevResult.combine(result)
+    }
+    currentBuild.setResult(result.toString())
 }
 
 def readBuildRevisions()
