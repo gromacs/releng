@@ -36,7 +36,7 @@ def getOrGenerateTarballs(builds)
 
 def getExistingTarballBuilds(builds)
 {
-    node('!windows') {
+    node('pipeline-general') {
         builds.gromacs = getExistingBuild(builds.gromacs)
         builds.regressiontests = getExistingBuild(builds.regressiontests)
     }
@@ -104,7 +104,7 @@ def getOrTriggerTarballBuild(buildInfo, version = null)
     parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: RELEASE]
     def packagingBuild = build job: buildInfo.jobName, parameters: parameters
     buildInfo.buildNumber = packagingBuild.number.toString()
-    node('!windows') {
+    node('pipeline-general') {
         buildInfo = getExistingBuild(buildInfo)
     }
     addTarballSummary(buildInfo, true)

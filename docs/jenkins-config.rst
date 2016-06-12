@@ -126,7 +126,7 @@ Workflow builds
 Workflow builds should use a bootstrapping script like this::
 
   def script
-  node('bs_nix-matrix_master') {
+  node('pipeline-general') {
       def checkout_refspec = RELENG_REFSPEC
       if (binding.variables.containsKey('GERRIT_PROJECT')) {
           if (GERRIT_PROJECT == 'releng') {
@@ -163,4 +163,32 @@ TODO
 Build slave labels
 ------------------
 
-TODO
+The following labels on the Jenkins build slaves are currently used to allocate
+builds to slaves:
+
+pipeline-master
+  Used to run general steps in workflow jobs that do not do any lengthy
+  processing (except for source code checkouts).  These could in principle run
+  anywhere, but limiting them to a subset of the nodes reduces the number of
+  workspaces used.  This reduces disk space use, and each time a new workspace
+  is created, the initial checkout takes quite a bit of time.
+clang-static-analyzer-X.Y
+  Used to run clang static analysis builds.  The build is dynamically allocated
+  using a version-specific label, based on what is specified in the
+  :file:`clang-analyzer.py` build script in the source repository.
+cppcheck
+  Used to run cppcheck builds.  For now, there is no version specification: all
+  used versions of cppcheck must be installed on each node.
+doxygen
+  Used to run documentation builds.  In addition to Doxygen, also other tools
+  needed by the documentation build (Sphinx, Latex) need to be installed here.
+  Also the source packaging builds use this label, since they need Sphinx.
+linux
+  Used for regression test packaging builds to get a uniform enough environment.
+windows
+  Should not be currently used, but has been used to restrict Unix-specific
+  things in workflows to not run on Windows slaves.
+
+In other cases, slaves are explicitly assigned to a node.  Multi-configuration
+builds are currently assigned to nodes based on information in
+:file:`slaves.py`, not on labels configured in Jenkins.
