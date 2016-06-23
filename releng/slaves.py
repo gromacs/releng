@@ -52,7 +52,7 @@ _HOST_LABELS = {
                               'cmake-2.8.9',
                               'sse2',
                               'mpi' },
-            BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9',
+            BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6.1',
                               'clang-3.4',
                               'icc-12.1', 'icc-13.0', 'icc-15.0', 'icc-16.0',
                               'cmake-3.2.1',
