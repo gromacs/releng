@@ -409,9 +409,8 @@ class BuildContext(object):
         output_path = self.workspace.get_path_for_logfile('coverage.xml')
         self.chdir(self.workspace.build_dir)
         gcovr = os.path.join(releng_dir, 'scripts', 'gcovr-3.2')
-        # TODO: This relies on gcov from the path being compatible with
-        # whatever compiler was set in the build script, which is fragile.
-        cmd = [gcovr, '--xml', '-r', gromacs_dir, '-o', output_path, '.']
+        cmd = [gcovr, '--xml', '-r', gromacs_dir, '-o', output_path, '.',
+                '--gcov-executable=' + self.env.gcov_command]
         if exclude:
             for x in exclude:
                 cmd.extend(['-e', x])

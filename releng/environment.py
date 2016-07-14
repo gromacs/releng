@@ -38,6 +38,7 @@ class BuildEnvironment(object):
        compiler_version (string): Version number for the selected compiler.
        c_compiler (str or None): Name of the C compiler executable.
        cxx_compiler (str or None): Name of the C++ compiler executable.
+       gcov_command (str): Name of the gcov executable.
        cmake_command (str): Name of the CMake executable.
        ctest_command (str): Name of the CTest executable.
        cmake_generator (str or None): CMake generator being used.
@@ -57,6 +58,7 @@ class BuildEnvironment(object):
         self.compiler_version = None
         self.c_compiler = None
         self.cxx_compiler = None
+        self.gcov_command = None
         self.cmake_command = 'cmake'
         self.ctest_command = 'ctest'
         self.cmake_generator = None
@@ -181,6 +183,7 @@ class BuildEnvironment(object):
         self.compiler_version = version
         self.c_compiler = 'gcc-' + version
         self.cxx_compiler = 'g++-' + version
+        self.gcov_command = 'gcov-' + version
 
     def _manage_stdlib_from_gcc(self, format_for_stdlib_flag):
         """Manages using a C++ standard library from a particular gcc toolchain
