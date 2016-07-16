@@ -42,6 +42,12 @@ def run_build(build, job_type, opts, project=Project.GROMACS):
         BuildContext._run_build(factory, build, job_type, opts)
 
 def read_build_script_config(script_name, outputfile):
+    """Reads build options specified in a build script.
+
+    Args:
+        script_name (str): Name of the build script (see run_build()).
+        outputfile (str): File to write the configurations to, under build/.
+    """
     from context import BuildContext
     from factory import ContextFactory
     factory = ContextFactory()
@@ -69,6 +75,41 @@ def prepare_multi_configuration_build(configfile, outputfile):
     factory = ContextFactory()
     with factory.status_reporter:
         prepare_build_matrix(factory, configfile, outputfile)
+
+def get_actions_from_triggering_comment(outputfile):
+    """Processes Gerrit comment that triggered the build.
+
+    Parses the comment that triggered an on-demand build and writes out a JSON
+    file that tells the workflow build what it needs to do.
+
+    Args:
+        outputfile (str): File to write the information to, under builds/.
+    """
+    from factory import ContextFactory
+    from ondemand import get_actions_from_triggering_comment
+    factory = ContextFactory()
+    with factory.status_reporter:
+        get_actions_from_triggering_comment(factory, outputfile)
+
+def do_ondemand_post_build(inputfile, outputfile):
+    """Does processing after on-demand builds have finished.
+
+    Reads a JSON file that provides information about the builds (and things
+    forwarded from the output of get_actions_from_triggering_comment()), and
+    writes a JSON file that specifies what to post back to Gerrit.
+
+    Can also perform other actions related to processing the build results.
+
+    Args:
+        inputfile (str): File to read the input from, relative to working dir.
+        outputfile (str): File to write the Gerrit message and URL to, under
+            builds/.
+    """
+    from factory import ContextFactory
+    from ondemand import do_post_build
+    factory = ContextFactory()
+    with factory.status_reporter:
+        do_post_build(factory, inputfile, outputfile)
 
 def get_build_revisions(filename):
     """Writes out information about revisions used in the build.

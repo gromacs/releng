@@ -22,12 +22,31 @@ def prepare_build_matrix(factory, configfile, outputfile):
     workspace._check_projects()
     workspace._init_build_dir(out_of_source=True)
 
-    inputpath = workspace._resolve_build_input_file(configfile, '.txt')
+    configs = get_build_configs(factory, configfile)
+
     outputpath = os.path.join(workspace.build_dir, outputfile)
+    _write_matrix_configs(executor, outputpath, configs)
+
+def get_build_configs(factory, configfile):
+    executor = factory.executor
+    workspace = factory.workspace
+    inputpath = workspace._resolve_build_input_file(configfile, '.txt')
 
     configs = _read_matrix_configs(executor, inputpath)
     configs = select_build_hosts(factory, configs)
-    _write_matrix_configs(executor, outputpath, configs)
+    return configs
+
+def get_options_string(configs):
+    contents = []
+    for config in configs:
+        opts = list(config.opts)
+        if slaves.is_label(config.host):
+            opts.append('label=' + config.host)
+        else:
+            opts.append('host=' + config.host)
+        quoted_opts = [pipes.quote(x) for x in opts]
+        contents.append('"{0}"'.format(' '.join(quoted_opts)))
+    return ' '.join(contents)
 
 def _read_matrix_configs(executor, path):
     configs = []
@@ -46,14 +65,6 @@ def _write_matrix_configs(executor, path, configs):
     if ext == '.json':
         contents = json.dumps([config.to_dict() for config in configs])
     else:
-        contents = 'OPTIONS'
-        for config in configs:
-            opts = list(config.opts)
-            if slaves.is_label(config.host):
-                opts.append('label=' + config.host)
-            else:
-                opts.append('host=' + config.host)
-            quoted_opts = [pipes.quote(x) for x in opts]
-            contents += ' "{0}"'.format(' '.join(quoted_opts))
+        contents = 'OPTIONS ' + get_options_string(configs)
     contents += '\n'
     executor.write_file(path, contents)

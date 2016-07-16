@@ -1,3 +1,4 @@
+import base64
 import os.path
 import unittest
 # With Python 2.7, this needs to be separately installed.
@@ -147,6 +148,71 @@ class TestGerritIntegration(unittest.TestCase):
         self.assertEqual(gerrit.checked_out_project, Project.RELENG)
         self.assertTrue(gerrit.get_refspec(Project.GROMACS).is_tarball)
         self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+
+    def test_SimpleTriggeringComment(self):
+        helper = TestHelper(self, env={
+                'CHECKOUT_PROJECT': 'releng',
+                'CHECKOUT_REFSPEC': 'refs/heads/master',
+                'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_REFSPEC': 'refs/heads/master',
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'RELENG_REFSPEC': 'refs/heads/master',
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Coverage')
+            })
+        gerrit = helper.factory.gerrit
+        self.assertEqual(gerrit.get_triggering_comment(), 'Coverage')
+
+    def test_SimpleTriggeringCommentWithNewline(self):
+        helper = TestHelper(self, env={
+                'CHECKOUT_PROJECT': 'releng',
+                'CHECKOUT_REFSPEC': 'refs/heads/master',
+                'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_REFSPEC': 'refs/heads/master',
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'RELENG_REFSPEC': 'refs/heads/master',
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Coverage\n')
+            })
+        gerrit = helper.factory.gerrit
+        self.assertEqual(gerrit.get_triggering_comment(), 'Coverage')
+
+    def test_TriggeringCommentWithLeadingText(self):
+        helper = TestHelper(self, env={
+                'CHECKOUT_PROJECT': 'releng',
+                'CHECKOUT_REFSPEC': 'refs/heads/master',
+                'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_REFSPEC': 'refs/heads/master',
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'RELENG_REFSPEC': 'refs/heads/master',
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('Text\n\n[JENKINS] Coverage')
+            })
+        gerrit = helper.factory.gerrit
+        self.assertEqual(gerrit.get_triggering_comment(), 'Coverage')
+
+    def test_TriggeringCommentWithTrailingText(self):
+        helper = TestHelper(self, env={
+                'CHECKOUT_PROJECT': 'releng',
+                'CHECKOUT_REFSPEC': 'refs/heads/master',
+                'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_REFSPEC': 'refs/heads/master',
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'RELENG_REFSPEC': 'refs/heads/master',
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Coverage\n\nText')
+            })
+        gerrit = helper.factory.gerrit
+        self.assertEqual(gerrit.get_triggering_comment(), 'Coverage')
+
+    def test_MultilineTriggeringComment(self):
+        helper = TestHelper(self, env={
+                'CHECKOUT_PROJECT': 'releng',
+                'CHECKOUT_REFSPEC': 'refs/heads/master',
+                'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_REFSPEC': 'refs/heads/master',
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'RELENG_REFSPEC': 'refs/heads/master',
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS]\nCoverage\nMore')
+            })
+        gerrit = helper.factory.gerrit
+        self.assertEqual(gerrit.get_triggering_comment(), 'Coverage\nMore')
 
 
 class TestBuildParameters(unittest.TestCase):

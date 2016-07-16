@@ -109,3 +109,27 @@ The workflow and the level of testing is still a work-in-progress, but it
 already covers most of what the earlier builds did, and remaining content
 should not be too hard to add.  Missing functionality is indicated with TODOs
 in the workflow script or in the build scripts in the source repo.
+
+On-demand launcher
+------------------
+
+The workflow build in :file:`ondemand.groovy` handles builds that are triggered
+with a ``[JENKINS]`` comment from Gerrit.  The actual builds are done using
+separate, non-workflow jobs triggered from the workflow.
+The general sequence is:
+
+1. In the context of the initial checkout, the workflow uses
+   ``get_actions_from_triggering_comment()`` to parse the comment from Gerrit.
+   This function will also read information from the ``gromacs`` repository,
+   e.g., to fill out the matrix options into the returned data structure.
+2. In the same context, the workflow does a normal git checkout to show Changes
+   and other git data on the build page.
+3. The Jenkins job calls ``doBuild()`` without parameters.  The workflow runs
+   the requested builds in parallel, based on the data structure it got in
+   step 1.  All relevant build parameters are forwarded.
+4. After the builds finish, the workflow adds links to the triggered builds
+   to the build summary page (while the build is running, the link can be found
+   from the console log).  The workflow then uses ``do_ondemand_post_build()``
+   to construct the message to post back to Gerrit, as well as to perform other
+   actions.  The combined build status of the builds is also propagated to
+   the status of the workflow job.

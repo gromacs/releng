@@ -67,6 +67,10 @@ class TestHelper(object):
         lines = textwrap.dedent(contents).splitlines(True)
         self._input_files[path] = lines
 
+    def add_input_json_file(self, path, contents):
+        lines = json.dumps(contents).splitlines(True)
+        self._input_files[path] = lines
+
     def assertConsoleOutput(self, expected):
         text = textwrap.dedent(expected)
         self._test.assertEqual(text, self._console.getvalue())

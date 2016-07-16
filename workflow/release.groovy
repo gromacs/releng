@@ -248,15 +248,10 @@ def addConfigurationSummary(testConfigs)
     manager.createSummary('empty').appendText(text, false)
 }
 
+@NonCPS
 def setBuildResult(testConfigs)
 {
-    def combinedResult = hudson.model.Result.SUCCESS
-    for (int i = 0; i != testConfigs.size(); ++i) {
-        def result = hudson.model.Result.fromString(testConfigs[i].status.result)
-        combinedResult = combinedResult.combine(result)
-    }
-    currentBuild.setResult(combinedResult.toString())
-    return combinedResult.isBetterOrEqualTo(hudson.model.Result.SUCCESS)
+    return utils.setCombinedBuildResult(testConfigs.collect { it.status.result })
 }
 
 def createWebsitePackage(tarballBuilds)

@@ -93,9 +93,18 @@ API for Jenkins
 ---------------
 
 The following functions from the ``releng`` package are intended to be called
-from scripts in Jenkins build configuration (see :doc:`jenkins-config`).
+from scripts in Jenkins build configuration or from workflow scripts
+(see :doc:`jenkins-config`).
 
 .. py:currentmodule:: releng
 .. autofunction:: run_build
 
+.. autofunction:: read_build_script_config
+
 .. autofunction:: prepare_multi_configuration_build
+
+.. autofunction:: get_actions_from_triggering_comment
+
+.. autofunction:: do_ondemand_post_build
+
+.. autofunction:: get_build_revisions

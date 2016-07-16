@@ -112,8 +112,8 @@ See :doc:`workflow` and :doc:`jenkins-config` for more details.
 Input environment variables
 ---------------------------
 
-The following environment variables are used by the releng scripts for input
-from the Jenkins job (or from a workflow build script):
+The following environment variables are used by the releng Python scripts for
+input from the Jenkins job (or from a workflow build script):
 
 ``GROMACS_REFSPEC`` ``REGRESSIONTESTS_REFSPEC`` ``RELENG_REFSPEC``
   Refspecs for the repositories used for fetching the change to build.
@@ -135,6 +135,17 @@ from the Jenkins job (or from a workflow build script):
 ``GERRIT_PROJECT`` ``GERRIT_REFSPEC``
   These are set by Gerrit Trigger, and can be used for simplicity instead of
   ``CHECKOUT_PROJECT`` and ``CHECKOUT_REFSPEC``.
+  ``GERRIT_PROJECT`` is also used in some cases for interpreting
+  ``GERRIT_EVENT_COMMENT_TEXT``.
+``GERRIT_EVENT_COMMENT_TEXT``
+  This is set by Gerrit Trigger when the build is triggered by a comment added
+  in Jenkins.  The text is expected to be base64-encoded (the default in Gerrit
+  Trigger).  See :ref:`releng-triggering-builds` for recognized ways of
+  triggering builds through this.
+``MANUAL_COMMENT_TEXT``
+  If ``GERRIT_EVENT_COMMENT_TEXT`` is not set, the value from this variable is
+  used instead (without base64-decoding or removing ``[JENKINS]`` tags).
+  This allows creating a test Jenkins job that can be manually triggered.
 ``NODE_NAME``
   Name of the host where the build is running.  This is used for some
   host-specific logic in configuring the compilation.

@@ -7,8 +7,10 @@ configuration.
 """
 from __future__ import print_function
 
+import base64
 import json
 import os
+import re
 import traceback
 
 from common import BuildError, ConfigurationError
@@ -151,9 +153,8 @@ class GerritIntegration(object):
         refspec = self._env.get(env_name, None)
         env_name = '{0}_HASH'.format(project.upper())
         sha1 = self._env.get(env_name, None)
-        gerrit_project = self._env.get('GERRIT_PROJECT', None)
+        gerrit_project = self.get_triggering_project()
         if not RefSpec.is_tarball_refspec(refspec) and gerrit_project is not None:
-            gerrit_project = Project.parse(gerrit_project)
             if gerrit_project == project:
                 refspec = self._env.get('GERRIT_REFSPEC', None)
                 if refspec is None:
@@ -178,6 +179,23 @@ class GerritIntegration(object):
     def get_git_url(self, project):
         """Returns the URL for git to access the given project."""
         return 'ssh://{0}/{1}.git'.format(self._get_ssh_url(), project)
+
+    def get_triggering_project(self):
+        gerrit_project = self._env.get('GERRIT_PROJECT', None)
+        if gerrit_project is None:
+            return None
+        return Project.parse(gerrit_project)
+
+    def get_triggering_comment(self):
+        text = self._env.get('GERRIT_EVENT_COMMENT_TEXT', None)
+        if text:
+            text = base64.b64decode(text)
+            match = re.search(r'(?:^|\n\n)\[JENKINS\]\s*((?:.+\n)*(?:.+))(?:\n\n|\n?$)', text)
+            if not match:
+                return None
+            return match.group(1).strip()
+        text = self._env.get('MANUAL_COMMENT_TEXT', None)
+        return text
 
     def _get_ssh_url(self):
         return self._user + '@gerrit.gromacs.org'

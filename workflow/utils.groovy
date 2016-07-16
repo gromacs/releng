@@ -2,11 +2,12 @@
 def setEnvForRelengFromBuildParameters(defaultProject)
 {
     // Most of this becomes unnecessary if JENKINS-30910 is resolved.
-    env.GROMACS_REFSPEC = GROMACS_REFSPEC
-    if (binding.variables.containsKey('REGRESSIONTESTS_REFSPEC')) {
-        env.REGRESSIONTESTS_REFSPEC = REGRESSIONTESTS_REFSPEC
-    }
-    env.RELENG_REFSPEC = RELENG_REFSPEC
+    setEnvFromBindingIfExists('GROMACS_REFSPEC')
+    setEnvFromBindingIfExists('GROMACS_HASH')
+    setEnvFromBindingIfExists('REGRESSIONTESTS_REFSPEC')
+    setEnvFromBindingIfExists('REGRESSIONTESTS_HASH')
+    setEnvFromBindingIfExists('RELENG_REFSPEC')
+    setEnvFromBindingIfExists('RELENG_HASH')
     if (binding.variables.containsKey('GERRIT_PROJECT')) {
         binding.variables.findAll { it.key.startsWith('GERRIT_') }.each {
             key, value -> env."$key" = value
@@ -16,6 +17,14 @@ def setEnvForRelengFromBuildParameters(defaultProject)
     } else {
         env.CHECKOUT_PROJECT = defaultProject
         env.CHECKOUT_REFSPEC = env."${defaultProject.toUpperCase()}_REFSPEC"
+    }
+}
+
+@NonCPS
+def setEnvFromBindingIfExists(name)
+{
+    if (binding.variables.containsKey(name)) {
+        env."$name" = binding.variables."$name"
     }
 }
 
@@ -241,6 +250,18 @@ def processMatrixConfigs(filename)
     return readJsonFile('build/matrix.json')
 }
 
+@NonCPS
+def setCombinedBuildResult(results)
+{
+    def combinedResult = hudson.model.Result.SUCCESS
+    for (int i = 0; i != results.size(); ++i) {
+        def result = hudson.model.Result.fromString(results[i])
+        combinedResult = combinedResult.combine(result)
+    }
+    currentBuild.setResult(combinedResult.toString())
+    return combinedResult.isBetterOrEqualTo(hudson.model.Result.SUCCESS)
+}
+
 def readPropertyFile(path)
 {
     def contents = readFile path
@@ -269,6 +290,19 @@ def parseJson(contents)
 {
     def slurper = new groovy.json.JsonSlurperClassic()
     return slurper.parseText(contents)
+}
+
+def writeJsonFile(path, obj)
+{
+    def contents = toJsonString(obj)
+    writeFile file: path, text: contents
+}
+
+@NonCPS
+def toJsonString(obj)
+{
+    def builder = new groovy.json.JsonBuilder(obj)
+    return builder.toPrettyString()
 }
 
 return this

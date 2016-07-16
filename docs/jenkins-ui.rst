@@ -36,6 +36,8 @@ General
   errors from ``releng`` if the API has changed, if such a rebasing need
   exists and your change is particularly old.
 
+.. _releng-triggering-builds:
+
 Triggering builds
 ^^^^^^^^^^^^^^^^^
 
@@ -64,16 +66,34 @@ triggered builds, in case all or most of them had problems.
 It is not possible to rebuild only a part of the matrix job.
 
 Some types of builds are not automatically triggered from Gerrit when a patch
-set is uploaded, but instead need to be requested.  For example, to get a
-coverage report for a change in Gerrit, post a ``[JENKINS] Coverage`` comment
-in the change, and Jenkins should report back with the build URL once the build
-completes.
+set is uploaded, but instead need to be requested with a specifically formatted
+comment in Gerrit.  The general format for the comment is ``[JENKINS]``
+followed by keywords for the build(s) requested.  Currently, the following
+keywords are supported:
 
-To manually trigger a build (e.g., for verifying simultaneous changes to
-multiple repositories, or for testing job configuration changes), use Build
-with Parameters on the project page, for the same builds that are triggered
-from Gerrit.  Enter the refspecs (like ``refs/changes/53/2053/1``) for the
-combination you want to build.  For now, this will not report anything back to
+* ``Coverage``: Triggers a coverage build.
+* ``Package``: Triggers a packaging build.  When triggered from a source or a
+  regression tests change, packages that repository.  When triggered from
+  releng, packages both.
+* ``Post-submit``: Triggers a matrix build with the post-submit matrix
+  specified in the ``gromacs`` repository.
+* ``Release``: Triggers a release workflow build for testing the release
+  process.
+
+More than one build can be requested with a single comment; the keywords should
+be separated by whitespace.  When the requested builds complete, a link to the
+build is posted back.  In case there is just a single build, the link points
+directly to it.  If there are multiple, the link points to a workflow build and
+the individual builds can be accessed through links on the build summary page.
+
+There can be also other content in the Gerrit comment that requests a build.
+The ``[JENKINS]`` tag must appear at the start of a paragraph, and that
+paragraph as a whole will be interpreted as keywords intended for Jenkins.
+
+To manually trigger a build (e.g., for testing job configuration changes), use
+Build with Parameters on the project page, for the same builds that are
+triggered from Gerrit.  Enter the refspecs (like ``refs/changes/53/2053/1``)
+for the combination you want to build.  This will not report anything back to
 Gerrit.  The refspec for changes in Gerrit is of the form
 ``refs/changes/MM/NNMM/PP``, where ``NNMM`` is the number of the change and
 ``PP`` is the patch set number.  You can see the refspec, e.g., in the download
