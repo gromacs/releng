@@ -131,5 +131,5 @@ The general sequence is:
    to the build summary page (while the build is running, the link can be found
    from the console log).  The workflow then uses ``do_ondemand_post_build()``
    to construct the message to post back to Gerrit, as well as to perform other
-   actions.  The combined build status of the builds is also propagated to
-   the status of the workflow job.
+   actions such as posting cross-verify messages.  The combined build status of
+   the builds is also propagated to the status of the workflow job.

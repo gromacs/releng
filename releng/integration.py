@@ -99,6 +99,18 @@ class RefSpec(object):
         return self._value
 
 
+class GerritChange(object):
+
+    def __init__(self, json_data):
+        self.project = Project.parse(json_data['project'])
+        self.number = int(json_data['number'])
+        self.url = json_data['url']
+        self.is_open = json_data['open']
+        patchset = json_data['currentPatchSet']
+        self.patchnumber = int(patchset['number'])
+        self.refspec = RefSpec(patchset['ref'], patchset['revision'])
+
+
 class GerritIntegration(object):
 
     """Provides access to Gerrit and Jenkins configuration related to checkouts.
@@ -113,6 +125,7 @@ class GerritIntegration(object):
         self._env = factory.env
         self._executor = factory.executor
         self._cmd_runner = factory.cmd_runner
+        self._overrides = dict()
         self._user = user
         self.checked_out_project, self._checked_out_refspec = self._get_checked_out_project()
 
@@ -149,6 +162,8 @@ class GerritIntegration(object):
         """Returns the refspec that is being built for the given project."""
         if self.checked_out_project == project:
             return self._checked_out_refspec
+        if project in self._overrides:
+            return self._overrides[project]
         env_name = '{0}_REFSPEC'.format(project.upper())
         refspec = self._env.get(env_name, None)
         env_name = '{0}_HASH'.format(project.upper())
@@ -197,8 +212,43 @@ class GerritIntegration(object):
         text = self._env.get('MANUAL_COMMENT_TEXT', None)
         return text
 
+    def override_refspec(self, project, refspec):
+        self._overrides[project] = refspec
+
+    def query_unique_change(self, query):
+        cmd = self._get_ssh_query_cmd()
+        cmd.extend(['--current-patch-set', '--', query])
+        lines = self._cmd_runner.check_output(cmd).splitlines()
+        if len(lines) != 2:
+            raise BuildError(query + ' does not identify a unique change')
+        return GerritChange(json.loads(lines[0]))
+
+    def post_cross_verify_start(self, change, patchset):
+        message = 'Cross-verify with {0} (patch set {1}) running at {2}'.format(
+                self._env['GERRIT_CHANGE_URL'], self._env['GERRIT_PATCHSET_NUMBER'],
+                self._env['BUILD_URL'])
+        cmd = self._get_ssh_review_cmd(change, patchset, message)
+        self._cmd_runner.check_call(cmd)
+
+    def post_cross_verify_finish(self, change, patchset, build_messages):
+        message = 'Cross-verify with {0} (patch set {1}) finished'.format(
+                self._env['GERRIT_CHANGE_URL'], self._env['GERRIT_PATCHSET_NUMBER'])
+        message += '\n\n' + '\n\n'.join(build_messages)
+        cmd = self._get_ssh_review_cmd(change, patchset, message)
+        self._cmd_runner.check_call(cmd)
+
     def _get_ssh_url(self):
         return self._user + '@gerrit.gromacs.org'
+
+    def _get_ssh_gerrit_cmd(self, cmdname):
+        return ['ssh', '-p', '29418', self._get_ssh_url(), 'gerrit', cmdname]
+
+    def _get_ssh_query_cmd(self):
+        return self._get_ssh_gerrit_cmd('query') + ['--format=JSON']
+
+    def _get_ssh_review_cmd(self, change, patchset, message):
+        changeref = '{0},{1}'.format(change, patchset)
+        return self._get_ssh_gerrit_cmd('review') + [changeref, '-m', '"' + message + '"']
 
 
 class BuildParameters(object):

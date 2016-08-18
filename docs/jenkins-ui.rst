@@ -72,6 +72,13 @@ followed by keywords for the build(s) requested.  Currently, the following
 keywords are supported:
 
 * ``Coverage``: Triggers a coverage build.
+* ``Cross-verify`` NNNN: Triggers a cross-verification build using the
+  pre-submit matrix, building the current change together with the latest patch
+  set of change number NNNN from Gerrit (should be from another project).
+  Results are posted back to both changes (the NNNN change only if it is still
+  open), but the vote is not affected.  For cross-verification with releng
+  changes, the ``[JENKINS]`` comment needs to be posted in the releng change
+  to ensure that the correct releng scripts are used throughout the build.
 * ``Package``: Triggers a packaging build.  When triggered from a source or a
   regression tests change, packages that repository.  When triggered from
   releng, packages both.

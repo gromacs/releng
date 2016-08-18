@@ -102,6 +102,42 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                     ]
             })
 
+    def test_CrossVerifyRequest(self):
+        helper = TestHelper(self, workspace='ws', env={
+                'BUILD_URL': 'http://build',
+                'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_CHANGE_URL': 'http://gerrit',
+                'GERRIT_PATCHSET_NUMBER': '3',
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234')
+            })
+        input_lines = [
+                'gcc-4.6 gpu cuda-5.0',
+                'msvc-2013'
+            ]
+        helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
+                '\n'.join(input_lines) + '\n')
+        factory = helper.factory
+        executor = helper.executor
+        get_actions_from_triggering_comment(factory, 'actions.json')
+        helper.assertOutputJsonFile('ws/build/actions.json', {
+                'builds': [
+                        {
+                            'type': 'matrix',
+                            'desc': 'cross-verify',
+                            'options': '"{0} host=bs_nix1310" "{1} host=bs-win2012r2"'.format(*[x.strip() for x in input_lines])
+                        }
+                    ],
+                'env': {
+                        'REGRESSIONTESTS_REFSPEC': 'refs/changes/34/1234/5',
+                        'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
+                    },
+                'gerrit_info': {
+                        'change': 1234,
+                        'patchset': 5
+                    }
+            })
+        helper.assertCommandInvoked(['ssh', '-p', '29418', 'jenkins@gerrit.gromacs.org', 'gerrit', 'review', '1234,5', '-m', '"Cross-verify with http://gerrit (patch set 3) running at http://build"'])
+
 
 class TestDoPostBuild(unittest.TestCase):
     def test_NoBuild(self):
@@ -133,6 +169,32 @@ class TestDoPostBuild(unittest.TestCase):
                 'url': 'http://my_build',
                 'message': ''
             })
+
+    def test_SingleBuildWithCrossVerify(self):
+        helper = TestHelper(self, workspace='ws', env={
+                'GERRIT_CHANGE_URL': 'http://gerrit',
+                'GERRIT_PATCHSET_NUMBER': '3',
+            })
+        factory = helper.factory
+        helper.add_input_json_file('actions.json', {
+                'builds': [
+                        {
+                            'url': 'http://my_build',
+                            'desc': None,
+                            'result': 'SUCCESS'
+                        }
+                    ],
+                'gerrit_info': {
+                        'change': 1234,
+                        'patchset': 5
+                    }
+            })
+        do_post_build(factory, 'actions.json', 'message.json')
+        helper.assertOutputJsonFile('ws/build/message.json', {
+                'url': 'http://my_build',
+                'message': ''
+            })
+        helper.assertCommandInvoked(['ssh', '-p', '29418', 'jenkins@gerrit.gromacs.org', 'gerrit', 'review', '1234,5', '-m', '"Cross-verify with http://gerrit (patch set 3) finished\n\nhttp://my_build: SUCCESS"'])
 
     def test_SingleBuildWithDescription(self):
         helper = TestHelper(self, workspace='ws')

@@ -98,7 +98,8 @@ def do_ondemand_post_build(inputfile, outputfile):
     forwarded from the output of get_actions_from_triggering_comment()), and
     writes a JSON file that specifies what to post back to Gerrit.
 
-    Can also perform other actions related to processing the build results.
+    Can also perform other actions related to processing the build results,
+    such as posting cross-verify messages.
 
     Args:
         inputfile (str): File to read the input from, relative to working dir.

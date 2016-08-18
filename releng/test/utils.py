@@ -53,6 +53,19 @@ class TestHelper(object):
             sha1 = '1234567890abcdef0123456789abcdef01234567'
             refspec = cmd[3]
             return '{0} {1}\n'.format(sha1, refspec)
+        elif cmd[0] == 'ssh' and cmd[4:6] == ['gerrit', 'query']:
+            data = {
+                    'project': 'regressiontests',
+                    'number': '1234',
+                    'url': 'URL',
+                    'open': True,
+                    'currentPatchSet': {
+                            'number': '5',
+                            'revision': '1234567890abcdef0123456789abcdef01234567',
+                            'ref': 'refs/changes/34/1234/5'
+                        }
+                }
+            return json.dumps(data) + '\nstats'
         return None
 
     def _read_file(self, path):
@@ -86,3 +99,6 @@ class TestHelper(object):
             self._test.fail('output file not produced: ' + path)
         contents = json.loads(self._output_files[path])
         self._test.assertEqual(contents, expected)
+
+    def assertCommandInvoked(self, cmd):
+        self.executor.check_call.assert_any_call(cmd, cwd=mock.ANY, env=mock.ANY)

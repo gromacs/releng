@@ -1,6 +1,6 @@
 // TODO: Consider what's the best place to have knowledge of these build names.
 coverageJobName = 'Coverage_Gerrit_master-new-releng'
-matrixJobName = 'Gromacs_Gerrit_master_nwrpo'
+matrixJobName = 'Gromacs_Gerrit_master_nrwpo'
 regtestPackageJobName = 'Regressiontests_package_master'
 releaseJobName = 'Release_workflow_master'
 sourcePackageJobName = 'Source_package_master'
@@ -8,6 +8,7 @@ sourcePackageJobName = 'Source_package_master'
 utils = load 'releng/workflow/utils.groovy'
 utils.setEnvForRelengFromBuildParameters('releng')
 actions = processTriggeringCommentAndGetActions()
+setEnvFromActions(actions.env)
 utils.checkoutDefaultProject()
 utils.readBuildRevisions()
 
@@ -18,6 +19,17 @@ def processTriggeringCommentAndGetActions()
         releng.get_actions_from_triggering_comment('actions.json')
         """)
     return utils.readJsonFile('build/actions.json')
+}
+
+@NonCPS
+def setEnvFromActions(overrides)
+{
+    if (!overrides) {
+        return
+    }
+    overrides.each {
+        key, value -> env."$key" = value
+    }
 }
 
 def doBuild()
@@ -32,7 +44,7 @@ def doBuild()
     parallel tasks
     setBuildResult(builds)
     addSummaryForTriggeredBuilds(builds)
-    setGerritOutput(builds)
+    setGerritOutput(builds, actions.gerrit_info)
 }
 
 @NonCPS
@@ -115,16 +127,17 @@ def addSummaryForTriggeredBuilds(builds)
     manager.createSummary('empty').appendText(text, false)
 }
 
-def setGerritOutput(builds)
+def setGerritOutput(builds, gerrit_info)
 {
-    def messages = doPostBuildActions(builds)
+    def messages = doPostBuildActions(builds, gerrit_info)
     setGerritReview customUrl: messages.url, unsuccessfulMessage: messages.message
 }
 
-def doPostBuildActions(builds)
+def doPostBuildActions(builds, gerrit_info)
 {
     def data = [
-            'builds': getBuildInfoForReleng(builds)
+            'builds': getBuildInfoForReleng(builds),
+            'gerrit_info': gerrit_info
         ]
     def messages
     node('pipeline-general') {
