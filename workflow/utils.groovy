@@ -266,7 +266,7 @@ def readJsonFile(path)
 @NonCPS
 def parseJson(contents)
 {
-    def slurper = new groovy.json.JsonSlurper()
+    def slurper = new groovy.json.JsonSlurperClassic()
     return slurper.parseText(contents)
 }
 
