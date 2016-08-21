@@ -45,6 +45,7 @@ class ProjectInfo(object):
                 'refspec': str(self.refspec),
                 'hash': self.head_hash,
                 'title': self.head_title,
+                'refspec_env': '{0}_REFSPEC'.format(self.project.upper()),
                 'hash_env': '{0}_HASH'.format(self.project.upper())
             }
 

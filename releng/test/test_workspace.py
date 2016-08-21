@@ -23,6 +23,7 @@ class TestWorkspace(unittest.TestCase):
                 {
                     'project': 'gromacs',
                     'hash_env': 'GROMACS_HASH',
+                    'refspec_env': 'GROMACS_REFSPEC',
                     'refspec': 'refs/changes/34/1234/5',
                     'hash': '1234567890abcdef0123456789abcdef01234567',
                     'title': 'Mock title'
@@ -30,6 +31,7 @@ class TestWorkspace(unittest.TestCase):
                 {
                     'project': 'regressiontests',
                     'hash_env': 'REGRESSIONTESTS_HASH',
+                    'refspec_env': 'REGRESSIONTESTS_REFSPEC',
                     'refspec': 'refs/heads/master',
                     'hash': '1234567890abcdef0123456789abcdef01234567',
                     'title': None
@@ -37,6 +39,7 @@ class TestWorkspace(unittest.TestCase):
                 {
                     'project': 'releng',
                     'hash_env': 'RELENG_HASH',
+                    'refspec_env': 'RELENG_REFSPEC',
                     'refspec': 'refs/heads/master',
                     'hash': '1234567890abcdef0123456789abcdef01234567',
                     'title': 'Mock title'
@@ -57,6 +60,7 @@ class TestWorkspace(unittest.TestCase):
                 {
                     'project': 'gromacs',
                     'hash_env': 'GROMACS_HASH',
+                    'refspec_env': 'GROMACS_REFSPEC',
                     'refspec': 'refs/changes/34/1234/5',
                     'hash': '1234567890abcdef0123456789abcdef01234567',
                     'title': 'Mock title'
@@ -64,6 +68,7 @@ class TestWorkspace(unittest.TestCase):
                 {
                     'project': 'releng',
                     'hash_env': 'RELENG_HASH',
+                    'refspec_env': 'RELENG_REFSPEC',
                     'refspec': 'refs/heads/master',
                     'hash': '1234567890abcdef0123456789abcdef01234567',
                     'title': 'Mock title'

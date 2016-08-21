@@ -53,10 +53,8 @@ def currentBuildParametersForJenkins()
     parameters = addBuildParameterIfExists(parameters, 'REGRESSIONTESTS_HASH')
     parameters = addBuildParameterIfExists(parameters, 'RELENG_REFSPEC')
     parameters = addBuildParameterIfExists(parameters, 'RELENG_HASH')
-    binding.variables.findAll { it.key.startsWith('GERRIT_') }.each {
-        key, value ->
-            parameters += [$class: 'StringParameterValue', name: key, value: value]
-    }
+    // We cannot forward the Gerrit Trigger parameters, because of SECURITY-170.
+    // Instead, they are dealt with in readBuildRevisions()
     return parameters
 }
 
@@ -171,14 +169,17 @@ def readBuildRevisions()
         releng.get_build_revisions('build-revisions.json')
         """)
     def revisionList = readJsonFile('logs/build-revisions.json')
-    setRevisionHashesToEnv(revisionList)
+    setRevisionsToEnv(revisionList)
     addBuildRevisionsSummary(revisionList)
     return revisionListToRevisionMap(revisionList)
 }
 
 @NonCPS
-def setRevisionHashesToEnv(revisionList)
+def setRevisionsToEnv(revisionList)
 {
+    // Set refspec env variables to the actual refspecs so that they can be
+    // used as build parameters.
+    revisionList.each { env."${it.refspec_env}" = it.refspec }
     revisionList.each { env."${it.hash_env}" = it.hash }
 }
 
