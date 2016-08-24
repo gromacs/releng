@@ -20,7 +20,7 @@ def doBuild()
                 excludePattern: ''])
             publishHTML(target: [
                 reportDir: 'logs/scan_html/final',
-                reportFiles: 'index.html',
+                reportFiles: 'index.html', 'scanview.css',
                 allowMissing: true, alwaysLinkToLastBuild: false, keepAll: true,
                 reportName: 'Analysis Report'])
         }
