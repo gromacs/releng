@@ -167,7 +167,7 @@ class BuildEnvironment(object):
         self._build_jobs = jobs
 
     def _init_cmake(self, version):
-        self.prepend_path_env('~/tools/cmake-{0}/bin'.format(version))
+        self.cmake_command = 'cmake-{0}'.format(version)
 
     def _init_gcc(self, version):
         """Initializes the build to use given gcc version as the compiler.
