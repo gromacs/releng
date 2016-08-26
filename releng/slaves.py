@@ -96,7 +96,8 @@ _HOST_LABELS = {
             BS_WIN2008:     { 'msvc-2010',
                               'icc-12.1' },
             BS_WIN2012R2:   { 'msvc-2013', 'msvc-2015',
-                              'icc-16.0' },
+                              'icc-16.0',
+                              'cmake-2.8.12.2', 'cmake-3.2.3', 'cmake-3.3.0', 'cmake-3.6.1' },
             DOCKER_DEFAULT: {} # TODO
         }
 
