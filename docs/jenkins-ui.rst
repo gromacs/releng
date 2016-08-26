@@ -86,6 +86,13 @@ keywords are supported:
   specified in the ``gromacs`` repository.
 * ``Release``: Triggers a release workflow build for testing the release
   process.
+* ``release-2016``: Triggers all per-patchset builds for the release branch.
+  Only makes sense for releng changes, where it should be run at least once
+  before merging if there is a possibility that the changes impact builds in
+  the release branch.  These do not run automatically (at least for now) to
+  reduce peak load, and make testing releng changes easier (since in many
+  cases, the test builds that are actually interesting will only run after the
+  matrix builds have been cleared from the queue).
 
 More than one build can be requested with a single comment; the keywords should
 be separated by whitespace.  When the requested builds complete, a link to the

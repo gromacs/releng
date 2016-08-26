@@ -102,6 +102,40 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                     ]
             })
 
+    def test_ReleaseBranchRequest(self):
+        helper = TestHelper(self, workspace='ws', env={
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] release-2016')
+            })
+        input_lines = [
+                'gcc-4.6 gpu cuda-5.0',
+                'msvc-2013'
+            ]
+        helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
+                '\n'.join(input_lines) + '\n')
+        factory = helper.factory
+        executor = helper.executor
+        get_actions_from_triggering_comment(factory, 'actions.json')
+        self.maxDiff = None
+        helper.assertOutputJsonFile('ws/build/actions.json', {
+                'builds': [
+                        {
+                            'type': 'matrix',
+                            'desc': 'release-2016',
+                            'options': '"{0} host=bs_nix1310" "{1} host=bs-win2012r2"'.format(*[x.strip() for x in input_lines])
+                        },
+                        { 'type': 'clang-analyzer', 'desc': 'release-2016' },
+                        { 'type': 'cppcheck', 'desc': 'release-2016' },
+                        { 'type': 'documentation', 'desc': 'release-2016' },
+                        { 'type': 'uncrustify', 'desc': 'release-2016' }
+                    ],
+                'env': {
+                        'GROMACS_REFSPEC': 'refs/heads/release-2016',
+                        'GROMACS_HASH': '1234567890abcdef0123456789abcdef01234567',
+                        'REGRESSIONTESTS_REFSPEC': 'refs/heads/release-2016',
+                        'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
+                    }
+            })
+
     def test_CrossVerifyRequest(self):
         helper = TestHelper(self, workspace='ws', env={
                 'BUILD_URL': 'http://build',

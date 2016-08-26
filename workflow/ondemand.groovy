@@ -1,9 +1,13 @@
 // TODO: Consider what's the best place to have knowledge of these build names.
+clangAnalyzerJobName = 'clang-static-analyzer_Gerrit_master-workflow'
 coverageJobName = 'Coverage_Gerrit_master-new-releng'
+cppcheckJobName = 'cppcheck_Gerrit_master-new-releng'
+documentationJobName = 'Documentation_Gerrit_master-new-releng'
 matrixJobName = 'Gromacs_Gerrit_master_nrwpo'
 regtestPackageJobName = 'Regressiontests_package_master'
 releaseJobName = 'Release_workflow_master'
 sourcePackageJobName = 'Source_package_master'
+uncrustifyJobName = 'uncrustify_master-new-releng'
 
 utils = load 'releng/workflow/utils.groovy'
 utils.setEnvForRelengFromBuildParameters('releng')
@@ -51,18 +55,43 @@ def doBuild()
 def getBuildersMap()
 {
     return [
+            'clang-analyzer': this.&doClangAnalyzer,
             'coverage': this.&doCoverage,
+            'cppcheck': this.&doCppCheck,
+            'documentation': this.&doDocumentation,
             'matrix': this.&doMatrix,
             'regtest-package': this.&doRegressionTestsPackage,
             'release': this.&doReleaseWorkflow,
             'source-package': this.&doSourcePackage,
+            'uncrustify': this.&doUncrustify,
         ]
+}
+
+def doClangAnalyzer(bld)
+{
+    def parameters = utils.currentBuildParametersForJenkins()
+    bld.jobName = clangAnalyzerJobName
+    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
 }
 
 def doCoverage(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
     bld.jobName = coverageJobName
+    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+}
+
+def doCppCheck(bld)
+{
+    def parameters = utils.currentBuildParametersForJenkins()
+    bld.jobName = cppcheckJobName
+    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+}
+
+def doDocumentation(bld)
+{
+    def parameters = utils.currentBuildParametersForJenkins()
+    bld.jobName = documentationJobName
     bld.build = build job: bld.jobName, parameters: parameters, propagate: false
 }
 
@@ -97,6 +126,13 @@ def doSourcePackage(bld)
     def parameters = utils.currentBuildParametersForJenkins()
     parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: false]
     bld.jobName = sourcePackageJobName
+    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+}
+
+def doUncrustify(bld)
+{
+    def parameters = utils.currentBuildParametersForJenkins()
+    bld.jobName = uncrustifyJobName
     bld.build = build job: bld.jobName, parameters: parameters, propagate: false
 }
 

@@ -77,6 +77,36 @@ def _parse_request(factory, request):
                 })
         elif token == 'release':
             builds.append({ 'type': 'release' })
+        # TODO: Make this generic so that it works for all future release
+        # branches as well.
+        elif token == 'release-2016':
+            triggering_project = gerrit.get_triggering_project()
+            if triggering_project and triggering_project != Project.RELENG:
+                raise BuildError('Release branch verification only makes sense for releng changes')
+            spec = 'refs/heads/' + token
+            gromacs_refspec = RefSpec(spec)
+            gromacs_hash = gerrit.get_remote_hash(Project.GROMACS, gromacs_refspec)
+            regtest_refspec = RefSpec(spec)
+            regtest_hash = gerrit.get_remote_hash(Project.REGRESSIONTESTS, regtest_refspec)
+            gromacs_refspec = RefSpec(spec, gromacs_hash)
+            gerrit.override_refspec(Project.GROMACS, gromacs_refspec)
+            env['GROMACS_REFSPEC'] = spec
+            env['GROMACS_HASH'] = gromacs_hash
+            env['REGRESSIONTESTS_REFSPEC'] = spec
+            env['REGRESSIONTESTS_HASH'] = regtest_hash
+            workspace._checkout_project(Project.GROMACS)
+            configs = get_build_configs(factory, 'pre-submit-matrix')
+            builds.extend([
+                    {
+                        'type': 'matrix',
+                        'desc': token,
+                        'options': get_options_string(configs)
+                    },
+                    { 'type': 'clang-analyzer', 'desc': token },
+                    { 'type': 'cppcheck', 'desc': token },
+                    { 'type': 'documentation', 'desc': token },
+                    { 'type': 'uncrustify', 'desc': token }
+                ])
         else:
             raise BuildError('Unknown request: ' + request)
     for action in delayed_actions:
