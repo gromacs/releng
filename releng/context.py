@@ -222,13 +222,7 @@ class BuildContext(object):
         Returns:
             Dict: variables found from the file, with their values.
         """
-        values = dict()
-        set_re = r'(?i)SET\((\w+)\s*"(.*)"\)\s*'
-        for line in self._executor.read_file(path):
-            match = re.match(set_re, line)
-            if match:
-                values[match.group(1)] = match.group(2)
-        return values
+        return cmake.read_cmake_variable_file(path)
 
     def write_package_info(self, project, file_name, version):
         """Writes an information file for a tar package.
@@ -438,6 +432,10 @@ class BuildContext(object):
         out_of_source = script.build_out_of_source or context.opts.out_of_source
         workspace._init_build_dir(out_of_source)
         context.chdir(workspace.build_dir)
+        if factory.default_project == Project.GROMACS:
+            gromacs_dir = workspace.get_project_dir(Project.GROMACS)
+            version = cmake.read_cmake_minimum_version(factory.executor, gromacs_dir)
+            context.env._set_cmake_minimum_version(version)
         utils.flush_output()
         script.do_build(context)
 

@@ -9,6 +9,7 @@ import os
 
 from common import ConfigurationError
 from common import Compiler,System
+import cmake
 import slaves
 
 # TODO: Check that the paths returned/used actually exists and raise nice
@@ -17,6 +18,12 @@ import slaves
 # TODO: Clean up the different mechanisms used here; even for the ~same thing,
 # different approaches may be used (some might set an environment variable,
 # others use an absolute path, or set a CMake option).
+
+def _to_version_tuple(version_string):
+    return [int(x) for x in version_string.split('.')]
+
+def _is_older_version(older, newer):
+    return _to_version_tuple(older) < _to_version_tuple(newer)
 
 class BuildEnvironment(object):
     """Provides access to the build environment.
@@ -41,6 +48,7 @@ class BuildEnvironment(object):
        gcov_command (str): Name of the gcov executable.
        cmake_command (str): Name of the CMake executable.
        ctest_command (str): Name of the CTest executable.
+       cmake_version (str): Version of the CMake executable.
        cmake_generator (str or None): CMake generator being used.
        cuda_root (str or None): Root of the CUDA toolkit being used
            (for passing to CUDA_TOOLKIT_ROOT_DIR CMake option).
@@ -61,6 +69,7 @@ class BuildEnvironment(object):
         self.gcov_command = None
         self.cmake_command = 'cmake'
         self.ctest_command = 'ctest'
+        self.cmake_version = None
         self.cmake_generator = None
         self.cuda_root = None
         self.cuda_host_compiler = None
@@ -72,6 +81,7 @@ class BuildEnvironment(object):
         self._build_prefix_cmd = None
         self._cmd_runner = factory.cmd_runner
         self._workspace = factory.workspace
+        self._cmake_base_dir = None
 
         if self.system is not None:
             self._init_system()
@@ -109,6 +119,27 @@ class BuildEnvironment(object):
             cmd.append('-k')
         return cmd
 
+    def _set_cmake_minimum_version(self, version):
+        if self.cmake_version or not version:
+            return
+        current_version = cmake.get_cmake_version(self._cmd_runner, self.cmake_command)
+        self.cmake_version = current_version
+        if not _is_older_version(current_version, version):
+            return
+        available_versions = self._get_available_cmake_versions()
+        for test_version in available_versions:
+            if not _is_older_version(test_version, version):
+                self._init_cmake(test_version)
+
+    def _get_available_cmake_versions(self):
+        versions = []
+        for cmake_dir in os.listdir(self._cmake_base_dir):
+            cmd = os.path.join(self._cmake_base_dir, cmake_dir, 'bin', 'cmake')
+            if os.path.is_file(cmd):
+                versions.append(cmake_dir.split("-")[-1])
+        versions.sort(key=_to_version_tuple)
+        return versions
+
     def set_env_var(self, variable, value):
         """Sets environment variable to be used for further commands.
 
@@ -145,12 +176,14 @@ class BuildEnvironment(object):
         if self.system == System.WINDOWS:
             self.cmake_generator = 'NMake Makefiles JOM'
             self._build_jobs = 4
+            self._cmake_base_dir = 'c:\\utils'
         else:
             self._build_jobs = 2
             self.prepend_path_env('~/bin')
             if self.system == System.OSX:
                 self.set_env_var('CMAKE_PREFIX_PATH', '/opt/local')
             self._init_core_dump()
+            self._cmake_base_dir = ('/opt/cmake')
 
     def _init_core_dump(self):
         import resource
@@ -167,7 +200,12 @@ class BuildEnvironment(object):
         self._build_jobs = jobs
 
     def _init_cmake(self, version):
-        self.cmake_command = 'cmake-{0}'.format(version)
+        cmake_bin_dir = os.path.join(self._cmake_base_dir, 'cmake-' + version, 'bin')
+        if not os.path.exists(cmake_bin_dir):
+            cmake_bin_dir = os.path.join(self._cmake_base_dir, version, 'bin')
+        self.cmake_command = os.path.join(cmake_bin_dir, 'cmake')
+        self.ctest_command = os.path.join(cmake_bin_dir, 'ctest')
+        self.cmake_version = version
 
     def _init_gcc(self, version):
         """Initializes the build to use given gcc version as the compiler.

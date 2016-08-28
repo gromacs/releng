@@ -2,9 +2,46 @@
 Helper routines for parsing CMake-related stuff.
 """
 import os.path
+import re
 import xml.etree.ElementTree as ET
 
-from common import BuildError
+from common import BuildError, ConfigurationError
+
+def read_cmake_variable_file(executor, path):
+    """Reads a file with CMake variable declarations (set commands).
+
+    Args:
+        path (str): Path to the file to read.
+
+    Returns:
+        Dict: variables found from the file, with their values.
+    """
+    values = dict()
+    set_re = r'(?i)SET\((\w+)\s*"(.*)"\)\s*'
+    for line in executor.read_file(path):
+        match = re.match(set_re, line)
+        if match:
+            values[match.group(1)] = match.group(2)
+    return values
+
+def read_cmake_minimum_version(executor, root):
+    version_re = r'(?i)cmake_minimum_required\s*\(\s*VERSION\s+([\d.]+)\s*\)'
+    path = os.path.join(root, 'CMakeLists.txt')
+    if os.path.isfile(path):
+        for line in executor.read_file(path):
+            match = re.match(version_re, line)
+            if match:
+                return match.group(1)
+        raise ConfigurationError('Could not parse minimum required CMake version from CMakeLists.txt')
+    return None
+
+def get_cmake_version(cmd_runner, cmake_executable):
+    version_re = 'cmake version\s*([\d.]+)'
+    output = cmd_runner.check_output([cmake_executable, '--version'])
+    match = re.match(version_re, output)
+    if match:
+        return match.group(1)
+    raise ConfigurationError('Could not parse CMake version:\n' + output)
 
 def process_ctest_xml(executor, memcheck):
     tag = _read_ctest_tag_name(executor)
