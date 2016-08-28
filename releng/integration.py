@@ -17,25 +17,6 @@ from common import BuildError, ConfigurationError
 from common import Project
 import utils
 
-def _ref(change, patchset):
-    """Constructs a Gerrit refspec for given patchset in a change.
-
-    Arguments:
-        change (int): Number of the change.
-        patchset (int): Patchset number.
-    """
-    value = 'refs/changes/{0}/{1}/{2}'.format(str(change)[-2:], change, patchset)
-    return RefSpec(value)
-
-# These variables can be used to trigger the builds from Gerrit against changes
-# still in review, instead of the default branch head.
-# They only take effect in builds triggered for releng changes.
-# _ref() from above can be used.
-_OVERRIDES = {
-        Project.GROMACS: None,
-        Project.REGRESSIONTESTS: None
-    }
-
 class RefSpec(object):
 
     """Wraps handling of refspecs used to check out projects."""
@@ -174,9 +155,6 @@ class GerritIntegration(object):
                 refspec = self._env.get('GERRIT_REFSPEC', None)
                 if refspec is None:
                     raise ConfigurationError('GERRIT_REFSPEC not set')
-            elif gerrit_project == Project.RELENG:
-                if _OVERRIDES.get(project, None) is not None:
-                    return RefSpec(_OVERRIDES[project])
         if refspec is None:
             if allow_none:
                 return None

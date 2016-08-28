@@ -32,11 +32,17 @@ def _parse_request(factory, request):
         if token == 'coverage':
             builds.append({ 'type': 'coverage' })
         elif token == 'cross-verify':
+            quiet = False
             token = tokens.pop(0)
+            if token.lower() == 'quiet':
+                quiet = True
+                token = tokens.pop(0)
+            triggering_project = gerrit.get_triggering_project()
             change = gerrit.query_unique_change(token)
+            if not triggering_project or not change.is_open:
+                quiet = True
             project = change.project
             refspec = change.refspec
-            triggering_project = gerrit.get_triggering_project()
             if triggering_project and project == triggering_project:
                 raise BuildError('Cross-verify is not possible with another change from the same repository')
             if project == Project.RELENG:
@@ -51,7 +57,14 @@ def _parse_request(factory, request):
                     'desc': 'cross-verify',
                     'options': get_options_string(configs)
                 })
-            if triggering_project and change.is_open:
+            if not triggering_project or triggering_project == Project.RELENG:
+                builds.extend([
+                        { 'type': 'clang-analyzer', 'desc': 'cross-verify' },
+                        { 'type': 'cppcheck', 'desc': 'cross-verify' },
+                        { 'type': 'documentation', 'desc': 'cross-verify' },
+                        { 'type': 'uncrustify', 'desc': 'cross-verify' }
+                    ])
+            if not quiet:
                 gerrit_info = {
                         'change': change.number,
                         'patchset': change.patchnumber

@@ -293,12 +293,8 @@ clear-cut, but the general approach should be well covered.
    until releng changes are merged; the releng change can be merged safely
    without breaking old builds.  To verify the releng change with its
    corresponding main repo change, the releng change can be uploaded to Gerrit
-   with a suitable ``_OVERRIDES`` specified in :file:`gerrit.py`.  This will
-   build the combination and report the result in the releng change, allowing
-   full integration testing and showing that the build passes.  Care should
-   be taken to not merge a change with ``_OVERRIDES`` specified, but if it
-   slips past, it will only affect future changes pushed to ``releng``, not any
-   builds for the other repositories.
+   and then the on-demand cross-verification mechanism used (see
+   :doc:`jenkins-ui`).
    After the releng change is merged, the main change build can be triggered
    and it will pass.
 

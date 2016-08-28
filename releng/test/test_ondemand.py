@@ -172,6 +172,73 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
             })
         helper.assertCommandInvoked(['ssh', '-p', '29418', 'jenkins@gerrit.gromacs.org', 'gerrit', 'review', '1234,5', '-m', '"Cross-verify with http://gerrit (patch set 3) running at http://build"'])
 
+    def test_CrossVerifyRequestQuiet(self):
+        helper = TestHelper(self, workspace='ws', env={
+                'BUILD_URL': 'http://build',
+                'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_CHANGE_URL': 'http://gerrit',
+                'GERRIT_PATCHSET_NUMBER': '3',
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify quiet 1234')
+            })
+        input_lines = [
+                'gcc-4.6 gpu cuda-5.0',
+                'msvc-2013'
+            ]
+        helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
+                '\n'.join(input_lines) + '\n')
+        factory = helper.factory
+        executor = helper.executor
+        get_actions_from_triggering_comment(factory, 'actions.json')
+        helper.assertOutputJsonFile('ws/build/actions.json', {
+                'builds': [
+                        {
+                            'type': 'matrix',
+                            'desc': 'cross-verify',
+                            'options': '"{0} host=bs_nix1310" "{1} host=bs-win2012r2"'.format(*[x.strip() for x in input_lines])
+                        }
+                    ],
+                'env': {
+                        'REGRESSIONTESTS_REFSPEC': 'refs/changes/34/1234/5',
+                        'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
+                    }
+            })
+
+    def test_CrossVerifyRequestReleng(self):
+        helper = TestHelper(self, workspace='ws', env={
+                'BUILD_URL': 'http://build',
+                'GERRIT_PROJECT': 'releng',
+                'GERRIT_REFSPEC': 'refs/changes/12/3456/3',
+                'GERRIT_CHANGE_URL': 'http://gerrit',
+                'GERRIT_PATCHSET_NUMBER': '3',
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify quiet 1234')
+            })
+        input_lines = [
+                'gcc-4.6 gpu cuda-5.0',
+                'msvc-2013'
+            ]
+        helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
+                '\n'.join(input_lines) + '\n')
+        factory = helper.factory
+        executor = helper.executor
+        get_actions_from_triggering_comment(factory, 'actions.json')
+        helper.assertOutputJsonFile('ws/build/actions.json', {
+                'builds': [
+                        {
+                            'type': 'matrix',
+                            'desc': 'cross-verify',
+                            'options': '"{0} host=bs_nix1310" "{1} host=bs-win2012r2"'.format(*[x.strip() for x in input_lines])
+                        },
+                        { 'type': 'clang-analyzer', 'desc': 'cross-verify' },
+                        { 'type': 'cppcheck', 'desc': 'cross-verify' },
+                        { 'type': 'documentation', 'desc': 'cross-verify' },
+                        { 'type': 'uncrustify', 'desc': 'cross-verify' }
+                    ],
+                'env': {
+                        'REGRESSIONTESTS_REFSPEC': 'refs/changes/34/1234/5',
+                        'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
+                    }
+            })
+
 
 class TestDoPostBuild(unittest.TestCase):
     def test_NoBuild(self):
