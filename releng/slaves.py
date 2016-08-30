@@ -13,6 +13,7 @@ BS_NIX1404 = 'bs_nix1404'
 BS_NIX64 = 'bs_nix64'
 BS_NIX_AMD_GPU = 'bs_nix-amd_gpu'
 BS_NIX_AMD = 'bs_nix-amd'
+BS_NIX_DOCS = 'bs_nix-docs'
 BS_WIN2008 = 'bs_Win2008_64'
 BS_WIN2012R2 = 'bs-win2012r2'
 
@@ -39,7 +40,8 @@ _HOST_LABELS = {
             BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2',
                               'clang-3.4',
                               'clang-analyzer',
-                              'icc-14.0', 'icc-16.0',
+                              'cuda-6.5', 'cuda-7.0', 'cuda-7.5',
+                              'icc-14.0', 'icc-15.0', 'icc-16.0',
                               'phi',
                               'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1',
                               'sse2', 'sse4.1', 'avx_256', 'mic' },
@@ -93,6 +95,8 @@ _HOST_LABELS = {
                               'cmake-2.8.12.2', 'cmake-3.4.3',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi' },
+            BS_NIX_DOCS:    { 'cmake-3.6.1'
+                            },
             BS_WIN2008:     { 'msvc-2010',
                               'icc-12.1' },
             BS_WIN2012R2:   { 'msvc-2013', 'msvc-2015',
