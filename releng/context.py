@@ -222,7 +222,7 @@ class BuildContext(object):
         Returns:
             Dict: variables found from the file, with their values.
         """
-        return cmake.read_cmake_variable_file(path)
+        return cmake.read_cmake_variable_file(self._executor, path)
 
     def write_package_info(self, project, file_name, version):
         """Writes an information file for a tar package.

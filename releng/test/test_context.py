@@ -85,5 +85,20 @@ class TestReadBuildScriptConfig(unittest.TestCase):
                 'labels': 'clang-3.4 && clang-analyzer'
             })
 
+
+class TestReadCmakeVariableFile(unittest.TestCase):
+    def setUp(self):
+        self.helper = TestHelper(self, workspace='/ws')
+
+    def test_ReadFile(self):
+        self.helper.add_input_file('Test.cmake',
+                """\
+                set(FOO "1")
+                set(BAR "2")
+                """)
+        context = self.helper.factory.create_context(JobType.GERRIT, None, None)
+        result = context.read_cmake_variable_file('Test.cmake')
+        self.assertEqual(result, { 'FOO': '1', 'BAR': '2' })
+
 if __name__ == '__main__':
     unittest.main()
