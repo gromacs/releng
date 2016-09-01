@@ -135,6 +135,8 @@ class BuildEnvironment(object):
         versions = []
         for cmake_dir in os.listdir(self._cmake_base_dir):
             cmd = os.path.join(self._cmake_base_dir, cmake_dir, 'bin', 'cmake')
+            if self.system == System.WINDOWS and not cmd.endswith('.exe'):
+                cmd += '.exe'
             if os.path.isfile(cmd):
                 versions.append(cmake_dir.split("-")[-1])
         versions.sort(key=_to_version_tuple)
