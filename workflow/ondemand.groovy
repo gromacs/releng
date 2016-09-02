@@ -19,7 +19,15 @@ utils.readBuildRevisions()
 def processTriggeringCommentAndGetActions()
 {
     env.MANUAL_COMMENT_TEXT = MANUAL_COMMENT_TEXT
+    // Logic for CHECKOUT_PROJECT is similar to
+    // utils.setEnvForRelengSecondaryCheckouts(), except here this is before
+    // even the primary checkout.
+    // TODO: Consider if this could be generalized.
     utils.runRelengScriptNoCheckout("""\
+        import os
+        if os.environ['CHECKOUT_PROJECT'] != 'releng'
+            os.environ['CHECKOUT_PROJECT'] = 'releng'
+            os.environ['CHECKOUT_REFSPEC'] = os.environ['RELENG_REFSPEC']
         releng.get_actions_from_triggering_comment('actions.json')
         """)
     return utils.readJsonFile('build/actions.json')
