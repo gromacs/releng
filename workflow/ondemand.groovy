@@ -25,7 +25,7 @@ def processTriggeringCommentAndGetActions()
     // TODO: Consider if this could be generalized.
     utils.runRelengScriptNoCheckout("""\
         import os
-        if os.environ['CHECKOUT_PROJECT'] != 'releng'
+        if os.environ['CHECKOUT_PROJECT'] != 'releng':
             os.environ['CHECKOUT_PROJECT'] = 'releng'
             os.environ['CHECKOUT_REFSPEC'] = os.environ['RELENG_REFSPEC']
         releng.get_actions_from_triggering_comment('actions.json')
