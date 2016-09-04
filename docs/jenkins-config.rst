@@ -22,7 +22,16 @@ SCM checkout configuration:
 * The releng script will check out remaining repositories if necessary.
 * Various ``*_REFSPEC`` environment variables (see
   :ref:`releng-input-env-vars`) need to be set in one way or another (see below
-  for the suggested approach).
+  for the suggested approach with build parameters).
+
+In SCM poll jobs it is possible to simply set the various environment variables
+to static values using a properties file in "Prepare environment for the run"
+(``CHECKOUT_PROJECT`` and the various ``*_REFSPEC`` variables).  Note that the
+SCM checkout behavior cannot use ``CHECKOUT_PROJECT`` in the git address,
+because the injected variables are not available for SCM polling.
+
+Build parameters
+^^^^^^^^^^^^^^^^
 
 To create a build that allows both intuitive parameterized builds with given
 refspecs and Gerrit Trigger builds, the following configuration is recommended:
@@ -41,12 +50,21 @@ refspecs and Gerrit Trigger builds, the following configuration is recommended:
 * Configure all SCM checkout behaviors to use ``CHECKOUT_PROJECT`` and
   ``CHECKOUT_REFSPEC``.
 
-SCM poll jobs are simpler, as it is possible to simply set the various
-environment variables to static values using a properties file in "Prepare
-environment for the run" (``CHECKOUT_PROJECT`` and the various ``*_REFSPEC``
-variables).  Note that the SCM checkout behavior cannot use
-``CHECKOUT_PROJECT`` in the git address, because the injected variables are not
-available for SCM polling.
+To create a build that works as expected in all corner cases when triggered
+from a workflow job, the following configuration is recommended:
+
+* Create additional string parameters ``GROMACS_HASH``, ``RELENG_HASH``, and
+  ``REGRESSIONTESTS_HASH`` with empty default values.
+* Create a string parameter ``CHECKOUT_PROJECT``, with the default value
+  ``gromacs`` (or another repository that you want to see in Changes section
+  for manually triggered builds).
+* Use the following Groovy script for injecting environment variables::
+
+    return [CHECKOUT_REFSPEC: binding.variables."${CHECKOUT_PROJECT.toUpperCase()}_REFSPEC"]
+
+  If you also need to support directly triggering the build with Gerrit
+  Trigger, you need a slightly more complicated script, but in most cases, it
+  should be the workflow job that is triggered with Gerrit Trigger.
 
 Normal/matrix builds
 ^^^^^^^^^^^^^^^^^^^^

@@ -71,6 +71,7 @@ class TestGerritIntegration(unittest.TestCase):
         gerrit = helper.factory.gerrit
         self.assertEqual(gerrit.checked_out_project, Project.GROMACS)
         self.assertEqual(gerrit.get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
         self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_GerritTrigger(self):
@@ -85,6 +86,7 @@ class TestGerritIntegration(unittest.TestCase):
         gerrit = helper.factory.gerrit
         self.assertEqual(gerrit.checked_out_project, Project.GROMACS)
         self.assertEqual(gerrit.get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
         self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_GerritTriggerInWorkflowSecondaryCheckout(self):
@@ -99,6 +101,22 @@ class TestGerritIntegration(unittest.TestCase):
         gerrit = helper.factory.gerrit
         self.assertEqual(gerrit.checked_out_project, Project.RELENG)
         self.assertEqual(gerrit.get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
+        self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+
+    def test_ManualTriggerWithEmptyHash(self):
+        helper = TestHelper(self, env={
+                'CHECKOUT_PROJECT': 'gromacs',
+                'CHECKOUT_REFSPEC': 'refs/changes/34/1234/5',
+                'GROMACS_REFSPEC': 'refs/changes/34/1234/5',
+                'GROMACS_HASH': '',
+                'RELENG_REFSPEC': 'refs/heads/master',
+                'RELENG_HASH': ''
+            })
+        gerrit = helper.factory.gerrit
+        self.assertEqual(gerrit.checked_out_project, Project.GROMACS)
+        self.assertEqual(gerrit.get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
         self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_ManualTriggerWithHash(self):

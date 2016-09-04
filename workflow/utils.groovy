@@ -63,7 +63,10 @@ def currentBuildParametersForJenkins()
     parameters = addBuildParameterIfExists(parameters, 'RELENG_REFSPEC')
     parameters = addBuildParameterIfExists(parameters, 'RELENG_HASH')
     // We cannot forward the Gerrit Trigger parameters, because of SECURITY-170.
-    // Instead, they are dealt with in readBuildRevisions()
+    // Instead, they are dealt with in readBuildRevisions() such that the
+    // project-specific REFSPEC parameters contain the correct references.
+    // Passing CHECKOUT_PROJECT allows the Changes section work properly.
+    parameters = addBuildParameterIfExists(parameters, 'CHECKOUT_PROJECT')
     return parameters
 }
 

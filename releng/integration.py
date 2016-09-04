@@ -30,7 +30,7 @@ class RefSpec(object):
     def __init__(self, value, remote_hash=None, executor=None):
         self._value = value
         self._remote = value
-        if remote_hash is not None:
+        if remote_hash:
             self._remote = remote_hash
         self._tar_props = None
         if self.is_tarball_refspec(value):
