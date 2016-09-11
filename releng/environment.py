@@ -267,6 +267,12 @@ class BuildEnvironment(object):
         # Need a suitable standard library for C++11 support, so get
         # one from a gcc on the host.
         self._manage_stdlib_from_gcc('--gcc-toolchain={gcctoolchain}')
+        # Symbolizer is only required for ASAN builds, but should not do any
+        # harm to always set it (and that is much simpler).
+        clang_path = self._cmd_runner.find_executable(self.c_compiler)
+        clang_path = os.path.dirname(os.path.realpath(clang_path))
+        symbolizer_path = os.path.join(clang_path, 'llvm-symbolizer')
+        self.set_env_var('ASAN_SYMBOLIZER_PATH', symbolizer_path)
 
     def _init_icc(self, version):
         if self.system == System.WINDOWS:
