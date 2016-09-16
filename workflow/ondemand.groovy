@@ -46,6 +46,7 @@ def setEnvFromActions(overrides)
 
 def doBuild()
 {
+    utils.setEnvForRelengSecondaryCheckouts()
     def builds = actions.builds
     def tasks = [:]
     def builders = getBuildersMap()
@@ -72,43 +73,39 @@ def getBuildersMap()
             'release': this.&doReleaseWorkflow,
             'source-package': this.&doSourcePackage,
             'uncrustify': this.&doUncrustify,
+            'regressiontests-update': this.&doRegressiontestsUpdate
         ]
 }
 
 def doClangAnalyzer(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
-    bld.jobName = clangAnalyzerJobName
-    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+    doChildBuild(bld, clangAnalyzerJobName, parameters)
 }
 
 def doCoverage(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
-    bld.jobName = coverageJobName
-    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+    doChildBuild(bld, coverageJobName, parameters)
 }
 
 def doCppCheck(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
-    bld.jobName = cppcheckJobName
-    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+    doChildBuild(bld, cppcheckJobName, parameters)
 }
 
 def doDocumentation(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
-    bld.jobName = documentationJobName
-    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+    doChildBuild(bld, documentationJobName, parameters)
 }
 
 def doMatrix(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
     parameters += [$class: 'StringParameterValue', name: 'OPTIONS', value: bld.options]
-    bld.jobName = matrixJobName
-    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+    doChildBuild(bld, matrixJobName, parameters)
 }
 
 def doRegressionTestsPackage(bld)
@@ -116,8 +113,7 @@ def doRegressionTestsPackage(bld)
     def parameters = utils.currentBuildParametersForJenkins()
     parameters += [$class: 'StringParameterValue', name: 'PACKAGE_VERSION_STRING', value: 'master']
     parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: false]
-    bld.jobName = regtestPackageJobName
-    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+    doChildBuild(bld, regtestPackageJobName, parameters)
 }
 
 def doReleaseWorkflow(bld)
@@ -125,29 +121,52 @@ def doReleaseWorkflow(bld)
     def parameters = utils.currentBuildParametersForJenkins()
     parameters += [$class: 'BooleanParameterValue', name: 'FORCE_REPACKAGING', value: false]
     parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: false]
-    bld.jobName = releaseJobName
-    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+    doChildBuild(bld, releaseJobName, parameters)
 }
 
 def doSourcePackage(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
     parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: false]
-    bld.jobName = sourcePackageJobName
-    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+    doChildBuild(bld, sourcePackageJobName, parameters)
 }
 
 def doUncrustify(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
-    bld.jobName = uncrustifyJobName
-    bld.build = build job: bld.jobName, parameters: parameters, propagate: false
+    doChildBuild(bld, uncrustifyJobName, parameters)
+}
+
+def doRegressiontestsUpdate(bld)
+{
+    bld.title = "Regressiontests update"
+    node('bs_nix-amd')
+    {
+        timestamps {
+            timeout(45) {
+                bld.status = utils.runRelengScript("""\
+                    releng.run_build('regressiontests-update', releng.JobType.GERRIT, ['build-jobs=4'])
+                    """, false)
+            }
+        }
+    }
+}
+
+def doChildBuild(bld, jobName, parameters)
+{
+    bld.title = jobName
+    def childBuild = build job: jobName, parameters: parameters, propagate: false
+    bld.url = childBuild.absoluteUrl
+    bld.number = childBuild.number
+    bld.status = [
+            'result': childBuild.result
+        ]
 }
 
 @NonCPS
 def setBuildResult(builds)
 {
-    utils.setCombinedBuildResult(builds.collect { it.build.result })
+    utils.setCombinedBuildResult(builds.collect { it.status.result })
 }
 
 def addSummaryForTriggeredBuilds(builds)
@@ -160,12 +179,37 @@ def addSummaryForTriggeredBuilds(builds)
     // (also for the message posted back to Gerrit below).
     for (int i = 0; i != builds.size(); ++i) {
         def bld = builds[i]
-        text += """\
-            <tr>
-              <td>${bld.jobName}</td>
-              <td><a href="${bld.build.absoluteUrl}">#${bld.build.number}</a></td>
-            </tr>
-            """.stripIndent()
+        if (bld.url) {
+            text += """\
+                <tr>
+                  <td>${bld.title}</td>
+                  <td><a href="${bld.url}">#${bld.number}</a></td>
+                  <td>${bld.status.result}</td>
+                </tr>
+                """.stripIndent()
+        } else {
+            text += """\
+                <tr>
+                  <td>${bld.title}</td>
+                  <td/>
+                  <td>${bld.status.result}</td>
+                </tr>
+                """.stripIndent()
+            if (bld.status.reason) {
+                text += """\
+                    <tr>
+                      <td />
+                      <td colspan=2>
+                        <pre>
+                    """.stripIndent()
+                text += bld.status.reason
+                text += """
+                        </pre>
+                      </td>
+                    </tr>
+                    """.stripIndent()
+            }
+        }
     }
     text += "</table>"
     manager.createSummary('empty').appendText(text, false)
@@ -198,7 +242,7 @@ def doPostBuildActions(builds, gerrit_info)
 def getBuildInfoForReleng(builds)
 {
     return builds.collect {
-            [ 'url': it.build.absoluteUrl, 'desc': it.desc, 'result': it.build.result ]
+            [ 'title': it.title, 'url': it.url, 'desc': it.desc, 'result': it.status.result ]
         }
 }
 

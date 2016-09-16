@@ -296,6 +296,25 @@ class TestDoPostBuild(unittest.TestCase):
                 'message': ''
             })
 
+    def test_SingleBuildWithoutUrl(self):
+        helper = TestHelper(self, workspace='ws')
+        factory = helper.factory
+        helper.add_input_json_file('actions.json', {
+                'builds': [
+                        {
+                            'title': 'My title',
+                            'url': None,
+                            'desc': None,
+                            'result': 'SUCCESS'
+                        }
+                    ]
+            })
+        do_post_build(factory, 'actions.json', 'message.json')
+        helper.assertOutputJsonFile('ws/build/message.json', {
+                'url': None,
+                'message': ''
+            })
+
     def test_SingleBuildWithCrossVerify(self):
         helper = TestHelper(self, workspace='ws', env={
                 'GERRIT_CHANGE_URL': 'http://gerrit',
@@ -362,6 +381,31 @@ class TestDoPostBuild(unittest.TestCase):
                 'url': None,
                 'message': 'http://my_build (cross-verify): SUCCESS\nhttp://my_build2: SUCCESS'
             })
+
+    def test_TwoBuildsWithoutUrl(self):
+        helper = TestHelper(self, workspace='ws')
+        factory = helper.factory
+        helper.add_input_json_file('actions.json', {
+                'builds': [
+                        {
+                            'url': 'http://my_build',
+                            'desc': 'cross-verify',
+                            'result': 'SUCCESS'
+                        },
+                        {
+                            'title': 'My title',
+                            'url': None,
+                            'desc': None,
+                            'result': 'SUCCESS'
+                        }
+                    ]
+            })
+        do_post_build(factory, 'actions.json', 'message.json')
+        helper.assertOutputJsonFile('ws/build/message.json', {
+                'url': None,
+                'message': 'http://my_build (cross-verify): SUCCESS\nMy title: SUCCESS'
+            })
+
 
 
 if __name__ == '__main__':

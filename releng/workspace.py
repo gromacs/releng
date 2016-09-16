@@ -10,13 +10,14 @@ import json
 import os.path
 import tarfile
 
-from common import BuildError, ConfigurationError
+from common import BuildError, CommandError, ConfigurationError
 from common import Project
 
 class ProjectInfo(object):
     """Information about a checked-out project.
 
     Attributes:
+        project (str): Name of the git project (e.g. gromacs, regressiontests, releng)
         root (str): Root directory where the project has been checked out.
         refspec (RefSpec): Refspec from which the project has been checked out.
         head_hash (str): SHA1 of HEAD.
@@ -51,14 +52,17 @@ class ProjectInfo(object):
 
 
 class Workspace(object):
-    """Provides access to the build workspace.
+    """Provides access to set up, query, and act within the build workspace,
+    particularly involving operations on the git repositories associated
+    with the projects.
 
     Methods are provided for accessing the build directory (whether in- or
     out-of-source), as well as the root directories of all checked-out
     projects.  Also, methods to access a common log directory (for logs that
-    need to be post-processed in Jenkins) are provided.
+    need to be post-processed in Jenkins) are provided. Implements
+    functionality for updating commits with new files.
 
-    Internally, this class is also responsible of checking out the projects
+    Internally, this class is also responsible for checking out the projects
     and for tasks related to it.
 
     Attributes:
@@ -299,3 +303,51 @@ class Workspace(object):
                 all_correct = False
         if not all_correct:
             raise BuildError('Checkout failed (Jenkins issue)')
+
+    def upload_revision(self, project, file_glob="*"):
+        """Upload a new version of the patch that triggered this build, but
+        only if files in the glob changed and it came from the
+        specified project.
+
+        Args:
+            project (Project) : Enum value to choose which project might be updated
+            file_glob (str) : glob describing the files to add to the patch
+        """
+
+        triggering_project = self._gerrit.get_triggering_project()
+        triggering_branch = self._gerrit.get_triggering_branch()
+        if triggering_project is None or triggering_branch is None:
+            return
+
+        # Add files to the index if they were updated by this job and match the glob.
+        cwd = self.get_project_dir(project)
+        cmd = ['git', 'add', '--', file_glob]
+        try:
+            self._cmd_runner.check_call(cmd, cwd=cwd)
+        except CommandError as e:
+            raise BuildError('Failed to add updated files running ' + e.cmd + ' in cwd ' + cwd)
+
+        # Find out from git exit code whether there are any staged
+        # changes, but don't show those changes.
+        cmd = ['git', 'diff', '--cached', '--exit-code', '--no-patch']
+        no_files_were_added = (0 == self._cmd_runner.call(cmd, cwd=cwd))
+        if no_files_were_added:
+            return
+
+        # Reference files were added to the index, so amend the commit,
+        # keeping the message from the old HEAD commit.
+        cmd = ['git', 'commit', '--amend', '--reuse-message', 'HEAD']
+        try:
+            self._cmd_runner.check_call(cmd, cwd=cwd)
+        except CommandError as e:
+            raise BuildError('Failed to amend the commit when adding updated files running ' + e.cmd + ' in cwd ' + cwd)
+
+        # If the triggering_project was in fact the project that the
+        # caller expects to be updated, push the updated commit back
+        # to gerrit for testing and review.
+        if triggering_project == project:
+            cmd = ['git', 'push', self._gerrit.get_git_url(project), 'HEAD:refs/for/{0}'.format(triggering_branch)]
+            try:
+                self._cmd_runner.check_call(cmd, cwd=cwd)
+            except CommandError as e:
+                raise BuildError('Failed to upload the commit with updated files running ' + e.cmd + ' in cwd ' + cwd)

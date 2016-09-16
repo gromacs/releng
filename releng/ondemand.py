@@ -82,6 +82,13 @@ class RequestParser(object):
                 self._builds.append({ 'type': 'release' })
             elif token == 'uncrustify':
                 self._builds.append({ 'type': 'uncrustify' })
+            elif token == 'update':
+                project = self._gerrit.get_triggering_project()
+                # It can be useful to trigger these from releng for testing,
+                # so we do not check for that.
+                if project == Project.GROMACS:
+                    raise BuildError('Update only makes sense for regressiontests changes')
+                self._builds.append({ 'type': 'regressiontests-update' })
             else:
                 raise BuildError('Unknown request: ' + request)
 
@@ -189,17 +196,27 @@ def do_post_build(factory, inputfile, outputfile):
 
 def _get_url_and_messages(data):
     builds = data['builds']
-    build_messages = ['{0}: {1}'.format(_get_url(x), x['result']) for x in builds]
+    build_messages = ['{0}: {1}'.format(_get_title(x), x['result']) for x in builds]
     url = None
     if len(builds) == 1:
-        url = _get_url(builds[0])
+        url = _append_desc(_get_url(builds[0]), builds[0])
     return url, build_messages
 
+def _get_title(build):
+    title = _get_url(build)
+    if not title:
+        title = build['title']
+    return _append_desc(title, build)
+
 def _get_url(build):
-    url = build['url']
-    if build.has_key('desc') and build['desc']:
-        url += ' ({0})'.format(build['desc'])
-    return url
+    if build.has_key('url') and build['url']:
+        return build['url']
+    return None
+
+def _append_desc(text, build):
+    if text and build.has_key('desc') and build['desc']:
+        text += ' ({0})'.format(build['desc'])
+    return text
 
 def _write_message_json(executor, path, url, build_messages):
     if len(build_messages) == 1:

@@ -63,14 +63,14 @@ class BuildContext(object):
 
     def run_cmd(self, cmd, ignore_failure=False, use_return_code=False,
             failure_message=None, **kwargs):
-        """Runs a command.
+        """Runs a command via subprocess.
 
         This wraps subprocess.call() and check_call() with error-handling code
         and other generic handling such as ensuring proper output flushing and
         using bash as the shell on Unix.
 
-        Any arguments accepted by subprocess.check_call() and friends can also
-        be passed.
+        Any arguments accepted by subprocess.call() or check_call() can also
+        be passed, e.g. cwd or env to make such calls in stateless ways.
 
         Args:
             cmd (str/list): Command to execute (as for subprocess.call()).

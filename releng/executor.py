@@ -186,6 +186,17 @@ class CommandRunner(object):
                     print(line, file=self._executor.console)
 
     def call(self, cmd, **kwargs):
+        """Runs a command via subprocess.call()
+
+        This wraps subprocess.call() with error-handling and other
+        generic handling such as ensuring proper output flushing and
+        using bash as the shell on Unix.
+
+        Any arguments accepted by subprocess.call() can also be
+        passed, e.g. cwd or env to make such calls in stateless ways.
+
+        """
+
         cmd_string, kwargs = self._prepare_cmd(cmd, kwargs)
         try:
             return self._executor.call(cmd, **kwargs)
@@ -193,6 +204,17 @@ class CommandRunner(object):
             raise CommandError(cmd_string)
 
     def check_call(self, cmd, **kwargs):
+        """Runs a command via subprocess.check_call()
+
+        This wraps subprocess.check_call() with error-handling and
+        generic handling such as ensuring proper output flushing and
+        using bash as the shell on Unix.
+
+        Any arguments accepted by subprocess.check_call() can also be
+        passed, e.g. cwd or env to make such calls in stateless ways.
+
+        """
+
         cmd_string, kwargs = self._prepare_cmd(cmd, kwargs)
         try:
             self._executor.check_call(cmd, **kwargs)
@@ -200,6 +222,18 @@ class CommandRunner(object):
             raise CommandError(cmd_string)
 
     def check_output(self, cmd, **kwargs):
+        """Runs a command via subprocess_check_output().
+
+        This wraps subprocess.check_output() with error-handling and
+        other generic handling such as ensuring proper output flushing
+        and using bash as the shell on Unix.
+
+        Any arguments accepted by subprocess.check_output() can also
+        be passed, e.g. cwd or env to make such calls in stateless
+        ways.
+
+        """
+
         cmd_string, kwargs = self._prepare_cmd(cmd, kwargs)
         try:
             return self._executor.check_output(cmd, **kwargs)

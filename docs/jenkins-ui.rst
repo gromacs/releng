@@ -110,12 +110,16 @@ With any of the above variants, possible builds are:
 * ``Release``: Triggers a release workflow build for testing the release
   process.
 * ``Uncrustify``: Triggers the per-patchset uncrustify code style checker build.
+* ``Update``: When triggered from a regressiontests change, generates reference
+  data for tests that are missing it, and uploads those back to Gerrit.
 
 More than one build can be requested with a single comment; the keywords should
 be separated by whitespace.  When the requested builds complete, a link to the
 build is posted back.  In case there is just a single build, the link points
 directly to it.  If there are multiple, the link points to a workflow build and
-the individual builds can be accessed through links on the build summary page.
+the individual builds can be accessed through links on the build summary page
+(some types of builds execute directly as part of the workflow, and all
+information is accessible directly from the build summary page).
 
 If no builds are specified, a default set of builds is triggered.  For
 cross-verification (including the release branch variant) from releng, it
