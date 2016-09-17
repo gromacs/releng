@@ -84,6 +84,7 @@ class GerritChange(object):
 
     def __init__(self, json_data):
         self.project = Project.parse(json_data['project'])
+        self.branch = json_data['branch']
         self.number = int(json_data['number'])
         self.url = json_data['url']
         self.is_open = json_data['open']
@@ -178,6 +179,9 @@ class GerritIntegration(object):
         if gerrit_project is None:
             return None
         return Project.parse(gerrit_project)
+
+    def get_triggering_branch(self):
+        return self._env.get('GERRIT_BRANCH', None)
 
     def get_triggering_comment(self):
         text = self._env.get('GERRIT_EVENT_COMMENT_TEXT', None)

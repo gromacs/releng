@@ -23,6 +23,12 @@ def _parse_request(factory, request):
     workspace = factory.workspace
     gerrit = factory.gerrit
     tokens = request.split()
+    triggering_project = gerrit.get_triggering_project()
+    branch = None
+    branch_projects = { Project.GROMACS, Project.REGRESSIONTESTS }
+    if triggering_project and triggering_project in branch_projects:
+        branch = gerrit.get_triggering_branch()
+        branch_projects.remove(triggering_project)
     env = dict()
     gerrit_info = None
     builds = []
@@ -37,7 +43,6 @@ def _parse_request(factory, request):
             if token.lower() == 'quiet':
                 quiet = True
                 token = tokens.pop(0)
-            triggering_project = gerrit.get_triggering_project()
             change = gerrit.query_unique_change(token)
             if not triggering_project or not change.is_open:
                 quiet = True
@@ -47,6 +52,10 @@ def _parse_request(factory, request):
                 raise BuildError('Cross-verify is not possible with another change from the same repository')
             if project == Project.RELENG:
                 raise BuildError('Cross-verify with releng changes should be initiated from the releng change in Gerrit')
+            if branch is None:
+                branch = change.branch
+            if project in branch_projects:
+                branch_projects.remove(project)
             gerrit.override_refspec(project, refspec)
             env['{0}_REFSPEC'.format(project.upper())] = refspec.fetch
             env['{0}_HASH'.format(project.upper())] = refspec.checkout
@@ -71,7 +80,7 @@ def _parse_request(factory, request):
                     }
                 delayed_actions.append(lambda: gerrit.post_cross_verify_start(change.number, change.patchnumber))
         elif token == 'package':
-            project = gerrit.get_triggering_project()
+            project = triggering_project
             if project is None:
                 project = Project.RELENG
             if project in (Project.GROMACS, Project.RELENG):
@@ -93,20 +102,15 @@ def _parse_request(factory, request):
         # TODO: Make this generic so that it works for all future release
         # branches as well.
         elif token == 'release-2016':
-            triggering_project = gerrit.get_triggering_project()
             if triggering_project and triggering_project != Project.RELENG:
                 raise BuildError('Release branch verification only makes sense for releng changes')
+            assert branch is None
+            branch = token
             spec = 'refs/heads/' + token
             gromacs_refspec = RefSpec(spec)
             gromacs_hash = gerrit.get_remote_hash(Project.GROMACS, gromacs_refspec)
-            regtest_refspec = RefSpec(spec)
-            regtest_hash = gerrit.get_remote_hash(Project.REGRESSIONTESTS, regtest_refspec)
             gromacs_refspec = RefSpec(spec, gromacs_hash)
             gerrit.override_refspec(Project.GROMACS, gromacs_refspec)
-            env['GROMACS_REFSPEC'] = spec
-            env['GROMACS_HASH'] = gromacs_hash
-            env['REGRESSIONTESTS_REFSPEC'] = spec
-            env['REGRESSIONTESTS_HASH'] = regtest_hash
             workspace._checkout_project(Project.GROMACS)
             configs = get_build_configs(factory, 'pre-submit-matrix')
             builds.extend([
@@ -122,6 +126,12 @@ def _parse_request(factory, request):
                 ])
         else:
             raise BuildError('Unknown request: ' + request)
+    if branch and branch_projects:
+        for project in sorted(branch_projects):
+            spec = 'refs/heads/' + branch
+            sha1 = gerrit.get_remote_hash(project, RefSpec(spec))
+            env['{0}_REFSPEC'.format(project.upper())] = spec
+            env['{0}_HASH'.format(project.upper())] = sha1
     for action in delayed_actions:
         action()
     result = { 'builds': builds }

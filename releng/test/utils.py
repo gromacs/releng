@@ -56,6 +56,7 @@ class TestHelper(object):
         elif cmd[0] == 'ssh' and cmd[4:6] == ['gerrit', 'query']:
             data = {
                     'project': 'regressiontests',
+                    'branch': 'master',
                     'number': '1234',
                     'url': 'URL',
                     'open': True,

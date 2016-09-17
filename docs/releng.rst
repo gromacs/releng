@@ -137,6 +137,10 @@ input from the Jenkins job (or from a workflow build script):
   ``CHECKOUT_PROJECT`` and ``CHECKOUT_REFSPEC``.
   ``GERRIT_PROJECT`` is also used in some cases for interpreting
   ``GERRIT_EVENT_COMMENT_TEXT``.
+``GERRIT_BRANCH``
+  This is set by Gerrit Trigger to identify the branch that triggered the build.
+  It is used to support the same job triggering from multiple branches, getting
+  the refspecs for associated repos right.
 ``GERRIT_EVENT_COMMENT_TEXT``
   This is set by Gerrit Trigger when the build is triggered by a comment added
   in Jenkins.  The text is expected to be base64-encoded (the default in Gerrit

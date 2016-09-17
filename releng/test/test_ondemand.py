@@ -234,6 +234,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         { 'type': 'uncrustify', 'desc': 'cross-verify' }
                     ],
                 'env': {
+                        'GROMACS_REFSPEC': 'refs/heads/master',
+                        'GROMACS_HASH': '1234567890abcdef0123456789abcdef01234567',
                         'REGRESSIONTESTS_REFSPEC': 'refs/changes/34/1234/5',
                         'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
                     }
