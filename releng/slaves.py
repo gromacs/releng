@@ -37,7 +37,8 @@ _HOST_LABELS = {
                               'mpi',
                               'valgrind' },
             BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2',
-                              'cuda-6.5', 'cuda-7.0', 'cuda-7.5',
+                              # These CUDA versions are installed, but aren't useful to use
+                              # 'cuda-6.5', 'cuda-7.0', 'cuda-7.5',
                               'icc-14.0', 'icc-15.0', 'icc-16.0',
                               'phi',
                               'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1',
@@ -70,7 +71,8 @@ _HOST_LABELS = {
                               'clang-3.5', 'clang-3.6', 'clang-3.7', 'clang-3.8', 'clang-3.9',
                               'clang-analyzer',
                               'clang-static-analyzer-3.8',
-                              'cuda-6.0', 'cuda-6.5', 'cuda-7.0',
+                              # These CUDA versions are installed, but aren't useful to use
+                              # 'cuda-6.0', 'cuda-6.5', 'cuda-7.0',
                               'cmake-2.8.12.2', 'cmake-3.0.2', 'cmake-3.4.3',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi',
