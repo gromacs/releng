@@ -29,7 +29,7 @@ class TestPrepareBuildMatrix(unittest.TestCase):
                 mock.call.ensure_dir_exists('ws/build', ensure_empty=True),
                 mock.call.read_file('ws/gromacs/admin/builds/pre-submit-matrix.txt'),
                 mock.call.write_file('ws/build/matrix.txt',
-                    'OPTIONS "{0} host=bs_nix1310" "{1} host=bs_mic" "{2} host=bs-win2012r2" "{3} host=bs-win2012r2"\n'.format(*[x.strip() for x in input_lines]))
+                    'OPTIONS "{0} host=bs_nix1310" "{1} host=bs_nix1310" "{2} host=bs-win2012r2" "{3} host=bs-win2012r2"\n'.format(*[x.strip() for x in input_lines]))
             ])
 
     def test_PrepareBuildMatrixJson(self):
