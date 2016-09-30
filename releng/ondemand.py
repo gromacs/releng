@@ -15,131 +15,158 @@ def get_actions_from_triggering_comment(factory, outputfile):
     outputpath = os.path.join(workspace.build_dir, outputfile)
 
     request = factory.gerrit.get_triggering_comment()
-    actions = _parse_request(factory, request)
+    parser = RequestParser(factory)
+    parser.parse(request)
+    actions = parser.get_actions()
 
     _write_actions(factory.executor, actions, outputpath)
 
-def _parse_request(factory, request):
-    workspace = factory.workspace
-    gerrit = factory.gerrit
-    tokens = request.split()
-    triggering_project = gerrit.get_triggering_project()
-    branch = None
-    branch_projects = { Project.GROMACS, Project.REGRESSIONTESTS }
-    if triggering_project and triggering_project in branch_projects:
-        branch = gerrit.get_triggering_branch()
-        branch_projects.remove(triggering_project)
-    env = dict()
-    gerrit_info = None
-    builds = []
-    delayed_actions = []
-    while tokens:
-        token = tokens.pop(0).lower()
-        if token == 'coverage':
-            builds.append({ 'type': 'coverage' })
-        elif token == 'cross-verify':
-            quiet = False
-            token = tokens.pop(0)
-            if token.lower() == 'quiet':
-                quiet = True
-                token = tokens.pop(0)
-            change = gerrit.query_unique_change(token)
-            if not triggering_project or not change.is_open:
-                quiet = True
-            project = change.project
-            refspec = change.refspec
-            if triggering_project and project == triggering_project:
-                raise BuildError('Cross-verify is not possible with another change from the same repository')
-            if project == Project.RELENG:
-                raise BuildError('Cross-verify with releng changes should be initiated from the releng change in Gerrit')
-            if branch is None:
-                branch = change.branch
-            if project in branch_projects:
-                branch_projects.remove(project)
-            gerrit.override_refspec(project, refspec)
-            env['{0}_REFSPEC'.format(project.upper())] = refspec.fetch
-            env['{0}_HASH'.format(project.upper())] = refspec.checkout
-            workspace._checkout_project(Project.GROMACS)
-            configs = get_build_configs(factory, 'pre-submit-matrix')
-            builds.append({
-                    'type': 'matrix',
-                    'desc': 'cross-verify',
-                    'options': get_options_string(configs)
-                })
-            if not triggering_project or triggering_project == Project.RELENG:
-                builds.extend([
-                        { 'type': 'clang-analyzer', 'desc': 'cross-verify' },
-                        { 'type': 'cppcheck', 'desc': 'cross-verify' },
-                        { 'type': 'documentation', 'desc': 'cross-verify' },
-                        { 'type': 'uncrustify', 'desc': 'cross-verify' }
-                    ])
-            if not quiet:
-                gerrit_info = {
-                        'change': change.number,
-                        'patchset': change.patchnumber
-                    }
-                delayed_actions.append(lambda: gerrit.post_cross_verify_start(change.number, change.patchnumber))
-        elif token == 'package':
-            project = triggering_project
-            if project is None:
-                project = Project.RELENG
-            if project in (Project.GROMACS, Project.RELENG):
-                builds.append({ 'type': 'source-package' })
-            if project in (Project.REGRESSIONTESTS, Project.RELENG):
-                builds.append({ 'type': 'regtest-package' })
-        elif token == 'post-submit':
-            # TODO: If this occurs before 'cross-verify', the build matrix
-            # may get read from an incorrect change.
-            workspace._checkout_project(Project.GROMACS)
-            configs = get_build_configs(factory, 'post-submit-matrix')
-            builds.append({
-                    'type': 'matrix',
-                    'desc': 'post-submit',
-                    'options': get_options_string(configs)
-                })
-        elif token == 'release':
-            builds.append({ 'type': 'release' })
-        # TODO: Make this generic so that it works for all future release
-        # branches as well.
+class RequestParser(object):
+    def __init__(self, factory):
+        self._factory = factory
+        self._workspace = factory.workspace
+        self._gerrit = factory.gerrit
+        self._branch = None
+        self._branch_projects = { Project.GROMACS, Project.REGRESSIONTESTS }
+        triggering_project = self._gerrit.get_triggering_project()
+        if triggering_project and triggering_project in self._branch_projects:
+            self._branch = self._gerrit.get_triggering_branch()
+            self._branch_projects.remove(triggering_project)
+        self._env = dict()
+        self._cross_verify_info = None
+        self._builds = []
+        self._default_builds = []
+
+    def parse(self, request):
+        tokens = request.split()
+        token = tokens[0].lower()
+        if token == 'cross-verify':
+            tokens.pop(0)
+            self._parse_cross_verify(tokens)
         elif token == 'release-2016':
-            if triggering_project and triggering_project != Project.RELENG:
-                raise BuildError('Release branch verification only makes sense for releng changes')
-            assert branch is None
-            branch = token
-            spec = 'refs/heads/' + token
-            gromacs_refspec = RefSpec(spec)
-            gromacs_hash = gerrit.get_remote_hash(Project.GROMACS, gromacs_refspec)
-            gromacs_refspec = RefSpec(spec, gromacs_hash)
-            gerrit.override_refspec(Project.GROMACS, gromacs_refspec)
-            workspace._checkout_project(Project.GROMACS)
-            configs = get_build_configs(factory, 'pre-submit-matrix')
-            builds.extend([
-                    {
+            tokens.pop(0)
+            self._process_release_branch(token)
+        while tokens:
+            token = tokens.pop(0).lower()
+            if token == 'quiet':
+                self._cross_verify_info = None
+            elif token == 'clang-analyzer':
+                self._builds.append({ 'type': 'clang-analyzer' })
+            elif token == 'coverage':
+                self._builds.append({ 'type': 'coverage' })
+            elif token == 'cppcheck':
+                self._builds.append({ 'type': 'cppcheck' })
+            elif token == 'documentation':
+                self._builds.append({ 'type': 'documentation' })
+            elif token == 'package':
+                project = self._gerrit.get_triggering_project()
+                if project is None:
+                    project = Project.RELENG
+                if project in (Project.GROMACS, Project.RELENG):
+                    self._builds.append({ 'type': 'source-package' })
+                if project in (Project.REGRESSIONTESTS, Project.RELENG):
+                    self._builds.append({ 'type': 'regtest-package' })
+            elif token == 'post-submit':
+                self._builds.append({
                         'type': 'matrix',
-                        'desc': token,
-                        'options': get_options_string(configs)
-                    },
-                    { 'type': 'clang-analyzer', 'desc': token },
-                    { 'type': 'cppcheck', 'desc': token },
-                    { 'type': 'documentation', 'desc': token },
-                    { 'type': 'uncrustify', 'desc': token }
+                        'desc': 'post-submit',
+                        'matrix-file': 'post-submit-matrix'
+                    })
+            elif token == 'pre-submit':
+                self._builds.append({
+                        'type': 'matrix',
+                        'desc': 'pre-submit',
+                        'matrix-file': 'pre-submit-matrix'
+                    })
+            elif token == 'release':
+                self._builds.append({ 'type': 'release' })
+            elif token == 'uncrustify':
+                self._builds.append({ 'type': 'uncrustify' })
+            else:
+                raise BuildError('Unknown request: ' + request)
+
+    def _parse_cross_verify(self, tokens):
+        triggering_project = self._gerrit.get_triggering_project()
+        token = tokens.pop(0)
+        change = self._gerrit.query_unique_change(token)
+        project = change.project
+        refspec = change.refspec
+        if triggering_project and project == triggering_project:
+            raise BuildError('Cross-verify is not possible with another change from the same repository')
+        if project == Project.RELENG:
+            raise BuildError('Cross-verify with releng changes should be initiated from the releng change in Gerrit')
+        if self._branch is None:
+            self._branch = change.branch
+        if project in self._branch_projects:
+            self._branch_projects.remove(project)
+        self._gerrit.override_refspec(project, refspec)
+        self._env['{0}_REFSPEC'.format(project.upper())] = refspec.fetch
+        self._env['{0}_HASH'.format(project.upper())] = refspec.checkout
+        self._default_builds = [{
+                'type': 'matrix',
+                'desc': 'cross-verify',
+                'matrix-file': 'pre-submit-matrix'
+            }]
+        if not triggering_project or triggering_project == Project.RELENG:
+            self._default_builds.extend([
+                    { 'type': 'clang-analyzer', 'desc': 'cross-verify' },
+                    { 'type': 'cppcheck', 'desc': 'cross-verify' },
+                    { 'type': 'documentation', 'desc': 'cross-verify' },
+                    { 'type': 'uncrustify', 'desc': 'cross-verify' }
                 ])
-        else:
-            raise BuildError('Unknown request: ' + request)
-    if branch and branch_projects:
-        for project in sorted(branch_projects):
-            spec = 'refs/heads/' + branch
-            sha1 = gerrit.get_remote_hash(project, RefSpec(spec))
-            env['{0}_REFSPEC'.format(project.upper())] = spec
-            env['{0}_HASH'.format(project.upper())] = sha1
-    for action in delayed_actions:
-        action()
-    result = { 'builds': builds }
-    if env:
-        result['env'] = env
-    if gerrit_info:
-        result['gerrit_info'] = gerrit_info
-    return result
+        if triggering_project and change.is_open:
+            self._cross_verify_info = {
+                    'change': change.number,
+                    'patchset': change.patchnumber
+                }
+
+    def _process_release_branch(self, branch):
+        triggering_project = self._gerrit.get_triggering_project()
+        if triggering_project and triggering_project != Project.RELENG:
+            raise BuildError('Release branch verification only makes sense for releng changes')
+        assert self._branch is None
+        self._branch = branch
+        spec = 'refs/heads/' + branch
+        gromacs_refspec = RefSpec(spec)
+        gromacs_hash = self._gerrit.get_remote_hash(Project.GROMACS, gromacs_refspec)
+        gromacs_refspec = RefSpec(spec, gromacs_hash)
+        self._gerrit.override_refspec(Project.GROMACS, gromacs_refspec)
+        self._default_builds = [
+                {
+                    'type': 'matrix',
+                    'desc': branch,
+                    'matrix-file': 'pre-submit-matrix'
+                },
+                { 'type': 'clang-analyzer', 'desc': branch },
+                { 'type': 'cppcheck', 'desc': branch },
+                { 'type': 'documentation', 'desc': branch },
+                { 'type': 'uncrustify', 'desc': branch }
+            ]
+
+    def get_actions(self):
+        if self._branch and self._branch_projects:
+            for project in sorted(self._branch_projects):
+                spec = 'refs/heads/' + self._branch
+                sha1 = self._gerrit.get_remote_hash(project, RefSpec(spec))
+                self._env['{0}_REFSPEC'.format(project.upper())] = spec
+                self._env['{0}_HASH'.format(project.upper())] = sha1
+        if not self._builds:
+            self._builds = self._default_builds
+        for build in self._builds:
+            if build['type'] == 'matrix':
+                self._workspace._checkout_project(Project.GROMACS)
+                configs = get_build_configs(self._factory, build['matrix-file'])
+                del build['matrix-file']
+                build['options'] = get_options_string(configs)
+        result = { 'builds': self._builds }
+        if self._env:
+            result['env'] = self._env
+        if self._cross_verify_info:
+            result['gerrit_info'] = self._cross_verify_info
+            number = self._cross_verify_info['change']
+            patchnumber = self._cross_verify_info['patchset']
+            self._gerrit.post_cross_verify_start(number, patchnumber)
+        return result
 
 def _write_actions(executor, actions, path):
     executor.write_file(path, json.dumps(actions))

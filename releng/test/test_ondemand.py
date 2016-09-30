@@ -178,7 +178,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                 'GERRIT_PROJECT': 'gromacs',
                 'GERRIT_CHANGE_URL': 'http://gerrit',
                 'GERRIT_PATCHSET_NUMBER': '3',
-                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify quiet 1234')
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet')
             })
         input_lines = [
                 'gcc-4.6 gpu cuda-5.0',
@@ -203,6 +203,29 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                     }
             })
 
+    def test_CrossVerifyRequestOneBuildOnly(self):
+        helper = TestHelper(self, workspace='ws', env={
+                'BUILD_URL': 'http://build',
+                'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_CHANGE_URL': 'http://gerrit',
+                'GERRIT_PATCHSET_NUMBER': '3',
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet clang-analyzer')
+            })
+        factory = helper.factory
+        executor = helper.executor
+        get_actions_from_triggering_comment(factory, 'actions.json')
+        helper.assertOutputJsonFile('ws/build/actions.json', {
+                'builds': [
+                        {
+                            'type': 'clang-analyzer'
+                        }
+                    ],
+                'env': {
+                        'REGRESSIONTESTS_REFSPEC': 'refs/changes/34/1234/5',
+                        'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
+                    }
+            })
+
     def test_CrossVerifyRequestReleng(self):
         helper = TestHelper(self, workspace='ws', env={
                 'BUILD_URL': 'http://build',
@@ -210,7 +233,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                 'GERRIT_REFSPEC': 'refs/changes/12/3456/3',
                 'GERRIT_CHANGE_URL': 'http://gerrit',
                 'GERRIT_PATCHSET_NUMBER': '3',
-                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify quiet 1234')
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet')
             })
         input_lines = [
                 'gcc-4.6 gpu cuda-5.0',

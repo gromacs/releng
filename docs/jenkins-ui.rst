@@ -68,40 +68,59 @@ It is not possible to rebuild only a part of the matrix job.
 Some types of builds are not automatically triggered from Gerrit when a patch
 set is uploaded, but instead need to be requested with a specifically formatted
 comment in Gerrit.  The general format for the comment is ``[JENKINS]``
-followed by keywords for the build(s) requested.  Currently, the following
-keywords are supported:
+followed by keywords for the build(s) requested.  This mechanism can also be
+used for cross-verification, i.e., verifying a different combination of changes
+than what is triggered by default.  The general format is:
+
+    ``[JENKINS]`` [ ``Cross-verify`` <NNNN> [``quiet``] | ``release-2016`` ] [<builds>]
+
+If ``Cross-verify`` is specified, it builds the current change together with
+the latest patch set of change number NNNN from Gerrit (should be from another
+project).  If ``quiet`` is not specified, results are posted back to both
+changes (the NNNN change only if it is still open), but the vote is not
+affected.  For cross-verification with releng changes, the ``[JENKINS]``
+comment needs to be posted in the releng change to ensure that the correct
+releng scripts are used throughout the build.
+
+If ``release-2016`` is specified, it builds the current change together with
+release branch HEADs from other repositories.  This only makes sense for releng
+changes, where it should be run at least once before merging if there is a
+possibility that the changes impact builds in the release branch.  These do not
+run automatically (at least for now) to reduce peak load, and make testing
+releng changes easier (since in many cases, the test builds that are actually
+interesting will only run after the matrix builds have been cleared from the
+queue).
+
+If neither of the above is specified, then the requested builds are built for
+this change.
+
+With any of the above variants, possible builds are:
 
 * ``Coverage``: Triggers a coverage build.
-* ``Cross-verify`` [``quiet``] NNNN: Triggers a cross-verification build,
-  building the current change together with the latest patch set of change
-  number NNNN from Gerrit (should be from another project).  If ``quiet`` is
-  not specified, results are posted back to both changes (the NNNN change only
-  if it is still open), but the vote is not affected.
-  For cross-verification with releng changes, the ``[JENKINS]`` comment needs
-  to be posted in the releng change to ensure that the correct releng scripts
-  are used throughout the build.
-  Cross-verification for releng changes triggers all per-patchset builds.  For
-  other repositories, it triggers only the pre-submit matrix.
+* ``clang-analyzer``: Triggers the per-patchset clang static analysis build.
+* ``cppcheck``: Triggers the per-patchset cppcheck static analysis build.
+* ``Documentation``: Triggers the per-patchset documentation build.
 * ``Package``: Triggers a packaging build.  When triggered from a source or a
   regression tests change, packages that repository.  When triggered from
   releng, packages both.
+* ``Pre-submit``: Triggers a matrix build with the pre-submit matrix
+  specified in the ``gromacs`` repository.
 * ``Post-submit``: Triggers a matrix build with the post-submit matrix
   specified in the ``gromacs`` repository.
 * ``Release``: Triggers a release workflow build for testing the release
   process.
-* ``release-2016``: Triggers all per-patchset builds for the release branch.
-  Only makes sense for releng changes, where it should be run at least once
-  before merging if there is a possibility that the changes impact builds in
-  the release branch.  These do not run automatically (at least for now) to
-  reduce peak load, and make testing releng changes easier (since in many
-  cases, the test builds that are actually interesting will only run after the
-  matrix builds have been cleared from the queue).
+* ``Uncrustify``: Triggers the per-patchset uncrustify code style checker build.
 
 More than one build can be requested with a single comment; the keywords should
 be separated by whitespace.  When the requested builds complete, a link to the
 build is posted back.  In case there is just a single build, the link points
 directly to it.  If there are multiple, the link points to a workflow build and
 the individual builds can be accessed through links on the build summary page.
+
+If no builds are specified, a default set of builds is triggered.  For
+cross-verification (including the release branch variant) from releng, it
+triggers all per-patchset builds.  Otherwise, only the pre-submit matrix build
+is triggered.
 
 There can be also other content in the Gerrit comment that requests a build.
 The ``[JENKINS]`` tag must appear at the start of a paragraph, and that
