@@ -229,11 +229,16 @@ def doPostBuildActions(builds, gerrit_info)
         ]
     def messages
     node('pipeline-general') {
-        utils.writeJsonFile('build/actions.json', data)
-        utils.runRelengScript("""\
-            releng.do_ondemand_post_build('build/actions.json', 'message.json')
-            """)
-        messages = utils.readJsonFile('build/message.json')
+        // This should not take any time, but it seems to often hang in
+        // Jenkins.  If we are lucky, the one-minute timeout will actually stop
+        // the build instead of leaving it running forever...
+        timeout(1) {
+            utils.writeJsonFile('build/actions.json', data)
+            utils.runRelengScript("""\
+                releng.do_ondemand_post_build('build/actions.json', 'message.json')
+                """)
+            messages = utils.readJsonFile('build/message.json')
+        }
     }
     return messages
 }

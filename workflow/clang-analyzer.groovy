@@ -9,10 +9,15 @@ def doBuild()
     utils.setEnvForRelengSecondaryCheckouts()
     node (config.labels)
     {
-        wrap([$class: 'TimestamperBuildWrapper']) {
-            utils.runRelengScript("""\
-                releng.run_build('clang-analyzer', releng.JobType.GERRIT, ['build-jobs=4'])
-                """)
+        timestamps {
+            // This has at least sometimes remained running forever in Jenkins.
+            // If we are lucky, the timeout will actually stop the build at
+            // some point instead of leaving it running forever...
+            timeout(120) {
+                utils.runRelengScript("""\
+                    releng.run_build('clang-analyzer', releng.JobType.GERRIT, ['build-jobs=4'])
+                    """)
+            }
             addInformationAboutWarnings()
             step([$class: 'WarningsPublisher',
                 canComputeNew: false, canRunOnFailed: true,
