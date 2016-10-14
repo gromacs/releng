@@ -69,7 +69,6 @@ _HOST_LABELS = {
                               'valgrind', 'tsan' },
             BS_NIX1404:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.1',
                               'clang-3.5', 'clang-3.6', 'clang-3.7', 'clang-3.8', 'clang-3.9',
-                              'clang-analyzer',
                               'clang-static-analyzer-3.8',
                               # These CUDA versions are installed, but aren't useful to use
                               # 'cuda-6.0', 'cuda-6.5', 'cuda-7.0',

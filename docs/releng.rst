@@ -222,9 +222,6 @@ gcc-X.Y
   Use the specified gcc version as the compiler.
 clang-X.Y
   Use the specified clang version as the compiler.
-clang-analyzer
-  Obsolete way of specifying the use of clang static analyzer (in combination
-  with clang-X.Y).
 clang-static-analyzer-X.Y
   Use the specified clang static analyzer as the compiler.
 icc-X.Y

@@ -189,9 +189,7 @@ def runSingleTestConfig(tarballBuilds, config)
         opts.add('out-of-source')
         def pythonOpts = listAsPythonList(opts)
         // TODO: Timeout.
-        // TODO: The timestamper output is not very useful, since there is no
-        // way to see just the console log of one run with the stamps.
-        wrap([$class: 'TimestamperBuildWrapper']) {
+        timestamps {
             // TODO: Add a test somewhere that ensures that for a release
             // build, the MD5 sum specified in the source repository matches
             // the regression tests tarball.

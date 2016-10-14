@@ -155,11 +155,6 @@ class BuildEnvironment(object):
         """
         self._cmd_runner.set_env_var(variable, value)
 
-    # TODO: Remove once replaced with set_env_var() in build scripts.
-    def add_env_var(self, variable, value):
-        """Sets environment variable to be used for further commands."""
-        self._cmd_runner.set_env_var(variable, value)
-
     def append_to_env_var(self, variable, value):
         self._cmd_runner.append_to_env_var(variable, value)
 
@@ -323,18 +318,6 @@ class BuildEnvironment(object):
             self.run_env_script(r'"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64')
         else:
             raise ConfigurationError('only Visual Studio 2010, 2013, and 2015 are supported, got msvc-' + version)
-
-# TODO this is deprecated, but retained during transition from analyzer version 3.4 to 3.8
-    def _init_clang_analyzer(self):
-        html_output_dir = self._workspace.get_log_dir(category='scan_html')
-        self.clang_analyzer_output_dir = html_output_dir
-        analyzer = self._cmd_runner.find_executable(self.c_compiler)
-        self.set_env_var('CCC_CC', self.c_compiler)
-        self.set_env_var('CCC_CXX', self.cxx_compiler)
-        scan_build_path = os.path.expanduser('~/bin/scan-build-path')
-        self.cxx_compiler = os.path.join(scan_build_path, 'c++-analyzer')
-        self._build_prefix_cmd = [scan_build_path + '/scan-build',
-                '--use-analyzer', analyzer, '-o', html_output_dir]
 
     def _init_clang_static_analyzer(self, version):
         scan_build = 'scan-build-' + version

@@ -73,16 +73,16 @@ class TestReadBuildScriptConfig(unittest.TestCase):
     def test_ClangAnalyzer(self):
         self.helper.add_input_file('script/build.py',
                 """\
-                build_options = ['clang-3.8', 'clang-analyzer']
+                build_options = ['clang-3.8', 'clang-static-analyzer-3.8']
                 def do_build(context):
                     pass
                 """)
         BuildContext._read_build_script_config(self.helper.factory,
                 'script/build.py', 'config.json')
         self.helper.assertOutputJsonFile('/ws/build/config.json', {
-                'opts': ['clang-3.8', 'clang-analyzer'],
+                'opts': ['clang-3.8', 'clang-static-analyzer-3.8'],
                 'host': 'bs_nix1404',
-                'labels': 'clang-3.8 && clang-analyzer'
+                'labels': 'clang-3.8 && clang-static-analyzer-3.8'
             })
 
 

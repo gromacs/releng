@@ -96,11 +96,6 @@ class BuildContext(object):
                     failure_message = 'failed to execute: ' + e.cmd
                 raise BuildError(failure_message)
 
-    # TODO: Remove after build scripts have been adapted
-    def run_cmd_with_env(self, cmd, **kwargs):
-        """Runs a command."""
-        return self.run_cmd(cmd, **kwargs)
-
     def run_cmake(self, options):
         """Runs CMake with the provided options.
 
@@ -365,14 +360,9 @@ class BuildContext(object):
         # TODO: Consider providing an analysis/summary of the results.
         pass
 
-    def process_clang_analyzer_results(self, html_dir=None):
-        """Processes results from clang analyzer.
-
-        Args:
-            html_dir (str): Output directory to which scan-build wrote found issues.
-        """
-        if html_dir is None:
-            html_dir = self.env.clang_analyzer_output_dir
+    def process_clang_analyzer_results(self):
+        """Processes results from clang analyzer."""
+        html_dir = self.env.clang_analyzer_output_dir
         html_dir = self._cwd.to_abs_path(html_dir)
         # The analyzer produces a subdirectory for each run with a dynamic name.
         # To make it easier to process in Jenkins, we rename it to a fixed name.

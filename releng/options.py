@@ -337,7 +337,6 @@ def _define_handlers(e, extra_options):
             _VersionOptionHandler('gcc', e._init_gcc, label=OPT),
             _VersionOptionHandler('gcov', label=OPT),
             _VersionOptionHandler('clang', e._init_clang, label=OPT),
-            _SimpleOptionHandler('clang-analyzer', e._init_clang_analyzer, label=OPT),
             _VersionOptionHandler('clang-static-analyzer', e._init_clang_static_analyzer, label=OPT),
             _VersionOptionHandler('msvc', e._init_msvc, label=OPT),
             _VersionOptionHandler('icc', e._init_icc, label=OPT),
