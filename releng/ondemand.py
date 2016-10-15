@@ -186,21 +186,28 @@ def do_post_build(factory, inputfile, outputfile):
     workspace._init_build_dir(out_of_source=True)
     outputpath = os.path.join(workspace.build_dir, outputfile)
 
-    url, build_messages = _get_url_and_messages(data)
-    _write_message_json(executor, outputpath, url, build_messages)
+    build_messages = _get_build_messages(data)
+    url, reason = None, None
+    if len(data['builds']) == 1:
+        url, reason = _get_single_url_and_reason(data)
+    elif build_messages:
+        reason = '\n'.join(build_messages)
+    _write_message_json(executor, outputpath, url, reason)
     if data.has_key('gerrit_info') and data['gerrit_info']:
         gerrit_info = data['gerrit_info']
         change = gerrit_info['change']
         patchset = gerrit_info['patchset']
         factory.gerrit.post_cross_verify_finish(change, patchset, build_messages)
 
-def _get_url_and_messages(data):
+def _get_build_messages(data):
     builds = data['builds']
-    build_messages = ['{0}: {1}'.format(_get_title(x), x['result']) for x in builds]
-    url = None
-    if len(builds) == 1:
-        url = _append_desc(_get_url(builds[0]), builds[0])
-    return url, build_messages
+    return [_get_message(x) for x in builds]
+
+def _get_message(build):
+    message = '{0}: {1}'.format(_get_title(build), build['result'])
+    if build.has_key('reason') and build['reason']:
+        message += ' <<<\n' + build['reason'].rstrip() + '\n>>>'
+    return message
 
 def _get_title(build):
     title = _get_url(build)
@@ -218,11 +225,17 @@ def _append_desc(text, build):
         text += ' ({0})'.format(build['desc'])
     return text
 
-def _write_message_json(executor, path, url, build_messages):
-    if len(build_messages) == 1:
-        build_messages = ''
+def _get_single_url_and_reason(data):
+    build = data['builds'][0]
+    url = _append_desc(_get_url(build), build)
+    reason = None
+    if build.has_key('reason') and build['reason']:
+        reason = build['reason'].rstrip()
+    return url, reason
+
+def _write_message_json(executor, path, url, reason):
     data = {
             'url': url,
-            'message': '\n'.join(build_messages)
+            'message': reason
         }
     executor.write_file(path, json.dumps(data))

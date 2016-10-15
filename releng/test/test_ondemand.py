@@ -275,7 +275,7 @@ class TestDoPostBuild(unittest.TestCase):
         do_post_build(factory, 'actions.json', 'message.json')
         helper.assertOutputJsonFile('ws/build/message.json', {
                 'url': None,
-                'message': ''
+                'message': None
             })
 
     def test_SingleBuild(self):
@@ -293,7 +293,26 @@ class TestDoPostBuild(unittest.TestCase):
         do_post_build(factory, 'actions.json', 'message.json')
         helper.assertOutputJsonFile('ws/build/message.json', {
                 'url': 'http://my_build',
-                'message': ''
+                'message': None
+            })
+
+    def test_FailedSingleBuild(self):
+        helper = TestHelper(self, workspace='ws')
+        factory = helper.factory
+        helper.add_input_json_file('actions.json', {
+                'builds': [
+                        {
+                            'url': 'http://my_build',
+                            'desc': None,
+                            'result': 'FAILURE',
+                            'reason': 'Failure reason'
+                        }
+                    ]
+            })
+        do_post_build(factory, 'actions.json', 'message.json')
+        helper.assertOutputJsonFile('ws/build/message.json', {
+                'url': 'http://my_build',
+                'message': 'Failure reason'
             })
 
     def test_SingleBuildWithoutUrl(self):
@@ -312,7 +331,27 @@ class TestDoPostBuild(unittest.TestCase):
         do_post_build(factory, 'actions.json', 'message.json')
         helper.assertOutputJsonFile('ws/build/message.json', {
                 'url': None,
-                'message': ''
+                'message': None
+            })
+
+    def test_FailedSingleBuildWithoutUrl(self):
+        helper = TestHelper(self, workspace='ws')
+        factory = helper.factory
+        helper.add_input_json_file('actions.json', {
+                'builds': [
+                        {
+                            'title': 'My title',
+                            'url': None,
+                            'desc': None,
+                            'result': 'FAILURE',
+                            'reason': 'Failure reason'
+                        }
+                    ]
+            })
+        do_post_build(factory, 'actions.json', 'message.json')
+        helper.assertOutputJsonFile('ws/build/message.json', {
+                'url': None,
+                'message': 'Failure reason'
             })
 
     def test_SingleBuildWithCrossVerify(self):
@@ -337,7 +376,7 @@ class TestDoPostBuild(unittest.TestCase):
         do_post_build(factory, 'actions.json', 'message.json')
         helper.assertOutputJsonFile('ws/build/message.json', {
                 'url': 'http://my_build',
-                'message': ''
+                'message': None
             })
         helper.assertCommandInvoked(['ssh', '-p', '29418', 'jenkins@gerrit.gromacs.org', 'gerrit', 'review', '1234,5', '-m', '"Cross-verify with http://gerrit (patch set 3) finished\n\nhttp://my_build: SUCCESS"'])
 
@@ -356,7 +395,7 @@ class TestDoPostBuild(unittest.TestCase):
         do_post_build(factory, 'actions.json', 'message.json')
         helper.assertOutputJsonFile('ws/build/message.json', {
                 'url': 'http://my_build (cross-verify)',
-                'message': ''
+                'message': None
             })
 
     def test_TwoBuilds(self):
@@ -380,6 +419,30 @@ class TestDoPostBuild(unittest.TestCase):
         helper.assertOutputJsonFile('ws/build/message.json', {
                 'url': None,
                 'message': 'http://my_build (cross-verify): SUCCESS\nhttp://my_build2: SUCCESS'
+            })
+
+    def test_TwoBuildsWithFailure(self):
+        helper = TestHelper(self, workspace='ws')
+        factory = helper.factory
+        helper.add_input_json_file('actions.json', {
+                'builds': [
+                        {
+                            'url': 'http://my_build',
+                            'desc': 'cross-verify',
+                            'result': 'SUCCESS'
+                        },
+                        {
+                            'url': 'http://my_build2',
+                            'desc': None,
+                            'result': 'FAILURE',
+                            'reason': 'Failure reason'
+                        }
+                    ]
+            })
+        do_post_build(factory, 'actions.json', 'message.json')
+        helper.assertOutputJsonFile('ws/build/message.json', {
+                'url': None,
+                'message': 'http://my_build (cross-verify): SUCCESS\nhttp://my_build2: FAILURE <<<\nFailure reason\n>>>'
             })
 
     def test_TwoBuildsWithoutUrl(self):

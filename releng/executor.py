@@ -21,7 +21,7 @@ import shutil
 import subprocess
 import sys
 
-from common import CommandError, System
+from common import AbortError, CommandError, System
 import utils
 
 def _read_file(path, binary):
@@ -194,14 +194,11 @@ class CommandRunner(object):
 
         Any arguments accepted by subprocess.call() can also be
         passed, e.g. cwd or env to make such calls in stateless ways.
-
         """
-
         cmd_string, kwargs = self._prepare_cmd(cmd, kwargs)
-        try:
-            return self._executor.call(cmd, **kwargs)
-        except subprocess.CalledProcessError:
-            raise CommandError(cmd_string)
+        returncode = self._executor.call(cmd, **kwargs)
+        self._handle_return_code(returncode)
+        return returncode
 
     def check_call(self, cmd, **kwargs):
         """Runs a command via subprocess.check_call()
@@ -212,13 +209,12 @@ class CommandRunner(object):
 
         Any arguments accepted by subprocess.check_call() can also be
         passed, e.g. cwd or env to make such calls in stateless ways.
-
         """
-
         cmd_string, kwargs = self._prepare_cmd(cmd, kwargs)
         try:
             self._executor.check_call(cmd, **kwargs)
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            self._handle_return_code(e.returncode)
             raise CommandError(cmd_string)
 
     def check_output(self, cmd, **kwargs):
@@ -231,13 +227,14 @@ class CommandRunner(object):
         Any arguments accepted by subprocess.check_output() can also
         be passed, e.g. cwd or env to make such calls in stateless
         ways.
-
         """
-
         cmd_string, kwargs = self._prepare_cmd(cmd, kwargs)
         try:
             return self._executor.check_output(cmd, **kwargs)
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            if e.output:
+                print(e.output, file=self._executor.console)
+            self._handle_return_code(e.returncode)
             raise CommandError(cmd_string)
 
     def _prepare_cmd(self, cmd, kwargs):
@@ -261,6 +258,22 @@ class CommandRunner(object):
             return subprocess.list2cmdline(cmd)
         else:
             return ' '.join([pipes.quote(x) for x in cmd])
+
+    def _handle_return_code(self, returncode):
+        if returncode != 0:
+            print('(exited with code {0})'.format(returncode), file=self._executor.console)
+        if self._is_windows:
+            # Based on testing, at least a batch script returns -1 when aborted
+            # as part of a workflow.
+            # Timeouts do not work in Jenkins pipelines for bat scripts...
+            if returncode == -1:
+                raise AbortError(returncode)
+        else:
+            # Aborting a job seems to send SIGTERM to the child processes in
+            # pipelines, which gives an exit code of 128+15 or -15.
+            # Handle SIGKILL as well for robustness.
+            if returncode in (-15, -9, 137, 143):
+                raise AbortError(returncode)
 
     def find_executable(self, name):
         """Returns the full path to the given executable."""

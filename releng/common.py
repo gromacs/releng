@@ -24,6 +24,12 @@ class CommandError(BuildError):
         BuildError.__init__(self, 'failed to execute: ' + cmd_string)
         self.cmd = cmd_string
 
+class AbortError(Exception):
+    """Exception to signal aborting the build"""
+
+    def __init__(self, returncode):
+        self.returncode = returncode
+
 class ConfigurationError(Exception):
     """Exception to signal errors in the build configuration
 

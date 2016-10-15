@@ -13,7 +13,7 @@ import os
 import re
 import traceback
 
-from common import BuildError, ConfigurationError
+from common import AbortError, BuildError, ConfigurationError
 from common import Project
 import utils
 
@@ -283,6 +283,7 @@ class StatusReporter(object):
         if not os.path.isabs(self._status_file):
             self._status_file = os.path.join(self._workspace.root, self._status_file)
         self.failed = False
+        self._aborted = False
         self._unsuccessful_reason = []
         self._tracebacks = tracebacks
 
@@ -290,11 +291,15 @@ class StatusReporter(object):
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
+        returncode = 1
         if exc_type is not None:
             console = self._executor.console
             if not self._tracebacks:
                 tb = None
-            if issubclass(exc_type, ConfigurationError):
+            if issubclass(exc_type, AbortError):
+                self._aborted = True
+                returncode = exc_value.returncode
+            elif issubclass(exc_type, ConfigurationError):
                 traceback.print_exception(exc_type, exc_value, tb, file=console)
                 self.mark_failed('Jenkins configuration error: ' + str(exc_value))
             elif issubclass(exc_type, BuildError):
@@ -307,8 +312,13 @@ class StatusReporter(object):
                 self._report_on_exception()
                 return False
         self._report()
-        if self.failed and self._propagate_failure:
-            self._executor.exit(1)
+        # Currently, we do not propagate even the aborted return value when
+        # not requested to.  This means that the parent workflow build may
+        # have a chance to write a summary to the build summary page before
+        # exiting.  Not sure what Jenkins does if the workflow build takes
+        # a long time afterwards to finish, though...
+        if (self._aborted or self.failed) and self._propagate_failure:
+            self._executor.exit(returncode)
         return True
 
     def mark_failed(self, reason):
@@ -345,11 +355,13 @@ class StatusReporter(object):
         """Reports possible failures at the end of the build."""
         result = 'SUCCESS'
         reason = None
-        if self.failed:
+        if self._aborted:
+            result = 'ABORTED'
+        elif self.failed:
             result = 'FAILURE'
         elif self._unsuccessful_reason:
             result = 'UNSTABLE'
-        if self._unsuccessful_reason:
+        if not self._aborted and self._unsuccessful_reason:
             reason = '\n'.join(self._unsuccessful_reason)
         if reason and to_console:
             console = self._executor.console

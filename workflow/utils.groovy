@@ -89,7 +89,8 @@ def addBuildParameterIfExists(parameters, name)
 def runPythonScript(contents)
 {
     writeFile file: 'build.py', text: contents
-    sh 'python build.py'
+    def returncode = sh script: 'python build.py', returnStatus: true
+    return returncode
 }
 
 def runRelengScript(contents, propagate = true)
@@ -132,14 +133,15 @@ def runRelengScriptInternal(prepareScript, contents, propagate)
     }
     script += contents.stripIndent()
     try {
-        runPythonScript(script)
-    } catch (err) {
-        def reason = null
-        if (fileExists('logs/status.json')) {
-            reason = readJsonFile('logs/status.json').reason
-            setGerritReview unsuccessfulMessage: reason
+        def returncode = runPythonScript(script)
+        if (isAbortCode(returncode)) {
+            return [ 'result': 'ABORTED', 'reason': null ]
         }
-        addRelengErrorSummary(reason)
+        if (returncode != 0) {
+            throw new hudson.AbortException("releng script exited with ${returncode}")
+        }
+    } catch (err) {
+        handleRelengError()
         throw err
     }
     def status = readJsonFile('logs/status.json')
@@ -147,6 +149,24 @@ def runRelengScriptInternal(prepareScript, contents, propagate)
         processRelengStatus(status)
     }
     return status
+}
+
+def isAbortCode(returncode)
+{
+    // Currently, this we do not support this on Windows (not in
+    // runPythonScript() either), where the code seems to be -1 for
+    // aborting.
+    return returncode == 137 || returncode == 143;
+}
+
+def handleRelengError()
+{
+    def reason = null
+    if (fileExists('logs/status.json')) {
+        reason = readJsonFile('logs/status.json').reason
+        setGerritReview unsuccessfulMessage: reason
+    }
+    addRelengErrorSummary(reason)
 }
 
 def addRelengErrorSummary(reason)

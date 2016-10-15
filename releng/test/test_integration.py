@@ -5,7 +5,7 @@ import unittest
 # With Python 3.3 and up, this should change to unittest.mock.
 import mock
 
-from releng.common import BuildError, Project
+from releng.common import AbortError, BuildError, Project
 from releng.integration import BuildParameters, ParameterTypes, RefSpec
 from releng.test.utils import TestHelper
 
@@ -316,6 +316,25 @@ class TestStatusReporter(unittest.TestCase):
                 ValueError: Mock Python error
                 """)
 
+    def test_Aborted(self):
+        with self.helper.factory.status_reporter as status_reporter:
+            raise AbortError(143)
+        self.assertFalse(status_reporter.failed)
+        self.assertEqual(self.helper.executor.mock_calls,
+                [mock.call.remove_path('logs/unsuccessful-reason.log'),
+                 mock.call.exit(143)])
+        self.helper.assertConsoleOutput('')
+
+    def test_AbortedAfterFailure(self):
+        with self.helper.factory.status_reporter as status_reporter:
+            status_reporter.mark_failed('Failure reason')
+            raise AbortError(143)
+        self.assertTrue(status_reporter.failed)
+        self.assertEqual(self.helper.executor.mock_calls,
+                [mock.call.remove_path('logs/unsuccessful-reason.log'),
+                 mock.call.exit(143)])
+        self.helper.assertConsoleOutput('')
+
 
 class TestStatusReporterJson(unittest.TestCase):
     def setUp(self):
@@ -361,6 +380,17 @@ class TestStatusReporterJson(unittest.TestCase):
                 'reason': 'Unstable reason'
             })
 
+    def test_Aborted(self):
+        with self.helper.factory.status_reporter as status_reporter:
+            raise AbortError(143)
+        self.assertFalse(status_reporter.failed)
+        self.helper.executor.exit.assert_called_with(143)
+        self.helper.assertConsoleOutput('')
+        self.helper.assertOutputJsonFile('ws/logs/status.json', {
+                'result': 'ABORTED',
+                'reason': None
+            })
+
 
 class TestStatusReporterNoPropagate(unittest.TestCase):
     def setUp(self):
@@ -381,6 +411,15 @@ class TestStatusReporterNoPropagate(unittest.TestCase):
         self.helper.assertOutputJsonFile('ws/logs/status.json', {
                 'result': 'FAILURE',
                 'reason': 'Failure reason'
+            })
+
+    def test_Aborted(self):
+        with self.helper.factory.status_reporter as status_reporter:
+            raise AbortError(143)
+        self.assertFalse(self.helper.executor.exit.called)
+        self.helper.assertOutputJsonFile('ws/logs/status.json', {
+                'result': 'ABORTED',
+                'reason': None
             })
 
 if __name__ == '__main__':

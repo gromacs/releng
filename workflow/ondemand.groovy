@@ -149,6 +149,7 @@ def doChildBuild(bld, jobName, parameters)
     def childBuild = build job: jobName, parameters: parameters, propagate: false
     bld.url = childBuild.absoluteUrl
     bld.number = childBuild.number
+    // TODO: Add handling for unsuccessful-reason.log from the child builds.
     bld.status = [
             'result': childBuild.result
         ]
@@ -166,8 +167,6 @@ def addSummaryForTriggeredBuilds(builds)
         Builds:
         <table>
         """.stripIndent()
-    // TODO: Add handling for unsuccessful-reason.log from the child builds
-    // (also for the message posted back to Gerrit below).
     for (int i = 0; i != builds.size(); ++i) {
         def bld = builds[i]
         if (bld.url) {
@@ -186,20 +185,20 @@ def addSummaryForTriggeredBuilds(builds)
                   <td>${bld.status.result}</td>
                 </tr>
                 """.stripIndent()
-            if (bld.status.reason) {
-                text += """\
-                    <tr>
-                      <td />
-                      <td colspan=2>
-                        <pre>
-                    """.stripIndent()
-                text += bld.status.reason
-                text += """
-                        </pre>
-                      </td>
-                    </tr>
-                    """.stripIndent()
-            }
+        }
+        if (bld.status.reason) {
+            text += """\
+                <tr>
+                  <td />
+                  <td colspan=2>
+                    <pre>
+                """.stripIndent()
+            text += bld.status.reason
+            text += """
+                    </pre>
+                  </td>
+                </tr>
+                """.stripIndent()
         }
     }
     text += "</table>"
@@ -238,7 +237,13 @@ def doPostBuildActions(builds, gerrit_info)
 def getBuildInfoForReleng(builds)
 {
     return builds.collect {
-            [ 'title': it.title, 'url': it.url, 'desc': it.desc, 'result': it.status.result ]
+            [
+                'title': it.title,
+                'url': it.url,
+                'desc': it.desc,
+                'result': it.status.result,
+                'reason': it.status.reason
+            ]
         }
 }
 
