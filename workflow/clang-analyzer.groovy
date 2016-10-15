@@ -1,12 +1,11 @@
 utils = load 'releng/workflow/utils.groovy'
-utils.setEnvForRelengFromBuildParameters('gromacs')
+utils.setEnvForReleng('gromacs')
 utils.checkoutDefaultProject()
 utils.readBuildRevisions()
 config = utils.processBuildScriptConfig('clang-analyzer')
 
 def doBuild()
 {
-    utils.setEnvForRelengSecondaryCheckouts()
     node (config.labels)
     {
         timestamps {

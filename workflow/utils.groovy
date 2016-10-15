@@ -1,7 +1,27 @@
 @NonCPS
-def setEnvForRelengFromBuildParameters(defaultProject)
+def setEnvForReleng(defaultProject)
 {
-    // Most of this becomes unnecessary if JENKINS-30910 is resolved.
+    setBuildParametersToEnv()
+    env.CHECKOUT_PROJECT = 'releng'
+    env.CHECKOUT_REFSPEC = RELENG_REFSPEC
+    if (env.GERRIT_PROJECT == 'releng') {
+        env.CHECKOUT_REFSPEC = GERRIT_REFSPEC
+    }
+    if (env.GERRIT_PROJECT) {
+        this.defaultProject = env.GERRIT_PROJECT
+        this.defaultProjectRefspec = env.GERRIT_REFSPEC
+    } else {
+        this.defaultProject = defaultProject
+        this.defaultProjectRefspec = env."${defaultProject.toUpperCase()}_REFSPEC"
+    }
+}
+
+@NonCPS
+def setBuildParametersToEnv()
+{
+    // All of this should become unnecessary after we upgrade to latest
+    // pipeline plugins (and we can switch in many places from using env
+    // to using params, which is clearer).
     setEnvFromBindingIfExists('GROMACS_REFSPEC')
     setEnvFromBindingIfExists('GROMACS_HASH')
     setEnvFromBindingIfExists('REGRESSIONTESTS_REFSPEC')
@@ -12,11 +32,6 @@ def setEnvForRelengFromBuildParameters(defaultProject)
         binding.variables.findAll { it.key.startsWith('GERRIT_') }.each {
             key, value -> env."$key" = value
         }
-        env.CHECKOUT_PROJECT = GERRIT_PROJECT
-        env.CHECKOUT_REFSPEC = GERRIT_REFSPEC
-    } else {
-        env.CHECKOUT_PROJECT = defaultProject
-        env.CHECKOUT_REFSPEC = env."${defaultProject.toUpperCase()}_REFSPEC"
     }
 }
 
@@ -28,28 +43,20 @@ def setEnvFromBindingIfExists(name)
     }
 }
 
-def setEnvForRelengSecondaryCheckouts()
-{
-    // If CHECKOUT_PROJECT is already releng, the refspec may come from GERRIT_REFSPEC,
-    // so we should preserve it.  In all other cases, RELENG_REFSPEC is correct.
-    if (env.CHECKOUT_PROJECT != 'releng') {
-        env.CHECKOUT_PROJECT = 'releng'
-        env.CHECKOUT_REFSPEC = RELENG_REFSPEC
-    }
-}
-
 def checkoutDefaultProject()
 {
+    def checkout_project = defaultProject
+    def checkout_refspec = defaultProjectRefspec
     checkout scm: [$class: 'GitSCM',
-        branches: [[name: env.CHECKOUT_REFSPEC]],
+        branches: [[name: checkout_refspec]],
         doGenerateSubmoduleConfigurations: false,
         extensions: [
-            [$class: 'RelativeTargetDirectory', relativeTargetDir: env.CHECKOUT_PROJECT],
+            [$class: 'RelativeTargetDirectory', relativeTargetDir: checkout_project],
             [$class: 'CleanCheckout'],
             [$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]],
         submoduleCfg: [],
-        userRemoteConfigs: [[refspec: env.CHECKOUT_REFSPEC,
-            url: "ssh://jenkins@gerrit.gromacs.org/${env.CHECKOUT_PROJECT}.git"]]]
+        userRemoteConfigs: [[refspec: checkout_refspec,
+            url: "ssh://jenkins@gerrit.gromacs.org/${checkout_project}.git"]]]
 }
 
 @NonCPS
@@ -66,7 +73,7 @@ def currentBuildParametersForJenkins()
     // Instead, they are dealt with in readBuildRevisions() such that the
     // project-specific REFSPEC parameters contain the correct references.
     // Passing CHECKOUT_PROJECT allows the Changes section work properly.
-    parameters = addBuildParameterIfExists(parameters, 'CHECKOUT_PROJECT')
+    parameters += [$class: 'StringParameterValue', name: 'CHECKOUT_PROJECT', value: defaultProject]
     return parameters
 }
 
@@ -87,7 +94,6 @@ def runPythonScript(contents)
 
 def runRelengScript(contents, propagate = true)
 {
-    assert env.CHECKOUT_PROJECT == 'releng'
     def checkoutScript = """\
         import os
         import subprocess

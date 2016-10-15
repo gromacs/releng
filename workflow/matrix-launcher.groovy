@@ -1,5 +1,5 @@
 utils = load 'releng/workflow/utils.groovy'
-utils.setEnvForRelengFromBuildParameters('gromacs')
+utils.setEnvForReleng('gromacs')
 utils.checkoutDefaultProject()
 utils.readBuildRevisions()
 
