@@ -60,7 +60,8 @@ _HOST_LABELS = {
                               'mpi', 'x11',
                               'valgrind' },
             BS_NIX1310:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9',
-                              'clang-3.4',
+                              # This clang is installed, but we don't want to use it if we can avoid it.
+                              # 'clang-3.4',
                               'icc-15.0', 'icc-16.0',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-7.5',
                               'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2',
@@ -82,6 +83,7 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi' },
             BS_NIX_AMD:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2',
+                              'clang-3.4',
                               'cmake-2.8.12.2', 'cmake-3.4.3',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi' },
