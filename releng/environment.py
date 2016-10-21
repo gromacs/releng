@@ -273,14 +273,13 @@ class BuildEnvironment(object):
         if self.system == System.WINDOWS:
             if self.compiler is None or self.compiler != Compiler.MSVC:
                 raise ConfigurationError('need to specify msvc version for icc on Windows')
-            if version == '16.0':
-                # Note that installing icc 16 over icc 15 uninstalled
-                # the latter, so it is likely not possible to have
-                # multiple icc versions installed on Windows.
+            self.c_compiler = 'icl'
+            self.cxx_compiler = 'icl'
+            self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/machine:x64"'
+            if version == '15.0':
                 self.run_env_script(r'"C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs' + self.compiler_version)
-                self.c_compiler = 'icl'
-                self.cxx_compiler = 'icl'
-                self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/machine:x64"'
+            elif version == '16.0':
+                self.run_env_script(r'"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016\windows\bin\compilervars.bat" intel64 vs' + self.compiler_version)
             else:
                 raise ConfigurationError('only icc 16.0 is supported for Windows builds with the Intel compiler')
         else:
