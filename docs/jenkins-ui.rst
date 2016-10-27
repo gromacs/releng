@@ -65,6 +65,9 @@ other, already done builds when reporting back).  Rebuild All rebuilds all the
 triggered builds, in case all or most of them had problems.
 It is not possible to rebuild only a part of the matrix job.
 
+On-demand builds
+................
+
 Some types of builds are not automatically triggered from Gerrit when a patch
 set is uploaded, but instead need to be requested with a specifically formatted
 comment in Gerrit.  The general format for the comment is ``[JENKINS]``
@@ -108,7 +111,9 @@ With any of the above variants, possible builds are:
 * ``Post-submit``: Triggers a matrix build with the post-submit matrix
   specified in the ``gromacs`` repository.
 * ``Release``: Triggers a release workflow build for testing the release
-  process.
+  process.  If ``no-dev`` is also specified (as ``Release no-dev``), the
+  workflow builds the tarballs without -dev suffixes for actually doing a
+  release.
 * ``Uncrustify``: Triggers the per-patchset uncrustify code style checker build.
 * ``Update``: When triggered from a regressiontests change, generates reference
   data for tests that are missing it, and uploads those back to Gerrit.
@@ -129,6 +134,9 @@ is triggered.
 There can be also other content in the Gerrit comment that requests a build.
 The ``[JENKINS]`` tag must appear at the start of a paragraph, and that
 paragraph as a whole will be interpreted as keywords intended for Jenkins.
+
+Manual triggering
+.................
 
 To manually trigger a build (e.g., for testing job configuration changes), use
 Build with Parameters on the project page, for the same builds that are

@@ -111,7 +111,7 @@ def doReleaseWorkflow(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
     parameters += [$class: 'BooleanParameterValue', name: 'FORCE_REPACKAGING', value: false]
-    parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: false]
+    parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: bld.release_flag]
     doChildBuild(bld, releaseJobName, parameters)
 }
 

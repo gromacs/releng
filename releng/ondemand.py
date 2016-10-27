@@ -79,7 +79,11 @@ class RequestParser(object):
                         'matrix-file': 'pre-submit-matrix'
                     })
             elif token == 'release':
-                self._builds.append({ 'type': 'release' })
+                build = { 'type': 'release', 'release_flag': False }
+                if tokens and tokens[0].lower() == 'no-dev':
+                    tokens.pop(0)
+                    build['release_flag'] = True
+                self._builds.append(build)
             elif token == 'uncrustify':
                 self._builds.append({ 'type': 'uncrustify' })
             elif token == 'update':
