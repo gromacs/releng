@@ -14,6 +14,7 @@ BS_NIX64 = 'bs_nix64'
 BS_NIX_AMD_GPU = 'bs_nix-amd_gpu'
 BS_NIX_AMD = 'bs_nix-amd'
 BS_NIX_DOCS = 'bs_nix-docs'
+BS_NIX_STATIC_ANALYZER = 'bs_nix-static_analyzer'
 BS_WIN2008 = 'bs_Win2008_64'
 BS_WIN2012R2 = 'bs-win2012r2'
 
@@ -70,7 +71,6 @@ _HOST_LABELS = {
                               'valgrind', 'tsan' },
             BS_NIX1404:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.1',
                               'clang-3.5', 'clang-3.6', 'clang-3.7', 'clang-3.8', 'clang-3.9',
-                              'clang-static-analyzer-3.8',
                               # These CUDA versions are installed, but aren't useful to use
                               # 'cuda-6.0', 'cuda-6.5', 'cuda-7.0',
                               'cmake-2.8.12.2', 'cmake-3.0.2', 'cmake-3.4.3',
@@ -88,6 +88,11 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi' },
             BS_NIX_DOCS:    { 'cmake-3.6.1'
+                            },
+            BS_NIX_STATIC_ANALYZER: {
+                              'clang-3.8',
+                              'clang-static-analyzer-3.8',
+                              'cmake-3.5.1'
                             },
             BS_WIN2008:     { 'msvc-2010',
                               'icc-12.1' },

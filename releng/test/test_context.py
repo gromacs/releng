@@ -81,7 +81,7 @@ class TestReadBuildScriptConfig(unittest.TestCase):
                 'script/build.py', 'config.json')
         self.helper.assertOutputJsonFile('/ws/build/config.json', {
                 'opts': ['clang-3.8', 'clang-static-analyzer-3.8'],
-                'host': 'bs_nix1404',
+                'host': 'bs_nix-static_analyzer',
                 'labels': 'clang-3.8 && clang-static-analyzer-3.8'
             })
 
