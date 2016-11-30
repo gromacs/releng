@@ -1,8 +1,10 @@
 utils = load 'releng/workflow/utils.groovy'
+packaging = load 'releng/workflow/packaging.groovy'
 utils.setEnvForReleng('releng')
 utils.checkoutDefaultProject()
 buildRevisions = utils.readBuildRevisions()
 testConfigs = utils.processMatrixConfigs('release-matrix.txt')
+sourceVersionInfo = utils.readSourceVersion()
 
 RELEASE = (RELEASE == 'true')
 FORCE_REPACKAGING = (FORCE_REPACKAGING == 'true')
@@ -14,6 +16,9 @@ def doBuild(sourcePackageJob, regressiontestsPackageJob)
             regressiontests: [ dir: 'regressiontests', revision: buildRevisions.regressiontests, jobName: regressiontestsPackageJob ]
         ]
     tarballBuilds = getOrGenerateTarballs(tarballBuilds)
+    if (!tarballBuilds) {
+        return
+    }
     setTarballEnvironmentVariablesForReleng()
     if (testTarballs(tarballBuilds, testConfigs)) {
         createWebsitePackage(tarballBuilds)
@@ -23,13 +28,23 @@ def doBuild(sourcePackageJob, regressiontestsPackageJob)
 def getOrGenerateTarballs(builds)
 {
     builds = getExistingTarballBuilds(builds)
-    // TODO: If we could extract the source package version earlier
-    // we could trigger the regressiontests tarball build first,
-    // and then test in the source packaging build that the MD5
-    // matches.  That would avoid potentially unnecessary tarball
-    // builds in the process.
+    builds.regressiontests = getOrTriggerTarballBuild(builds.regressiontests, sourceVersionInfo.version)
+    def sourceMd5 = sourceVersionInfo.regressiontestsMd5sum
+    if (builds.regressiontests.md5sum != sourceMd5) {
+        echo "Regressiontests MD5 mismatch:\n" +
+             "source:  ${sourceMd5}\n" +
+             "tarball: ${builds.regressiontests.md5sum}"
+        if (RELEASE) {
+            // TODO: Currently, there is no easy way to pass back failure message
+            // from on-demand builds.
+            // setGerritReview unsuccessfulReason: "Regression test MD5 in source code is incorrect"
+            def summary = manager.createSummary('error')
+            summary.appendText("Regression test MD5 in source code (${sourceMd5}) does not match the regressiontests tarball", true)
+            currentBuild.setResult("FAILURE")
+            return null
+        }
+    }
     builds.gromacs = getOrTriggerTarballBuild(builds.gromacs)
-    builds.regressiontests = getOrTriggerTarballBuild(builds.regressiontests, builds.gromacs.version)
     return builds
 }
 
@@ -44,50 +59,11 @@ def getExistingTarballBuilds(builds)
 
 def getExistingBuild(buildInfo)
 {
-    getPackageArtifacts(buildInfo)
-    return createBuildInfoFromPackageInfo(buildInfo)
-}
-
-def getPackageArtifacts(buildInfo, withTarball = false)
-{
-    def filter = null
-    if (!withTarball) {
-        filter = '**/package-info.log'
-    }
-    if (buildInfo.buildNumber) {
-        step([$class: 'CopyArtifact', projectName: buildInfo.jobName,
-              selector: [$class: 'SpecificBuildSelector', buildNumber: buildInfo.buildNumber],
-              filter: filter, target: "tarballs/${buildInfo.dir}",
-              fingerprintArtifacts: true, flatten: true])
-    } else {
-        step([$class: 'CopyArtifact', projectName: buildInfo.jobName,
-              filter: filter, target: "tarballs/${buildInfo.dir}",
-              fingerprintArtifacts: true, flatten: true])
-    }
-}
-
-def createBuildInfoFromPackageInfo(buildInfo)
-{
-    def props = utils.readPropertyFile("tarballs/${buildInfo.dir}/package-info.log")
-    def version = props.PACKAGE_VERSION
-    return [
-            dir: buildInfo.dir,
-            revision: buildInfo.revision,
-            jobName: buildInfo.jobName,
-            buildNumber: props.BUILD_NUMBER,
-            version: stripDevSuffix(version),
-            isRelease: !version.endsWith('-dev'),
-            md5sum: props.MD5SUM,
-            props: props
-        ]
-}
-
-def stripDevSuffix(version) {
-    def match = version =~ /(.*)-dev$/
-    if (match) {
-        version = match.group(1)
-    }
-    return version
+    def newInfo = packaging.getPackageInfo(buildInfo.dir, buildInfo.jobName, buildInfo.buildNumber)
+    newInfo.dir = buildInfo.dir
+    newInfo.revision = buildInfo.revision
+    newInfo.jobName = buildInfo.jobName
+    return newInfo
 }
 
 def getOrTriggerTarballBuild(buildInfo, version = null)
@@ -137,7 +113,7 @@ def addTarballSummary(buildInfo, wasTriggered)
         <table>
           <tr>
             <td><b>${title}</b>:</td>
-            <td>${buildInfo.props.PACKAGE_FILE_NAME}</td>
+            <td>${buildInfo.packageFileName}</td>
           </tr>
           <tr>
             <td>Build:</td>
@@ -182,21 +158,28 @@ def runSingleTestConfig(tarballBuilds, config)
     // defined matching slaves.py.
     node(config.host) {
         config.host = env.NODE_NAME
-        getPackageArtifacts(tarballBuilds.gromacs, true)
-        getPackageArtifacts(tarballBuilds.regressiontests, true)
+        getTarball(tarballBuilds.gromacs)
+        getTarball(tarballBuilds.regressiontests)
         def opts = config.opts.clone()
         opts.add('out-of-source')
         def pythonOpts = listAsPythonList(opts)
         // TODO: Timeout.
         timestamps {
-            // TODO: Add a test somewhere that ensures that for a release
-            // build, the MD5 sum specified in the source repository matches
-            // the regression tests tarball.
             config.status = utils.runRelengScript("""\
                 releng.run_build('gromacs', releng.JobType.RELEASE, ${pythonOpts})
                 """, false)
         }
     }
+}
+
+def getTarball(buildInfo)
+{
+    packaging.getPackageArtifacts(buildInfo.dir, buildInfo.jobName, buildInfo.buildNumber, true)
+}
+
+def getTarballInfo(buildInfo)
+{
+    packaging.getPackageArtifacts(buildInfo.dir, buildInfo.jobName, buildInfo.buildNumber, false)
 }
 
 @NonCPS
@@ -255,8 +238,8 @@ def createWebsitePackage(tarballBuilds)
 {
     node('doxygen') {
         wrap([$class: 'TimestamperBuildWrapper']) {
-            getPackageArtifacts(tarballBuilds.gromacs, true)
-            getPackageArtifacts(tarballBuilds.regressiontests)
+            getTarball(tarballBuilds.gromacs)
+            getTarballInfo(tarballBuilds.regressiontests)
             utils.runRelengScript("""\
                 releng.run_build('documentation', releng.JobType.RELEASE, ['source-md5=${tarballBuilds.gromacs.md5sum}'])
                 """)

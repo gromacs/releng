@@ -112,17 +112,43 @@ def do_ondemand_post_build(inputfile, outputfile):
     with factory.status_reporter:
         do_post_build(factory, inputfile, outputfile)
 
-def get_build_revisions(filename):
-    """Writes out information about revisions used in the build.
+def get_build_revisions(outputfile):
+    """Provides information about revisions used in the build.
 
-    Information is written as JSON.
+    Information is written as a JSON file that can be read from a workflow
+    script calling this (a temporary file is by far the simplest way to pass
+    the information out).
 
     Args:
-        filename (str): File to write the information, under logs/.
+        outputfile (str): File to write the information to, under logs/.
     """
     from factory import ContextFactory
     factory = ContextFactory()
     with factory.status_reporter:
         workspace = factory.workspace
         workspace._clear_workspace_dirs()
-        workspace._get_build_revisions(workspace.get_path_for_logfile(filename))
+        workspace._get_build_revisions(workspace.get_path_for_logfile(outputfile))
+
+def read_source_version_info(outputfile):
+    """Reads version info from the source repository.
+
+    Information is written as a JSON file that can be read from a workflow
+    script calling this (a temporary file is by far the simplest way to pass
+    the information out).
+
+    Args:
+        outputfile (str): File to write the information to, under logs/.
+    """
+    from context import BuildContext
+    from factory import ContextFactory
+    import json
+    factory = ContextFactory()
+    with factory.status_reporter:
+        context = BuildContext._run_build(factory, 'get-version-info', JobType.GERRIT, None)
+        version, regtest_md5sum = context._get_version_info()
+        contents = json.dumps({
+                'version': version,
+                'regressiontestsMd5sum': regtest_md5sum
+            })
+        path = factory.workspace.get_path_for_logfile(outputfile)
+        factory.executor.write_file(path, contents)

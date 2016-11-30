@@ -69,13 +69,17 @@ The general sequence is this:
    and does some preparatory steps.  It also reads a set of configurations to
    test from :file:`release-matrix.txt` in the source repo, using
    ``prepare_multi_configuration_build()`` Python function, and reads the
-   configuration into a data structure.
+   configuration into a data structure.  It also extracts version information
+   from the source repository (using :file:`get-version-info.py` build script),
+   since the regressiontests repository does not contain this.
 2. The workflow checks the latest successful builds in the packaging builds,
    and if these are not built from the correct commit, it triggers new builds
-   for them.  The source tarball is built first, and its version extracted to
-   be used in the regressiontests tarball (since the regressiontests repo does
-   not contain version information).  The packaging builds also compute MD5
-   sums for the tarballs, and these are accessible from Jenkins.
+   for them.  The regressiontests tarball is built first, and its MD5 sum is
+   checked against the one specified in the source tarball.  For a `RELEASE`
+   build, a mismatch fails the build, otherwise it only produces a note in the
+   console output.
+   The packaging builds also compute MD5 sums for the tarballs, and these are
+   accessible from Jenkins.
 3. After the tarballs are available, the workflow runs each configuration
    from the test matrix in parallel, using ``run_build()``, and the standard
    :file:`gromacs.py` build script from the source tarball.
@@ -88,7 +92,7 @@ The general sequence is this:
    the source tarball, which will produce the HTML pages for the documentation
    website.  The generated pages are available from the Jenkins project page,
    as well as from a link on the build summary page.
-   If the RELEASE build parameter is set, a tarball containing all the
+   If the `RELEASE` build parameter is set, a tarball containing all the
    documentation is also archived as an artifact.
 
 In addition to the refspecs to build, the workflow uses two additional build
@@ -126,7 +130,8 @@ The general sequence is:
    and other git data on the build page.
 3. The Jenkins job calls ``doBuild()`` without parameters.  The workflow runs
    the requested builds in parallel, based on the data structure it got in
-   step 1.  All relevant build parameters are forwarded.
+   step 1.  All relevant build parameters are forwarded.  Some actions are
+   handled directly within the workflow instead of triggering a separate build.
 4. After the builds finish, the workflow adds links to the triggered builds
    to the build summary page (while the build is running, the link can be found
    from the console log).  The workflow then uses ``do_ondemand_post_build()``

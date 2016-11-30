@@ -201,10 +201,15 @@ def processRelengStatus(status)
     currentBuild.setResult(result.toString())
 }
 
+def isRelengStatusSuccess(status)
+{
+    return status.result == 'SUCCESS'
+}
+
 def readBuildRevisions()
 {
     runRelengScriptNoCheckout("""\
-        releng.get_build_revisions('build-revisions.json')
+        releng.get_build_revisions(outputfile='build-revisions.json')
         """)
     def revisionList = readJsonFile('logs/build-revisions.json')
     setRevisionsToEnv(revisionList)
@@ -257,26 +262,38 @@ def revisionListToRevisionMap(revisionList)
 
 def processBuildScriptConfig(script)
 {
+    // Information is passed from the Python code using a temporary file named here.
     runRelengScriptNoCheckout("""\
-        releng.read_build_script_config('${script}', 'config.json')
+        releng.read_build_script_config('${script}', outputfile='config.json')
         """)
     return readJsonFile('build/config.json')
 }
 
 def processMatrixConfigsToBuildAxis(filename)
 {
+    // Information is passed from the Python code using a temporary file named here.
     runRelengScriptNoCheckout("""\
-        releng.prepare_multi_configuration_build('${filename}', 'matrix.txt')
+        releng.prepare_multi_configuration_build('${filename}', outputfile='matrix.txt')
         """)
     return readPropertyFile('build/matrix.txt').OPTIONS
 }
 
 def processMatrixConfigs(filename)
 {
+    // Information is passed from the Python code using a temporary file named here.
     runRelengScriptNoCheckout("""\
-        releng.prepare_multi_configuration_build('${filename}', 'matrix.json')
+        releng.prepare_multi_configuration_build('${filename}', outputfile='matrix.json')
         """)
     return readJsonFile('build/matrix.json')
+}
+
+def readSourceVersion()
+{
+    // Information is passed from the Python code using a temporary file named here.
+    runRelengScriptNoCheckout("""\
+        releng.read_source_version_info(outputfile='version.json')
+        """)
+    return readJsonFile('logs/version.json')
 }
 
 @NonCPS

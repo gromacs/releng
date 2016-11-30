@@ -117,6 +117,9 @@ With any of the above variants, possible builds are:
 * ``Uncrustify``: Triggers the per-patchset uncrustify code style checker build.
 * ``Update``: When triggered from a regressiontests change, generates reference
   data for tests that are missing it, and uploads those back to Gerrit.
+* ``Update-regtest-hash``: When triggered from a source change, generates the
+  latest release-versioned regressiontests tarball for that branch, and updates
+  the MD5 in the source repository to match this tarball.
 
 More than one build can be requested with a single comment; the keywords should
 be separated by whitespace.  When the requested builds complete, a link to the

@@ -108,3 +108,5 @@ from scripts in Jenkins build configuration or from workflow scripts
 .. autofunction:: do_ondemand_post_build
 
 .. autofunction:: get_build_revisions
+
+.. autofunction:: read_source_version_info

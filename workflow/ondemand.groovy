@@ -4,12 +4,11 @@ coverageJobName = 'Coverage_Gerrit_master-new-releng'
 cppcheckJobName = 'cppcheck_Gerrit_master-new-releng'
 documentationJobName = 'Documentation_Gerrit_master-new-releng'
 matrixJobName = 'Matrix_OnDemand'
-regtestPackageJobName = 'Regressiontests_package_master'
 releaseJobName = 'Release_workflow_master'
-sourcePackageJobName = 'Source_package_master'
 uncrustifyJobName = 'uncrustify_master-new-releng'
 
 utils = load 'releng/workflow/utils.groovy'
+packaging = load 'releng/workflow/packaging.groovy'
 utils.setEnvForReleng('releng')
 actions = processTriggeringCommentAndGetActions()
 setEnvFromActions(actions.env)
@@ -64,6 +63,7 @@ def getBuildersMap()
             'release': this.&doReleaseWorkflow,
             'source-package': this.&doSourcePackage,
             'uncrustify': this.&doUncrustify,
+            'update-regtest-hash': this.&doUpdateRegressionTestsHash,
             'regressiontests-update': this.&doRegressiontestsUpdate
         ]
 }
@@ -101,10 +101,30 @@ def doMatrix(bld)
 
 def doRegressionTestsPackage(bld)
 {
-    def parameters = utils.currentBuildParametersForJenkins()
-    parameters += [$class: 'StringParameterValue', name: 'PACKAGE_VERSION_STRING', value: 'master']
-    parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: false]
-    doChildBuild(bld, regtestPackageJobName, parameters)
+    bld.title = 'Regressiontests package'
+    createRegressionTestsPackage(bld, 'test', false)
+}
+
+def createRegressionTestsPackage(bld, version, release)
+{
+    def packageInfo = null
+    node('bs_mic') {
+        timestamps {
+            timeout(20) {
+                bld.status = utils.runRelengScript("""\
+                    import os
+                    os.environ['PACKAGE_VERSION_STRING'] = '${version}'
+                    os.environ['RELEASE'] = '${release}'
+                    releng.run_build('package', releng.JobType.GERRIT, None, project=releng.Project.REGRESSIONTESTS)
+                    """, false)
+            }
+        }
+        if (utils.isRelengStatusSuccess(bld.status)) {
+            packageInfo = packaging.readPackageInfo('logs/package-info.log')
+        }
+    }
+    bld.summary = packaging.createPackagingSummaryText(bld.status, packageInfo)
+    return packageInfo
 }
 
 def doReleaseWorkflow(bld)
@@ -117,9 +137,22 @@ def doReleaseWorkflow(bld)
 
 def doSourcePackage(bld)
 {
-    def parameters = utils.currentBuildParametersForJenkins()
-    parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: false]
-    doChildBuild(bld, sourcePackageJobName, parameters)
+    bld.title = 'Source package'
+    node('doxygen') {
+        timestamps {
+            timeout(45) {
+                bld.status = utils.runRelengScript("""\
+                    import os
+                    os.environ['RELEASE'] = 'false'
+                    releng.run_build('source-package', releng.JobType.GERRIT, None)
+                    """, false)
+            }
+        }
+        if (utils.isRelengStatusSuccess(bld.status)) {
+            def packageInfo = packaging.readPackageInfo('logs/package-info.log')
+            bld.summary = packaging.createPackagingSummaryText(bld.status, packageInfo)
+        }
+    }
 }
 
 def doUncrustify(bld)
@@ -128,9 +161,29 @@ def doUncrustify(bld)
     doChildBuild(bld, uncrustifyJobName, parameters)
 }
 
+def doUpdateRegressionTestsHash(bld)
+{
+    bld.title = 'Regressiontests MD5 update'
+    def packageInfo = createRegressionTestsPackage(bld, bld.version, true)
+    if (packageInfo == null) {
+        return
+    }
+    node('pipeline-general')
+    {
+        timestamps {
+            timeout(20) {
+                bld.status = utils.runRelengScript("""\
+                    releng.run_build('update-regtest-hash', releng.JobType.GERRIT, ['md5sum=${packageInfo.md5sum}'])
+                    """, false)
+            }
+        }
+        bld.summary += "<p>Update: ${bld.status.result}</p>"
+    }
+}
+
 def doRegressiontestsUpdate(bld)
 {
-    bld.title = "Regressiontests update"
+    bld.title = 'Regressiontests update'
     node('bs_nix-amd')
     {
         timestamps {
@@ -169,12 +222,16 @@ def addSummaryForTriggeredBuilds(builds)
         """.stripIndent()
     for (int i = 0; i != builds.size(); ++i) {
         def bld = builds[i]
+        def summary = bld.status.result
+        if (bld.summary) {
+            summary = bld.summary
+        }
         if (bld.url) {
             text += """\
                 <tr>
                   <td>${bld.title}</td>
                   <td><a href="${bld.url}">#${bld.number}</a></td>
-                  <td>${bld.status.result}</td>
+                  <td>${summary}</td>
                 </tr>
                 """.stripIndent()
         } else {
@@ -182,7 +239,7 @@ def addSummaryForTriggeredBuilds(builds)
                 <tr>
                   <td>${bld.title}</td>
                   <td/>
-                  <td>${bld.status.result}</td>
+                  <td>${summary}</td>
                 </tr>
                 """.stripIndent()
         }

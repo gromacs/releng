@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 import shutil
+import subprocess
 
 from common import BuildError, CommandError, ConfigurationError
 from common import JobType, Project
@@ -42,6 +43,7 @@ class BuildContext(object):
         self._cwd = factory.cwd
         self._executor = factory.executor
         self._cmd_runner = factory.cmd_runner
+        self._version = None
         self.workspace = factory.workspace
         self.env, self.opts = process_build_options(factory, opts, extra_options)
         self.params = BuildParameters(factory)
@@ -62,7 +64,7 @@ class BuildContext(object):
         self._cwd.chdir(path)
 
     def run_cmd(self, cmd, ignore_failure=False, use_return_code=False,
-            failure_message=None, **kwargs):
+            use_output=False, failure_message=None, **kwargs):
         """Runs a command via subprocess.
 
         This wraps subprocess.call() and check_call() with error-handling code
@@ -79,6 +81,8 @@ class BuildContext(object):
             use_return_code (Optional[bool]): If ``True``, exit code from the
                 command is returned.  Otherwise, non-zero return code fails the
                 build unless ignore_failure is set.
+            use_output (Optional[bool]): If ``True``, the output from the command
+                is returned.  Mutually exclusive with use_return_code.
             failure_message (Optional[str]): If set, provides a friendly
                 message about what in the build fails if this command fails.
                 This will be reported back to Gerrit.
@@ -86,10 +90,15 @@ class BuildContext(object):
         Returns:
             int: Command return code (if ``use_return_code=True``).
         """
-        if use_return_code:
-            return self._cmd_runner.call(cmd, **kwargs)
         try:
-            self._cmd_runner.check_call(cmd, **kwargs)
+            if use_return_code:
+                return self._cmd_runner.call(cmd, **kwargs)
+            elif use_output:
+                if not 'stderr' in kwargs:
+                    kwargs['stderr'] = subprocess.STDOUT
+                return self._cmd_runner.check_output(cmd, **kwargs)
+            else:
+                self._cmd_runner.check_call(cmd, **kwargs)
         except CommandError as e:
             if not ignore_failure:
                 if failure_message is None:
@@ -252,6 +261,18 @@ class BuildContext(object):
         """
         utils.write_property_file(self._executor, path, values)
 
+    def replace_in_file(self, path, pattern, repl):
+        """Performs re.sub() on contents of a file.
+
+        Args:
+            path (str): Path to the file to process.
+            pattern (str): Pattern to replace.
+            repl: See re.sub()
+        """
+        contents = ''.join(self._executor.read_file(path))
+        contents = re.sub(pattern, repl, contents)
+        self._executor.write_file(path, contents)
+
     def make_archive(self, path, root_dir=None, use_git=False, prefix=None):
         """Creates a tar.gz archive.
 
@@ -400,6 +421,21 @@ class BuildContext(object):
                 cmd.extend(['-e', x])
         self.run_cmd(cmd, failure_message='gcovr failed')
 
+    def set_version_info(self, version, regtest_md5sum):
+        """Provides source version information from a build script.
+
+        This method supports the `get-version-info.py` build script and allows
+        that script to pass out the version information without writing it into
+        a file that would then be read back.
+        """
+        self._version = version
+        self._regtest_md5sum = regtest_md5sum
+
+    def _get_version_info(self):
+        """Retrieves version info set with set_version_info()."""
+        assert self._version
+        return self._version, self._regtest_md5sum
+
     @staticmethod
     def _run_build(factory, build, job_type, opts):
         """Runs the actual build.
@@ -421,13 +457,12 @@ class BuildContext(object):
         workspace._check_projects()
         out_of_source = script.build_out_of_source or context.opts.out_of_source
         workspace._init_build_dir(out_of_source)
-        context.chdir(workspace.build_dir)
         if factory.default_project == Project.GROMACS:
             gromacs_dir = workspace.get_project_dir(Project.GROMACS)
             version = cmake.read_cmake_minimum_version(factory.executor, gromacs_dir)
             context.env._set_cmake_minimum_version(version)
-        utils.flush_output()
-        script.do_build(context)
+        script.do_build(context, factory.cwd)
+        return context
 
     @staticmethod
     def _read_build_script_config(factory, script_name, outputfile):

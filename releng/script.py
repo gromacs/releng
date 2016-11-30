@@ -11,6 +11,7 @@ from common import Enum
 from common import BuildType, Compiler, FftLibrary, JobType, Project, Simd, System
 from integration import ParameterTypes
 from options import OptionTypes
+import utils
 
 class BuildScript(object):
     """
@@ -64,10 +65,13 @@ class BuildScript(object):
         self.extra_options = build_globals.get('extra_options', dict())
         self.extra_projects = build_globals.get('extra_projects', [])
 
-    def do_build(self, context):
+    def do_build(self, context, cwd):
         """Calls do_build() in the build script.
 
         Args:
             context (BuildContext): Context to pass to the build script.
         """
+        utils.flush_output()
+        cwd.pushd(context.workspace.build_dir)
         self._do_build(context)
+        cwd.popd()

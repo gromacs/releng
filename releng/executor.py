@@ -137,6 +137,7 @@ class CurrentDirectoryTracker(object):
 
     def __init__(self):
         self.cwd = os.getcwd()
+        self._dirstack = []
 
     def chdir(self, path):
         assert os.path.isabs(path)
@@ -146,6 +147,13 @@ class CurrentDirectoryTracker(object):
         if not os.path.isabs(path):
             return os.path.join(self.cwd, path)
         return path
+
+    def pushd(self, path):
+        self._dirstack.append(self.cwd)
+        self.chdir(path)
+
+    def popd(self):
+        self.chdir(self._dirstack.pop())
 
 class CommandRunner(object):
 

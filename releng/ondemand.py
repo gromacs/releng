@@ -4,9 +4,10 @@ Utilities for handling on-demand builds (triggered from Gerrit comments)
 import json
 import os.path
 
-from common import BuildError, Project
+from common import BuildError, JobType, Project
 from integration import RefSpec
 from matrixbuild import get_build_configs, get_options_string
+from script import BuildScript
 
 def get_actions_from_triggering_comment(factory, outputfile):
     workspace = factory.workspace
@@ -93,6 +94,8 @@ class RequestParser(object):
                 if project == Project.GROMACS:
                     raise BuildError('Update only makes sense for regressiontests changes')
                 self._builds.append({ 'type': 'regressiontests-update' })
+            elif token == 'update-regtest-hash':
+                self._builds.append({ 'type': 'update-regtest-hash' })
             else:
                 raise BuildError('Unknown request: ' + request)
 
@@ -164,11 +167,26 @@ class RequestParser(object):
         if not self._builds:
             self._builds = self._default_builds
         for build in self._builds:
-            if build['type'] == 'matrix':
+            build_type = build['type']
+            if build_type == 'matrix':
                 self._workspace._checkout_project(Project.GROMACS)
                 configs = get_build_configs(self._factory, build['matrix-file'])
                 del build['matrix-file']
                 build['options'] = get_options_string(configs)
+            elif build_type == 'update-regtest-hash':
+                self._workspace._checkout_project(Project.GROMACS)
+                build_script_path = self._workspace._resolve_build_input_file('get-version-info', '.py')
+                script = BuildScript(self._factory.executor, build_script_path)
+                context = self._factory.create_context(JobType.GERRIT, None, None)
+                assert not script.build_opts
+                assert not script.build_out_of_source
+                assert not script.extra_options
+                assert not script.extra_projects
+                self._workspace._init_build_dir(False)
+                script.do_build(context, self._factory.cwd)
+                version, md5sum = context._get_version_info()
+                build['version'] = version
+                build['md5sum'] = md5sum
         result = { 'builds': self._builds }
         if self._env:
             result['env'] = self._env
