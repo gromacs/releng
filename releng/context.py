@@ -4,7 +4,6 @@ Top-level interface for build scripts to the releng package.
 import os
 import glob
 import hashlib
-import json
 import re
 import shutil
 import subprocess
@@ -464,7 +463,7 @@ class BuildContext(object):
         return context
 
     @staticmethod
-    def _read_build_script_config(factory, script_name, outputfile):
+    def _read_build_script_config(factory, script_name):
         workspace = factory.workspace
         workspace._clear_workspace_dirs()
         workspace._checkout_project(factory.default_project)
@@ -472,7 +471,4 @@ class BuildContext(object):
         script = BuildScript(factory.executor, build_script_path)
         config = BuildConfig(script.build_opts)
         config = select_build_hosts(factory, [config])[0]
-        workspace._init_build_dir(out_of_source=True)
-        outputpath = os.path.join(workspace.build_dir, outputfile)
-        contents = json.dumps(config.to_dict())
-        factory.executor.write_file(outputpath, contents)
+        return config.to_dict()

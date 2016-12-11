@@ -3,7 +3,7 @@ Interfacing with other systems (Gerrit, Jenkins)
 
 This module should contain all code related to interacting with Gerrit
 and as much as possible of the code related to interacting with the Jenkins job
-configuration.
+configuration and passing information back to workflow Groovy scripts.
 """
 from __future__ import print_function
 
@@ -296,6 +296,7 @@ class StatusReporter(object):
         self.failed = False
         self._aborted = False
         self._unsuccessful_reason = []
+        self.return_value = None
         self._tracebacks = tracebacks
 
     def __enter__(self):
@@ -382,10 +383,13 @@ class StatusReporter(object):
         contents = None
         ext = os.path.splitext(self._status_file)[1]
         if ext == '.json':
-            contents = json.dumps({
+            output = {
                     'result': result,
                     'reason': reason
-                })
+                }
+            if result == 'SUCCESS' and self.return_value:
+                output['return_value'] = self.return_value
+            contents = json.dumps(output, indent=2)
         elif reason:
             contents = reason + '\n'
         if contents:

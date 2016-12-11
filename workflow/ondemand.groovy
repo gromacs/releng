@@ -19,10 +19,26 @@ utils.readBuildRevisions()
 def processTriggeringCommentAndGetActions()
 {
     env.MANUAL_COMMENT_TEXT = MANUAL_COMMENT_TEXT
-    utils.runRelengScriptNoCheckout("""\
-        releng.get_actions_from_triggering_comment('actions.json')
+    // Information is returned as
+    //   {
+    //     builds: [
+    //       {
+    //         type: ...,
+    //         // values specific to build type
+    //       },
+    //       ...
+    //     ],
+    //     env: {
+    //       ...
+    //     },
+    //     gerrit_info: {
+    //       // opaque data passed back to do_ondemand_post_build()
+    //     }
+    //   }
+    def status = utils.runRelengScriptNoCheckout("""\
+        releng.get_actions_from_triggering_comment()
         """)
-    return utils.readJsonFile('build/actions.json')
+    return status.return_value
 }
 
 @NonCPS
@@ -282,10 +298,15 @@ def doPostBuildActions(builds, gerrit_info)
         // the build instead of leaving it running forever...
         timeout(1) {
             utils.writeJsonFile('build/actions.json', data)
-            utils.runRelengScript("""\
-                releng.do_ondemand_post_build('build/actions.json', 'message.json')
+            // Information is returned as
+            //   {
+            //     url: ...,
+            //     message: ...
+            //   }
+            def status = utils.runRelengScript("""\
+                releng.do_ondemand_post_build('build/actions.json')
                 """)
-            messages = utils.readJsonFile('build/message.json')
+            messages = status.return_value
         }
     }
     return messages

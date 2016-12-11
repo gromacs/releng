@@ -24,13 +24,9 @@ class TestPrepareBuildMatrix(unittest.TestCase):
             ]
         self.helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(input_lines) + '\n')
-        prepare_build_matrix(factory, 'pre-submit-matrix', 'matrix.txt')
-        self.assertEqual(executor.method_calls, [
-                mock.call.ensure_dir_exists('ws/build', ensure_empty=True),
-                mock.call.read_file('ws/gromacs/admin/builds/pre-submit-matrix.txt'),
-                mock.call.write_file('ws/build/matrix.txt',
-                    'OPTIONS "{0} host=bs_nix1310" "{1} host=bs_nix-amd" "{2} host=bs-win2012r2" "{3} host=bs-win2012r2"\n'.format(*[x.strip() for x in input_lines]))
-            ])
+        prepare_build_matrix(factory, 'pre-submit-matrix', as_axis=True)
+        self.assertEqual(factory.status_reporter.return_value,
+                '"{0} host=bs_nix1310" "{1} host=bs_nix-amd" "{2} host=bs-win2012r2" "{3} host=bs-win2012r2"'.format(*[x.strip() for x in input_lines]))
 
     def test_PrepareBuildMatrixJson(self):
         factory = self.helper.factory
@@ -41,8 +37,8 @@ class TestPrepareBuildMatrix(unittest.TestCase):
             ]
         self.helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(input_lines) + '\n')
-        prepare_build_matrix(factory, 'pre-submit-matrix', 'matrix.json')
-        self.helper.assertOutputJsonFile('ws/build/matrix.json', [
+        prepare_build_matrix(factory, 'pre-submit-matrix', as_axis=False)
+        self.assertEqual(factory.status_reporter.return_value, [
                 {
                     "host": "bs_nix1310",
                     "labels": "cuda-5.0 && gcc-4.6",
@@ -53,12 +49,6 @@ class TestPrepareBuildMatrix(unittest.TestCase):
                     "labels": "msvc-2013",
                     "opts": ["msvc-2013"]
                 }
-            ])
-
-        self.assertEqual(executor.method_calls, [
-                mock.call.ensure_dir_exists('ws/build', ensure_empty=True),
-                mock.call.read_file('ws/gromacs/admin/builds/pre-submit-matrix.txt'),
-                mock.call.write_file('ws/build/matrix.json', mock.ANY)
             ])
 
 if __name__ == '__main__':

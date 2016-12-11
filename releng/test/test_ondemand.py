@@ -17,20 +17,15 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Coverage')
             })
         factory = helper.factory
-        executor = helper.executor
-        get_actions_from_triggering_comment(factory, 'actions.json')
-        helper.assertOutputJsonFile('ws/build/actions.json', {
+        result = get_actions_from_triggering_comment(factory)
+        self.assertEqual(result, {
                 'builds': [
                         {
                             'type': 'coverage'
                         }
                     ]
             })
-
-        self.assertEqual(executor.method_calls, [
-                mock.call.ensure_dir_exists('ws/build', ensure_empty=True),
-                mock.call.write_file('ws/build/actions.json', mock.ANY)
-            ])
+        self.assertEqual(factory.executor.method_calls, [])
 
     def test_PackageRequestForSource(self):
         helper = TestHelper(self, workspace='ws', env={
@@ -39,20 +34,15 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Package')
             })
         factory = helper.factory
-        executor = helper.executor
-        get_actions_from_triggering_comment(factory, 'actions.json')
-        helper.assertOutputJsonFile('ws/build/actions.json', {
+        result = get_actions_from_triggering_comment(factory)
+        self.assertEqual(result, {
                 'builds': [
                         {
                             'type': 'source-package'
                         }
                     ]
             })
-
-        self.assertEqual(executor.method_calls, [
-                mock.call.ensure_dir_exists('ws/build', ensure_empty=True),
-                mock.call.write_file('ws/build/actions.json', mock.ANY)
-            ])
+        self.assertEqual(factory.executor.method_calls, [])
 
     def test_PackageRequestForReleng(self):
         helper = TestHelper(self, workspace='ws', env={
@@ -61,9 +51,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Package')
             })
         factory = helper.factory
-        executor = helper.executor
-        get_actions_from_triggering_comment(factory, 'actions.json')
-        helper.assertOutputJsonFile('ws/build/actions.json', {
+        result = get_actions_from_triggering_comment(factory)
+        self.assertEqual(result, {
                 'builds': [
                         {
                             'type': 'source-package'
@@ -73,11 +62,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         }
                     ]
             })
-
-        self.assertEqual(executor.method_calls, [
-                mock.call.ensure_dir_exists('ws/build', ensure_empty=True),
-                mock.call.write_file('ws/build/actions.json', mock.ANY)
-            ])
+        self.assertEqual(factory.executor.method_calls, [])
 
     def test_PostSubmitRequest(self):
         helper = TestHelper(self, workspace='ws', env={
@@ -90,9 +75,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         helper.add_input_file('ws/gromacs/admin/builds/post-submit-matrix.txt',
                 '\n'.join(input_lines) + '\n')
         factory = helper.factory
-        executor = helper.executor
-        get_actions_from_triggering_comment(factory, 'actions.json')
-        helper.assertOutputJsonFile('ws/build/actions.json', {
+        result = get_actions_from_triggering_comment(factory)
+        self.assertEqual(result, {
                 'builds': [
                         {
                             'type': 'matrix',
@@ -113,10 +97,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(input_lines) + '\n')
         factory = helper.factory
-        executor = helper.executor
-        get_actions_from_triggering_comment(factory, 'actions.json')
-        self.maxDiff = None
-        helper.assertOutputJsonFile('ws/build/actions.json', {
+        result = get_actions_from_triggering_comment(factory)
+        self.assertEqual(result, {
                 'builds': [
                         {
                             'type': 'matrix',
@@ -151,9 +133,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(input_lines) + '\n')
         factory = helper.factory
-        executor = helper.executor
-        get_actions_from_triggering_comment(factory, 'actions.json')
-        helper.assertOutputJsonFile('ws/build/actions.json', {
+        result = get_actions_from_triggering_comment(factory)
+        self.assertEqual(result, {
                 'builds': [
                         {
                             'type': 'matrix',
@@ -187,9 +168,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(input_lines) + '\n')
         factory = helper.factory
-        executor = helper.executor
-        get_actions_from_triggering_comment(factory, 'actions.json')
-        helper.assertOutputJsonFile('ws/build/actions.json', {
+        result = get_actions_from_triggering_comment(factory)
+        self.assertEqual(result, {
                 'builds': [
                         {
                             'type': 'matrix',
@@ -212,9 +192,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet clang-analyzer')
             })
         factory = helper.factory
-        executor = helper.executor
-        get_actions_from_triggering_comment(factory, 'actions.json')
-        helper.assertOutputJsonFile('ws/build/actions.json', {
+        result = get_actions_from_triggering_comment(factory)
+        self.assertEqual(result, {
                 'builds': [
                         {
                             'type': 'clang-analyzer'
@@ -242,9 +221,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(input_lines) + '\n')
         factory = helper.factory
-        executor = helper.executor
-        get_actions_from_triggering_comment(factory, 'actions.json')
-        helper.assertOutputJsonFile('ws/build/actions.json', {
+        result = get_actions_from_triggering_comment(factory)
+        self.assertEqual(result, {
                 'builds': [
                         {
                             'type': 'matrix',
@@ -272,8 +250,8 @@ class TestDoPostBuild(unittest.TestCase):
         helper.add_input_json_file('actions.json', {
                 'builds': []
             })
-        do_post_build(factory, 'actions.json', 'message.json')
-        helper.assertOutputJsonFile('ws/build/message.json', {
+        result = do_post_build(factory, 'actions.json')
+        self.assertEqual(result, {
                 'url': None,
                 'message': None
             })
@@ -290,8 +268,8 @@ class TestDoPostBuild(unittest.TestCase):
                         }
                     ]
             })
-        do_post_build(factory, 'actions.json', 'message.json')
-        helper.assertOutputJsonFile('ws/build/message.json', {
+        result = do_post_build(factory, 'actions.json')
+        self.assertEqual(result, {
                 'url': 'http://my_build',
                 'message': None
             })
@@ -309,8 +287,8 @@ class TestDoPostBuild(unittest.TestCase):
                         }
                     ]
             })
-        do_post_build(factory, 'actions.json', 'message.json')
-        helper.assertOutputJsonFile('ws/build/message.json', {
+        result = do_post_build(factory, 'actions.json')
+        self.assertEqual(result, {
                 'url': 'http://my_build',
                 'message': 'Failure reason'
             })
@@ -328,8 +306,8 @@ class TestDoPostBuild(unittest.TestCase):
                         }
                     ]
             })
-        do_post_build(factory, 'actions.json', 'message.json')
-        helper.assertOutputJsonFile('ws/build/message.json', {
+        result = do_post_build(factory, 'actions.json')
+        self.assertEqual(result, {
                 'url': None,
                 'message': None
             })
@@ -348,8 +326,8 @@ class TestDoPostBuild(unittest.TestCase):
                         }
                     ]
             })
-        do_post_build(factory, 'actions.json', 'message.json')
-        helper.assertOutputJsonFile('ws/build/message.json', {
+        result = do_post_build(factory, 'actions.json')
+        self.assertEqual(result, {
                 'url': None,
                 'message': 'Failure reason'
             })
@@ -373,8 +351,8 @@ class TestDoPostBuild(unittest.TestCase):
                         'patchset': 5
                     }
             })
-        do_post_build(factory, 'actions.json', 'message.json')
-        helper.assertOutputJsonFile('ws/build/message.json', {
+        result = do_post_build(factory, 'actions.json')
+        self.assertEqual(result, {
                 'url': 'http://my_build',
                 'message': None
             })
@@ -392,8 +370,8 @@ class TestDoPostBuild(unittest.TestCase):
                         }
                     ]
             })
-        do_post_build(factory, 'actions.json', 'message.json')
-        helper.assertOutputJsonFile('ws/build/message.json', {
+        result = do_post_build(factory, 'actions.json')
+        self.assertEqual(result, {
                 'url': 'http://my_build (cross-verify)',
                 'message': None
             })
@@ -415,8 +393,8 @@ class TestDoPostBuild(unittest.TestCase):
                         }
                     ]
             })
-        do_post_build(factory, 'actions.json', 'message.json')
-        helper.assertOutputJsonFile('ws/build/message.json', {
+        result = do_post_build(factory, 'actions.json')
+        self.assertEqual(result, {
                 'url': None,
                 'message': 'http://my_build (cross-verify): SUCCESS\nhttp://my_build2: SUCCESS'
             })
@@ -439,8 +417,8 @@ class TestDoPostBuild(unittest.TestCase):
                         }
                     ]
             })
-        do_post_build(factory, 'actions.json', 'message.json')
-        helper.assertOutputJsonFile('ws/build/message.json', {
+        result = do_post_build(factory, 'actions.json')
+        self.assertEqual(result, {
                 'url': None,
                 'message': 'http://my_build (cross-verify): SUCCESS\nhttp://my_build2: FAILURE <<<\nFailure reason\n>>>'
             })
@@ -463,8 +441,8 @@ class TestDoPostBuild(unittest.TestCase):
                         }
                     ]
             })
-        do_post_build(factory, 'actions.json', 'message.json')
-        helper.assertOutputJsonFile('ws/build/message.json', {
+        result = do_post_build(factory, 'actions.json')
+        self.assertEqual(result, {
                 'url': None,
                 'message': 'http://my_build (cross-verify): SUCCESS\nMy title: SUCCESS'
             })

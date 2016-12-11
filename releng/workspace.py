@@ -6,7 +6,6 @@ commands related to setting up and inspecting the workspace.
 """
 from __future__ import print_function
 
-import json
 import os.path
 import tarfile
 
@@ -216,7 +215,7 @@ class Workspace(object):
         path = self.get_log_dir(category=category)
         return os.path.join(path, name)
 
-    def _get_build_revisions(self, filename):
+    def _get_build_revisions(self):
         projects = []
         for project in Project._values:
             if project in self._projects:
@@ -230,8 +229,7 @@ class Workspace(object):
                 sha1 = self._gerrit.get_remote_hash(project, refspec)
                 info = ProjectInfo(project, None, refspec, sha1, None, sha1)
             projects.append(info)
-        contents = json.dumps([project.to_dict() for project in projects])
-        self._executor.write_file(filename, contents)
+        return [project.to_dict() for project in projects]
 
     def _checkout_project(self, project):
         """Checks out the given project if not yet done for this build."""

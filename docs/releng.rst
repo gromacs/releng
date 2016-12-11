@@ -178,16 +178,25 @@ releng scripts use the following mechanisms:
 
 exit code
   The script exits with a non-zero exit code if the build fails, unless
-  ``NO_PROPAGATE_FAILURE`` is set.  If it is set, only an unexpected exception
-  will cause a non-zero exit code.
+  ``NO_PROPAGATE_FAILURE`` is set.  If the environment variable is set, only an
+  unexpected exception will cause a non-zero exit code.
 status file
-  A file that contains the build result is written to ``STATUS_FILE`` (or to
-  :file:`logs/unsuccessful-reason.log` if none is specified).
+  In freestyle jobs, ``STATUS_FILE`` is not specified, and
+  :file:`logs/unsuccessful-reason.log` is written if the build fails or is
+  unstable.  This is intended to be used as the unsuccessful message for Gerrit
+  Trigger in non-workflow builds.
+
+  In workflow builds, ``STATUS_FILE`` is specified as a JSON file, and contains
+  additional information about the result of the execution.  This is used to
+  communicate success/failure back to the workflow script, as well as reason
+  for failures and in some cases, additional return values in case of success.
+
   A reasonable effort is done to try to delete this file at the start of the
   script, so that old versions would not be left if the script fails.
   Even on unexpected errors, a reasonable effort is made to produce the file
   and include the exception information in it.
   If producing this file fails, it is treated as an unexpected error.
+
 console outout
   If the build is unstable, it also ensures that the word ``FAILED`` appears in
   the console log.  This can be used in non-workflow builds to mark the build

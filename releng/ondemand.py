@@ -10,18 +10,11 @@ from integration import RefSpec
 from matrixbuild import get_build_configs, get_options_string
 from script import BuildScript
 
-def get_actions_from_triggering_comment(factory, outputfile):
-    workspace = factory.workspace
-    workspace._init_build_dir(out_of_source=True)
-
-    outputpath = os.path.join(workspace.build_dir, outputfile)
-
+def get_actions_from_triggering_comment(factory):
     request = factory.gerrit.get_triggering_comment()
     parser = RequestParser(factory)
     parser.parse(request)
-    actions = parser.get_actions()
-
-    _write_actions(factory.executor, actions, outputpath)
+    return parser.get_actions()
 
 class RequestParser(object):
     def __init__(self, factory):
@@ -198,16 +191,8 @@ class RequestParser(object):
             self._gerrit.post_cross_verify_start(number, patchnumber)
         return result
 
-def _write_actions(executor, actions, path):
-    executor.write_file(path, json.dumps(actions))
-
-def do_post_build(factory, inputfile, outputfile):
-    executor = factory.executor
-    data = json.loads(''.join(executor.read_file(inputfile)))
-
-    workspace = factory.workspace
-    workspace._init_build_dir(out_of_source=True)
-    outputpath = os.path.join(workspace.build_dir, outputfile)
+def do_post_build(factory, inputfile):
+    data = json.loads(''.join(factory.executor.read_file(inputfile)))
 
     build_messages = _get_build_messages(data)
     url, reason = None, None
@@ -215,12 +200,12 @@ def do_post_build(factory, inputfile, outputfile):
         url, reason = _get_single_url_and_reason(data)
     elif build_messages:
         reason = '\n'.join(build_messages)
-    _write_message_json(executor, outputpath, url, reason)
     if data.has_key('gerrit_info') and data['gerrit_info']:
         gerrit_info = data['gerrit_info']
         change = gerrit_info['change']
         patchset = gerrit_info['patchset']
         factory.gerrit.post_cross_verify_finish(change, patchset, build_messages)
+    return { 'url': url, 'message': reason }
 
 def _get_build_messages(data):
     builds = data['builds']
@@ -255,10 +240,3 @@ def _get_single_url_and_reason(data):
     if build.has_key('reason') and build['reason']:
         reason = build['reason'].rstrip()
     return url, reason
-
-def _write_message_json(executor, path, url, reason):
-    data = {
-            'url': url,
-            'message': reason
-        }
-    executor.write_file(path, json.dumps(data))

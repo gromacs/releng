@@ -60,13 +60,6 @@ def addBuildParameterIfExists(parameters, name)
     return parameters
 }
 
-def runPythonScript(contents)
-{
-    writeFile file: 'build.py', text: contents
-    def returncode = sh script: 'python build.py', returnStatus: true
-    return returncode
-}
-
 def runRelengScript(contents, propagate = true)
 {
     def checkoutScript = """\
@@ -123,6 +116,13 @@ def runRelengScriptInternal(prepareScript, contents, propagate)
         processRelengStatus(status)
     }
     return status
+}
+
+def runPythonScript(contents)
+{
+    writeFile file: 'build.py', text: contents
+    def returncode = sh script: 'python build.py', returnStatus: true
+    return returncode
 }
 
 def isAbortCode(returncode)
@@ -182,10 +182,22 @@ def isRelengStatusSuccess(status)
 
 def readBuildRevisions()
 {
-    runRelengScriptNoCheckout("""\
-        releng.get_build_revisions(outputfile='build-revisions.json')
+    // Information is returned as a list of projects:
+    //   [
+    //     {
+    //       project: ...,
+    //       refspec: ...,
+    //       hash: ...,
+    //       title: ...,
+    //       refspec_env: ...,
+    //       hash_env: ...
+    //     },
+    //     ...
+    //   ]
+    def status = runRelengScriptNoCheckout("""\
+        releng.get_build_revisions()
         """)
-    def revisionList = readJsonFile('logs/build-revisions.json')
+    def revisionList = status.return_value
     setRevisionsToEnv(revisionList)
     addBuildRevisionsSummary(revisionList)
     return revisionListToRevisionMap(revisionList)
@@ -236,38 +248,56 @@ def revisionListToRevisionMap(revisionList)
 
 def processBuildScriptConfig(script)
 {
-    // Information is passed from the Python code using a temporary file named here.
-    runRelengScriptNoCheckout("""\
-        releng.read_build_script_config('${script}', outputfile='config.json')
+    // Information is returned as if a single matrix configuration:
+    //   {
+    //     opts: [...],
+    //     host: ...,
+    //     labels: ...
+    //   }
+    def status = runRelengScriptNoCheckout("""\
+        releng.read_build_script_config('${script}')
         """)
-    return readJsonFile('build/config.json')
+    return status.return_value
 }
 
 def processMatrixConfigsToBuildAxis(filename)
 {
-    // Information is passed from the Python code using a temporary file named here.
-    runRelengScriptNoCheckout("""\
-        releng.prepare_multi_configuration_build('${filename}', outputfile='matrix.txt')
+    // Information is returned as a string suitable as a dynamic axis
+    // in a matrix build.
+    def status = runRelengScriptNoCheckout("""\
+        releng.prepare_multi_configuration_build('${filename}', as_axis=True)
         """)
-    return readPropertyFile('build/matrix.txt').OPTIONS
+    return status.return_value
 }
 
 def processMatrixConfigs(filename)
 {
-    // Information is passed from the Python code using a temporary file named here.
-    runRelengScriptNoCheckout("""\
-        releng.prepare_multi_configuration_build('${filename}', outputfile='matrix.json')
+    // Information is returned as a list of configurations:
+    //   [
+    //     {
+    //       opts: [...],
+    //       host: ...,
+    //       labels: ...
+    //     },
+    //     ...
+    //  ]
+    def status = runRelengScriptNoCheckout("""\
+        releng.prepare_multi_configuration_build('${filename}')
         """)
-    return readJsonFile('build/matrix.json')
+    return status.return_value
 }
 
 def readSourceVersion()
 {
-    // Information is passed from the Python code using a temporary file named here.
-    runRelengScriptNoCheckout("""\
-        releng.read_source_version_info(outputfile='version.json')
+    // Information is returned as:
+    //   {
+    //     version: ...,
+    //     regressiontestsMd5sum: ...
+    //   }
+    def status = runRelengScriptNoCheckout("""\
+        releng.read_source_version_info()
         """)
-    return readJsonFile('logs/version.json')
+    return status.return_value
 }
 
 @NonCPS

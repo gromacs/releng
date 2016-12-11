@@ -77,9 +77,9 @@ class TestReadBuildScriptConfig(unittest.TestCase):
                 def do_build(context):
                     pass
                 """)
-        BuildContext._read_build_script_config(self.helper.factory,
-                'script/build.py', 'config.json')
-        self.helper.assertOutputJsonFile('/ws/build/config.json', {
+        result = BuildContext._read_build_script_config(self.helper.factory,
+                'script/build.py')
+        self.assertEqual(result, {
                 'opts': ['clang-3.8', 'clang-static-analyzer-3.8'],
                 'host': 'bs_nix-static_analyzer',
                 'labels': 'clang-3.8 && clang-static-analyzer-3.8'

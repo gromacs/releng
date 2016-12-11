@@ -23,7 +23,8 @@ parser.add_argument('--run', action='store_true', default=False,
                     help='Actually run the build, instead of only showing what would be done')
 parser.add_argument('-U', '--user', help='User with ssh permissions to Gerrit')
 parser.add_argument('--system', help='Override system for testing')
-parser.add_argument('-N', '--node', help='Override node name for testing')
+parser.add_argument('-N', '--node', default='unknown',
+                    help='Override node name for testing')
 parser.add_argument('-W', '--workspace', help='Workspace root directory')
 parser.add_argument('-B', '--build', help='Build script to run')
 parser.add_argument('-P', '--project', help='Project for the build')
@@ -48,6 +49,7 @@ env.update({
         'GROMACS_REFSPEC': 'HEAD',
         'RELENG_REFSPEC': 'HEAD',
         'REGRESSIONTESTS_REFSPEC': 'HEAD',
+        'STATUS_FILE': 'logs/status.json',
         'WORKSPACE': workspace_root,
         'NODE_NAME': args.node
     })
@@ -60,6 +62,6 @@ if not args.run:
 factory.init_gerrit_integration(user=args.user)
 with factory.status_reporter:
     if args.matrix:
-        prepare_build_matrix(factory, args.matrix, os.path.basename(args.matrix))
+        prepare_build_matrix(factory, args.matrix, as_axis=False)
     else:
         BuildContext._run_build(factory, args.build, args.job_type, args.opts)

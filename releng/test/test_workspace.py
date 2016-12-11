@@ -18,8 +18,8 @@ class TestWorkspace(unittest.TestCase):
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
         workspace = helper.factory.workspace
-        workspace._get_build_revisions('build-revisions.json')
-        helper.assertOutputJsonFile('build-revisions.json', [
+        result = workspace._get_build_revisions()
+        self.assertEqual(result, [
                 {
                     'project': 'gromacs',
                     'hash_env': 'GROMACS_HASH',
@@ -55,8 +55,8 @@ class TestWorkspace(unittest.TestCase):
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
         workspace = helper.factory.workspace
-        workspace._get_build_revisions('build-revisions.json')
-        helper.assertOutputJsonFile('build-revisions.json', [
+        result = workspace._get_build_revisions()
+        self.assertEqual(result, [
                 {
                     'project': 'gromacs',
                     'hash_env': 'GROMACS_HASH',
