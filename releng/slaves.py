@@ -64,7 +64,7 @@ _HOST_LABELS = {
                               # This clang is installed, but we don't want to use it if we can avoid it.
                               # 'clang-3.4',
                               'icc-15.0', 'icc-16.0',
-                              'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-7.5',
+                              'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0',
                               'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
