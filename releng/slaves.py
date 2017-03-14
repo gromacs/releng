@@ -48,6 +48,7 @@ _HOST_LABELS = {
                               'cmake-2.8.8',
                               'sse2' },
             BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6.1',
+                              'clang-4.0',
                               'gcov-4.6', 'gcov-6.1',
                               'icc-12.1', 'icc-13.0', 'icc-15.0', 'icc-16.0',
                               'cmake-3.4.3', 'cmake-3.5.2',
