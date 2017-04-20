@@ -3,6 +3,7 @@ Utilities for handling on-demand builds (triggered from Gerrit comments)
 """
 import json
 import os.path
+import re
 
 from common import BuildError, JobType, Project
 from integration import RefSpec
@@ -44,7 +45,7 @@ class RequestParser(object):
         if token == 'cross-verify':
             tokens.pop(0)
             self._parse_cross_verify(tokens)
-        elif token == 'release-2016':
+        elif re.match(r'^release-\d{4}$', token):
             tokens.pop(0)
             self._process_release_branch(token)
         while tokens:

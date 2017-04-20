@@ -75,7 +75,7 @@ followed by keywords for the build(s) requested.  This mechanism can also be
 used for cross-verification, i.e., verifying a different combination of changes
 than what is triggered by default.  The general format is:
 
-    ``[JENKINS]`` [ ``Cross-verify`` <NNNN> [``quiet``] | ``release-2016`` ] [<builds>]
+    ``[JENKINS]`` [ ``Cross-verify`` <NNNN> [``quiet``] | ``release-<YYYY>`` ] [<builds>]
 
 If ``Cross-verify`` is specified, it builds the current change together with
 the latest patch set of change number NNNN from Gerrit (should be from another
@@ -85,10 +85,11 @@ affected.  For cross-verification with releng changes, the ``[JENKINS]``
 comment needs to be posted in the releng change to ensure that the correct
 releng scripts are used throughout the build.
 
-If ``release-2016`` is specified, it builds the current change together with
-release branch HEADs from other repositories.  This only makes sense for releng
-changes, where it should be run at least once before merging if there is a
-possibility that the changes impact builds in the release branch.  These do not
+If ``release-<YYYY>`` (name of a release branch) is specified, it builds the
+current change together with release branch HEADs from other repositories.
+This only makes sense for releng changes, where it should be run at least once
+before merging if there is a possibility that the changes impact builds in the
+release branches.  These do not
 run automatically (at least for now) to reduce peak load, and make testing
 releng changes easier (since in many cases, the test builds that are actually
 interesting will only run after the matrix builds have been cleared from the
