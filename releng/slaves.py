@@ -14,6 +14,7 @@ BS_NIX_DOCS = 'bs_nix-docs'
 BS_NIX_STATIC_ANALYZER = 'bs_nix-static_analyzer'
 BS_WIN2008 = 'bs_Win2008_64'
 BS_WIN2012R2 = 'bs-win2012r2'
+BS_JETSON_TK1 = 'bs_jetson_tk1'
 
 DOCKER_DEFAULT = 'docker-ubuntu-15.04'
 
@@ -34,6 +35,9 @@ ALL_LABELS = (DOCKER_DEFAULT,)
 # TODO Remove the "gcc-[56].?" and "clang-4.0" labels once the test
 # matrix specifications in the source repos have all been updated to
 # follow the new style in Redmine #2161.
+#
+# TODO: add some kind of cores/executor information to be able to use reasonable build
+#       parallelism (e.g. we should use -j4 on the Jentson ARM slaves).
 _HOST_LABELS = {
             BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2', 'gcc-5',
                               # These CUDA versions are installed, but aren't useful to use
@@ -97,6 +101,10 @@ _HOST_LABELS = {
             BS_WIN2012R2:   { 'msvc-2013', 'msvc-2015',
                               'icc-16.0',
                               'cmake-2.8.12.2', 'cmake-3.2.3', 'cmake-3.3.0', 'cmake-3.6.1' },
+            BS_JETSON_TK1:  { 'gcc-4.8', 'gcc-4.9', 'gcc-5',
+                              'arm_neon',
+                              'cmake-3.8.1',
+                              'cuda-6.5' },
             DOCKER_DEFAULT: {} # TODO
         }
 
@@ -113,6 +121,7 @@ _MATRIX_HOSTS = {
             BS_NIX1404,
             BS_NIX_AMD_GPU,
             BS_NIX_AMD,
+            BS_JETSON_TK1,
             BS_WIN2012R2
         }
 
@@ -129,6 +138,8 @@ _SPECIAL_HOST_GROUPS = [
             # Special-purpose VMs
             {BS_NIX_STATIC_ANALYZER},
             {BS_NIX_DOCS},
+            # ARM slaves
+            {BS_JETSON_TK1},
             # GPU slaves
             {BS_NIX_AMD_GPU, BS_NIX1204, BS_NIX1310}
         ]
