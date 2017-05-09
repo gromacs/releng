@@ -268,6 +268,10 @@ class BuildEnvironment(object):
         clang_path = os.path.dirname(os.path.realpath(clang_path))
         symbolizer_path = os.path.join(clang_path, 'llvm-symbolizer')
         self.set_env_var('ASAN_SYMBOLIZER_PATH', symbolizer_path)
+        # Test binaries compiled with clang OpenMP support need to
+        # find at run time the libomp.so that matches the compiler
+        # (libgomp.so is not suitable).
+        self.set_env_var('LD_LIBRARY_PATH', os.path.join(clang_path, '../lib'))
 
     def _init_icc(self, version):
         if self.system == System.WINDOWS:

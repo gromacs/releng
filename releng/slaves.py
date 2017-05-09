@@ -84,7 +84,7 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi' },
             BS_NIX_AMD:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2',
-                              'clang-3.4',
+                              'clang-3.4', 'clang-4',
                               'cmake-2.8.12.2', 'cmake-3.4.3',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi' },
