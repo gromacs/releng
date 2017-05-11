@@ -1,11 +1,12 @@
 // TODO: Consider what's the best place to have knowledge of these build names.
-clangAnalyzerJobName = 'clang-static-analyzer_Gerrit_master-workflow'
-coverageJobName = 'Coverage_Gerrit_master-new-releng'
-cppcheckJobName = 'cppcheck_Gerrit_master-new-releng'
-documentationJobName = 'Documentation_Gerrit_master-new-releng'
+// TODO: Do more of these actions as part of this workflow, instead of a separate build.
+clangAnalyzerJobName = 'clang_static_analyzer_PreSubmit'
+coverageJobName = 'Coverage_OnDemand'
+cppcheckJobName = 'cppcheck_PreSubmit'
+documentationJobName = 'Documentation_PreSubmit'
 matrixJobName = 'Matrix_OnDemand'
 releaseJobName = 'Release_workflow_master'
-uncrustifyJobName = 'uncrustify_master-new-releng'
+uncrustifyJobName = 'uncrustify_PreSubmit'
 
 utils = load 'releng/workflow/utils.groovy'
 packaging = load 'releng/workflow/packaging.groovy'
