@@ -30,6 +30,9 @@ ALL_LABELS = (DOCKER_DEFAULT,)
 # the labels assigned to slaves in Jenkins: the workflow plugin supports
 # selecting the node using a label expression, which we can easily construct
 # directly in options.py.
+#
+# Versions that are commented out are installed and working, but are not
+# part of the description, as a crude form of load balancing.
 _HOST_LABELS = {
             BS_CENTOS63:    { 'gcc-4.4', 'gcc-5.2',
                               'cuda-5.5',
@@ -42,7 +45,7 @@ _HOST_LABELS = {
                               # 'cuda-6.5', 'cuda-7.0', 'cuda-7.5',
                               'icc-14.0', 'icc-15.0', 'icc-16.0',
                               'phi',
-                              'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1',
+                              'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1', 'cmake-3.8.1'
                               'sse2', 'sse4.1', 'avx_256', 'mic' },
             BS_NIX1004:     { 'gcc-4.1', 'gcc-4.3', 'gcc-4.4',
                               'cmake-2.8.8',
@@ -57,16 +60,17 @@ _HOST_LABELS = {
             BS_NIX1204:     { 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-5.4',
                               'clang-3.3',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-8.0',
-                              'cmake-2.8.8', 'cmake-3.6.1',
+                              'cmake-2.8.8', 'cmake-3.6.1',# 'cmake-3.8.1'
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
                               'valgrind' },
             BS_NIX1310:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9',
                               # This clang is installed, but we don't want to use it if we can avoid it.
                               # 'clang-3.4',
+                              'clang-4',
                               'icc-15.0', 'icc-16.0',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0',
-                              'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2',
+                              'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1'
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
                               'valgrind', 'tsan' },
@@ -91,9 +95,9 @@ _HOST_LABELS = {
             BS_NIX_DOCS:    { 'cmake-3.6.1'
                             },
             BS_NIX_STATIC_ANALYZER: {
-                              'clang-3.8',
-                              'clang-static-analyzer-3.8',
-                              'cmake-3.5.1'
+                              'clang-3.8', 'clang-4',
+                              'clang-static-analyzer-3.8', 'clang-static-analyzer-4',
+                              'cmake-3.5.1', 'cmake-3.7.2'
                             },
             BS_WIN2008:     { 'msvc-2010',
                               'icc-12.1' },
