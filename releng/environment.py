@@ -232,8 +232,6 @@ class BuildEnvironment(object):
         # setup somewhere? Or the C++ standard library become
         # a build option?
         gcctoolchainpath=None
-        if os.getenv('NODE_NAME') == slaves.BS_CENTOS63:
-            gcctoolchainpath='/opt/gcc/5.2.0'
         if os.getenv('NODE_NAME') == slaves.BS_MIC:
             # icc is used here, and is buggy with respect to libstdc++ in gcc-5
             gcctoolchainpath='/opt/gcc/4.9.3'

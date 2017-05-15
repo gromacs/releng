@@ -3,14 +3,11 @@ Information about Jenkins build slaves
 """
 from common import ConfigurationError
 
-BS_CENTOS63 = 'bs_centos63'
 BS_MAC = 'bs_mac'
 BS_MIC = 'bs_mic'
-BS_NIX1004 = 'bs_nix1004'
 BS_NIX1204 = 'bs_nix1204'
 BS_NIX1310 = 'bs_nix1310'
 BS_NIX1404 = 'bs_nix1404'
-BS_NIX64 = 'bs_nix64'
 BS_NIX_AMD_GPU = 'bs_nix-amd_gpu'
 BS_NIX_AMD = 'bs_nix-amd'
 BS_NIX_DOCS = 'bs_nix-docs'
@@ -33,31 +30,26 @@ ALL_LABELS = (DOCKER_DEFAULT,)
 #
 # Versions that are commented out are installed and working, but are not
 # part of the description, as a crude form of load balancing.
+#
+# TODO Remove the "gcc-[56].?" and "clang-4.0" labels once the test
+# matrix specifications in the source repos have all been updated to
+# follow the new style in Redmine #2161.
 _HOST_LABELS = {
-            BS_CENTOS63:    { 'gcc-4.4', 'gcc-5.2',
-                              'cuda-5.5',
-                              'cmake-2.8.12.2', 'cmake-3.6.1',
-                              'sse2', 'sse4.1', 'avx_128_fma',
-                              'mpi',
-                              'valgrind' },
-            BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2',
+            BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2', 'gcc-5',
                               # These CUDA versions are installed, but aren't useful to use
                               # 'cuda-6.5', 'cuda-7.0', 'cuda-7.5',
                               'icc-14.0', 'icc-15.0', 'icc-16.0',
                               'phi',
                               'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1', 'cmake-3.8.1'
                               'sse2', 'sse4.1', 'avx_256', 'mic' },
-            BS_NIX1004:     { 'gcc-4.1', 'gcc-4.3', 'gcc-4.4',
-                              'cmake-2.8.8',
-                              'sse2' },
-            BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6.1',
-                              'clang-4.0',
-                              'gcov-4.6', 'gcov-6.1',
+            BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6.1', 'gcc-6',
+                              'clang-4.0', 'clang-4',
+                              'gcov-4.6', 'gcov-6.1', 'gcov-6',
                               'icc-12.1', 'icc-13.0', 'icc-15.0', 'icc-16.0',
                               'cmake-3.4.3', 'cmake-3.5.2',
                               'sse2', 'sse4.1',
                               'x11' },
-            BS_NIX1204:     { 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-5.4',
+            BS_NIX1204:     { 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-5.4', 'gcc-5',
                               'clang-3.3',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-8.0',
                               'cmake-2.8.8', 'cmake-3.6.1',# 'cmake-3.8.1'
@@ -74,7 +66,7 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
                               'valgrind', 'tsan' },
-            BS_NIX1404:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.1',
+            BS_NIX1404:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.1', 'gcc-5',
                               'clang-3.5', 'clang-3.6', 'clang-3.7', 'clang-3.8', 'clang-3.9',
                               # These CUDA versions are installed, but aren't useful to use
                               # 'cuda-6.0', 'cuda-6.5', 'cuda-7.0',
@@ -82,12 +74,12 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi',
                               'valgrind', 'msan' },
-            BS_NIX_AMD_GPU: { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2',
+            BS_NIX_AMD_GPU: { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2', 'gcc-5',
                               'amdappsdk-3.0',
                               'cmake-2.8.12.2', 'cmake-3.5.2',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi' },
-            BS_NIX_AMD:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2',
+            BS_NIX_AMD:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2', 'gcc-5',
                               'clang-3.4', 'clang-4',
                               'cmake-2.8.12.2', 'cmake-3.4.3',
                               'sse2', 'sse4.1', 'avx_128_fma',
