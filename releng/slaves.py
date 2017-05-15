@@ -40,7 +40,7 @@ _HOST_LABELS = {
                               # 'cuda-6.5', 'cuda-7.0', 'cuda-7.5',
                               'icc-14.0', 'icc-15.0', 'icc-16.0',
                               'phi',
-                              'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1', 'cmake-3.8.1'
+                              'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1', 'cmake-3.8.1',
                               'sse2', 'sse4.1', 'avx_256', 'mic' },
             BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6.1', 'gcc-6',
                               'clang-4.0', 'clang-4',
@@ -52,7 +52,7 @@ _HOST_LABELS = {
             BS_NIX1204:     { 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-5.4', 'gcc-5',
                               'clang-3.3',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-8.0',
-                              'cmake-2.8.8', 'cmake-3.6.1',# 'cmake-3.8.1'
+                              'cmake-2.8.8', 'cmake-3.6.1',# 'cmake-3.8.1',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
                               'valgrind' },
@@ -60,13 +60,14 @@ _HOST_LABELS = {
                               # This clang is installed, but we don't want to use it if we can avoid it.
                               # 'clang-3.4',
                               'clang-4',
-                              'icc-15.0', 'icc-16.0',
+                              # These are installed, but have no active license.
+                              # 'icc-15.0', 'icc-16.0',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0',
                               'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
                               'valgrind', 'tsan' },
-            BS_NIX1404:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.1', 'gcc-5',
+            BS_NIX1404:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.1', 'gcc-5', 'gcc-7',
                               'clang-3.5', 'clang-3.6', 'clang-3.7', 'clang-3.8', 'clang-3.9',
                               # These CUDA versions are installed, but aren't useful to use
                               # 'cuda-6.0', 'cuda-6.5', 'cuda-7.0',

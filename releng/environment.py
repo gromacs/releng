@@ -219,11 +219,15 @@ class BuildEnvironment(object):
         self.c_compiler = 'gcc-' + version
         self.cxx_compiler = 'g++-' + version
         self.gcov_command = 'gcov-' + version
+        # Newer gcc needs to be linked against compatible standard
+        # libraries, so arrange to link to one from the compiler
+        # installation.
+        self._manage_stdlib_from_gcc('')
 
     def _manage_stdlib_from_gcc(self, format_for_stdlib_flag):
         """Manages using a C++ standard library from a particular gcc toolchain
 
-        Use this function to configure compilers (e.g. icc or clang) to
+        Use this function to configure compilers (gcc, icc or clang) to
         use the standard library from a particular gcc installation on the
         particular host in use, since the system gcc may be too old.
         """
@@ -235,6 +239,10 @@ class BuildEnvironment(object):
         if os.getenv('NODE_NAME') == slaves.BS_MIC:
             # icc is used here, and is buggy with respect to libstdc++ in gcc-5
             gcctoolchainpath='/opt/gcc/4.9.3'
+        if self.compiler == Compiler.GCC and self.compiler_version == '7':
+            gcc_exe = self._cmd_runner.find_executable(self.c_compiler)
+            gcc_exe_real_path = os.path.dirname(os.path.realpath(gcc_exe))
+            gcctoolchainpath = os.path.join(gcc_exe_real_path, '..')
 
         if gcctoolchainpath:
             stdlibflag=format_for_stdlib_flag.format(gcctoolchain=gcctoolchainpath)
