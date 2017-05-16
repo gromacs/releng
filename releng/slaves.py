@@ -100,7 +100,22 @@ _HOST_LABELS = {
             DOCKER_DEFAULT: {} # TODO
         }
 
-_WINDOWS_HOSTS = {BS_WIN2008, BS_WIN2012R2}
+# Specifies groups of hosts that should only be used if no host outside the
+# group can be used.  For example, use Windows machines only for builds that
+# can only be run there.
+#
+# Order matters; the first set is excluded first from the set of possible
+# hosts, so that if a build can run in the first or second set, it will run in
+# the second.
+_SPECIAL_HOST_GROUPS = [
+            # Windows
+            {BS_WIN2008, BS_WIN2012R2},
+            # Special-purpose VMs
+            {BS_NIX_STATIC_ANALYZER},
+            {BS_NIX_DOCS},
+            # GPU slaves
+            {BS_NIX_AMD_GPU, BS_NIX1204, BS_NIX1310}
+        ]
 
 def is_label(host):
     return host in ALL_LABELS
@@ -118,8 +133,8 @@ def pick_host(labels, opts):
     # TODO: If there are multiple possible hosts, it would be better to
     # optimize the selection globally over all the configurations to
     # avoid assigning all the builds to the same host.
-    # Use Windows machines only for builds that can only be run there.
-    if set(possible_hosts).issubset(_WINDOWS_HOSTS):
-        return possible_hosts[0]
-    possible_hosts = [x for x in possible_hosts if x not in _WINDOWS_HOSTS]
+    for group in _SPECIAL_HOST_GROUPS:
+        if set(possible_hosts).issubset(group):
+            return possible_hosts[0]
+        possible_hosts = [x for x in possible_hosts if x not in group]
     return possible_hosts[0]
