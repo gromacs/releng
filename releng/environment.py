@@ -353,6 +353,7 @@ class BuildEnvironment(object):
         self.extra_cmake_options['CMAKE_PREFIX_PATH'] = os.path.expanduser('~/utils/libxml2')
 
     def _init_tsan(self):
+        # This is only useful for the tsan build with gcc 4.9 on bs_nix1310, but does no harm.
         self.set_env_var('LD_LIBRARY_PATH', os.path.expanduser('~/tools/gcc-nofutex/lib64'))
 
     def _init_atlas(self):

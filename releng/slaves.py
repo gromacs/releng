@@ -74,7 +74,7 @@ _HOST_LABELS = {
                               'cmake-2.8.12.2', 'cmake-3.0.2', 'cmake-3.4.3',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi',
-                              'valgrind', 'msan' },
+                              'valgrind', 'msan', 'tsan' },
             BS_NIX_AMD_GPU: { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2', 'gcc-5',
                               'amdappsdk-3.0',
                               'cmake-2.8.12.2', 'cmake-3.5.2',
