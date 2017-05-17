@@ -11,7 +11,6 @@ import subprocess
 
 from common import BuildError, CommandError, ConfigurationError
 from common import JobType, Project
-from integration import BuildParameters
 from options import BuildConfig, process_build_options, select_build_hosts
 from script import BuildScript
 import cmake
@@ -46,7 +45,7 @@ class BuildContext(object):
         self._version = None
         self.workspace = factory.workspace
         self.env, self.opts = process_build_options(factory, opts, extra_options)
-        self.params = BuildParameters(factory)
+        self.params = factory.jenkins.params
 
     # TODO: Consider if these would be better set in the build script, and
     # just the values queried.

@@ -23,6 +23,7 @@ parser.add_argument('--run', action='store_true', default=False,
                     help='Actually run the build, instead of only showing what would be done')
 parser.add_argument('-U', '--user', help='User with ssh permissions to Gerrit')
 parser.add_argument('--system', help='Override system for testing')
+parser.add_argument('-N', '--node', help='Override node name for testing')
 parser.add_argument('-W', '--workspace', help='Workspace root directory')
 parser.add_argument('-B', '--build', help='Build script to run')
 parser.add_argument('-P', '--project', help='Project for the build')
@@ -47,7 +48,8 @@ env.update({
         'GROMACS_REFSPEC': 'HEAD',
         'RELENG_REFSPEC': 'HEAD',
         'REGRESSIONTESTS_REFSPEC': 'HEAD',
-        'WORKSPACE': workspace_root
+        'WORKSPACE': workspace_root,
+        'NODE_NAME': args.node
     })
 
 # Please ensure that run_build() in __init__.py stays in sync.

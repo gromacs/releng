@@ -81,6 +81,7 @@ class BuildEnvironment(object):
         self._build_prefix_cmd = None
         self._cmd_runner = factory.cmd_runner
         self._workspace = factory.workspace
+        self._node_name = factory.jenkins.node_name
         self._cmake_base_dir = None
 
         if self.system is not None:
@@ -222,7 +223,7 @@ class BuildEnvironment(object):
         # Newer gcc needs to be linked against compatible standard
         # libraries, so arrange to link to one from the compiler
         # installation.
-        self._manage_stdlib_from_gcc('')
+        self._manage_stdlib_from_gcc(None)
 
     def _manage_stdlib_from_gcc(self, format_for_stdlib_flag):
         """Manages using a C++ standard library from a particular gcc toolchain
@@ -236,7 +237,7 @@ class BuildEnvironment(object):
         # setup somewhere? Or the C++ standard library become
         # a build option?
         gcctoolchainpath=None
-        if os.getenv('NODE_NAME') == slaves.BS_MIC:
+        if self._node_name == slaves.BS_MIC:
             # icc is used here, and is buggy with respect to libstdc++ in gcc-5
             gcctoolchainpath='/opt/gcc/4.9.3'
         if self.compiler == Compiler.GCC and self.compiler_version == '7':
@@ -245,9 +246,10 @@ class BuildEnvironment(object):
             gcctoolchainpath = os.path.join(gcc_exe_real_path, '..')
 
         if gcctoolchainpath:
-            stdlibflag=format_for_stdlib_flag.format(gcctoolchain=gcctoolchainpath)
-            self.append_to_env_var('CFLAGS', stdlibflag)
-            self.append_to_env_var('CXXFLAGS', stdlibflag)
+            if format_for_stdlib_flag:
+                stdlibflag=format_for_stdlib_flag.format(gcctoolchain=gcctoolchainpath)
+                self.append_to_env_var('CFLAGS', stdlibflag)
+                self.append_to_env_var('CXXFLAGS', stdlibflag)
             format_for_linker_flags="-Wl,-rpath,{gcctoolchain}/lib64 -L{gcctoolchain}/lib64"
             self.extra_cmake_options['CMAKE_CXX_LINK_FLAGS'] = format_for_linker_flags.format(gcctoolchain=gcctoolchainpath)
 

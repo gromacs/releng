@@ -267,6 +267,17 @@ class ParameterTypes(object):
         return value
 
 
+class JenkinsIntegration(object):
+    """Access to Jenkins specifics such as build parameters."""
+
+    def __init__(self, factory):
+        self.workspace_root = factory.env['WORKSPACE']
+        self.node_name = factory.env.get('NODE_NAME', None)
+        if not self.node_name:
+            self.node_name = 'unknown'
+        self.params = BuildParameters(factory)
+
+
 class StatusReporter(object):
     """Handles tracking and reporting of failures during the build.
 

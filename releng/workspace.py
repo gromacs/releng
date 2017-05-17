@@ -70,7 +70,7 @@ class Workspace(object):
         install_dir (str): Directory for test installation.
     """
     def __init__(self, factory):
-        self.root = factory.env['WORKSPACE']
+        self.root = factory.jenkins.workspace_root
         self._executor = factory.executor
         self._cmd_runner = factory.cmd_runner
         self._gerrit = factory.gerrit

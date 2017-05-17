@@ -8,7 +8,7 @@ import platform
 from common import Project, System
 from context import BuildContext
 from executor import CommandRunner, CurrentDirectoryTracker, Executor
-from integration import GerritIntegration, StatusReporter
+from integration import GerritIntegration, JenkinsIntegration, StatusReporter
 from workspace import Workspace
 
 class ContextFactory(object):
@@ -42,6 +42,7 @@ class ContextFactory(object):
         self._cmd_runner = None
         self._status_reporter = None
         self._gerrit = None
+        self._jenkins = None
         self._workspace = None
 
     @property
@@ -86,6 +87,13 @@ class ContextFactory(object):
         return self._gerrit
 
     @property
+    def jenkins(self):
+        """Returns the JenkinsIntegration instance for the build."""
+        if self._jenkins is None:
+            self.init_jenkins_integration()
+        return self._jenkins
+
+    @property
     def workspace(self):
         """Returns the Workspace instance for the build."""
         if self._workspace is None:
@@ -124,6 +132,14 @@ class ContextFactory(object):
         """
         assert self._gerrit is None
         self._gerrit = GerritIntegration(factory=self, **kwargs)
+
+    def init_jenkins_integration(self):
+        """Initializes JenkinsIntegration with given parameters.
+
+        If not called, the object will be created with default parameters.
+        """
+        assert self._jenkins is None
+        self._jenkins = JenkinsIntegration(factory=self)
 
     def init_workspace(self):
         """Initializes Workspace with given parameters.
