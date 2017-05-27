@@ -1,45 +1,17 @@
 @NonCPS
 def setEnvForReleng(defaultProject)
 {
-    setBuildParametersToEnv()
     env.CHECKOUT_PROJECT = 'releng'
-    env.CHECKOUT_REFSPEC = RELENG_REFSPEC
-    if (env.GERRIT_PROJECT == 'releng') {
-        env.CHECKOUT_REFSPEC = GERRIT_REFSPEC
+    env.CHECKOUT_REFSPEC = params.RELENG_REFSPEC
+    if (params.GERRIT_PROJECT == 'releng') {
+        env.CHECKOUT_REFSPEC = params.GERRIT_REFSPEC
     }
-    if (env.GERRIT_PROJECT) {
-        this.defaultProject = env.GERRIT_PROJECT
-        this.defaultProjectRefspec = env.GERRIT_REFSPEC
+    if (params.GERRIT_PROJECT) {
+        this.defaultProject = params.GERRIT_PROJECT
+        this.defaultProjectRefspec = params.GERRIT_REFSPEC
     } else {
         this.defaultProject = defaultProject
-        this.defaultProjectRefspec = env."${defaultProject.toUpperCase()}_REFSPEC"
-    }
-}
-
-@NonCPS
-def setBuildParametersToEnv()
-{
-    // All of this should become unnecessary after we upgrade to latest
-    // pipeline plugins (and we can switch in many places from using env
-    // to using params, which is clearer).
-    setEnvFromBindingIfExists('GROMACS_REFSPEC')
-    setEnvFromBindingIfExists('GROMACS_HASH')
-    setEnvFromBindingIfExists('REGRESSIONTESTS_REFSPEC')
-    setEnvFromBindingIfExists('REGRESSIONTESTS_HASH')
-    setEnvFromBindingIfExists('RELENG_REFSPEC')
-    setEnvFromBindingIfExists('RELENG_HASH')
-    if (binding.variables.containsKey('GERRIT_PROJECT')) {
-        binding.variables.findAll { it.key.startsWith('GERRIT_') }.each {
-            key, value -> env."$key" = value
-        }
-    }
-}
-
-@NonCPS
-def setEnvFromBindingIfExists(name)
-{
-    if (binding.variables.containsKey(name)) {
-        env."$name" = binding.variables."$name"
+        this.defaultProjectRefspec = params."${defaultProject.toUpperCase()}_REFSPEC"
     }
 }
 
@@ -80,6 +52,8 @@ def currentBuildParametersForJenkins()
 @NonCPS
 def addBuildParameterIfExists(parameters, name)
 {
+    // TODO: Consider managing the parameters for child build in a separate
+    // data structure from the environment variables for the current workflow.
     if (env."$name") {
         parameters += [$class: 'StringParameterValue', name: name, value: env."$name"]
     }

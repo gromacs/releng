@@ -145,11 +145,9 @@ Workflow builds should use a bootstrapping script like this::
 
   def script
   node('pipeline-general') {
-      def checkout_refspec = RELENG_REFSPEC
-      if (binding.variables.containsKey('GERRIT_PROJECT')) {
-          if (GERRIT_PROJECT == 'releng') {
-              checkout_refspec = GERRIT_REFSPEC
-          }
+      def checkout_refspec = params.RELENG_REFSPEC
+      if (params.GERRIT_PROJECT == 'releng') {
+          checkout_refspec = params.GERRIT_REFSPEC
       }
       sh """\
           set -e
@@ -167,6 +165,8 @@ Workflow builds should use a bootstrapping script like this::
   script.doBuild(<possible additional parameters>)
 
 where expressions in angle brackets depend on the workflow.
+For workflows that are never triggered by Gerrit Trigger from releng, the part
+referencing ``GERRIT_PROJECT`` and ``GERRIT_REFSPEC`` can be omitted.
 The workflow script will take care of most other tasks; the Jenkins
 configuration may only need to specify some build parameters (typically,
 ``GROMACS_REFSPEC`` etc., as for normal builds) and the possible build triggers.
