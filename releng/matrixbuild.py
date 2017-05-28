@@ -10,7 +10,7 @@ import os.path
 import pipes
 import shlex
 
-from common import Project
+from common import ConfigurationError, Project
 from options import BuildConfig, select_build_hosts
 import slaves
 
@@ -23,6 +23,7 @@ def prepare_build_matrix(factory, configfile, outputfile):
     workspace._init_build_dir(out_of_source=True)
 
     configs = get_build_configs(factory, configfile)
+    _check_matrix_configs(configs)
 
     outputpath = os.path.join(workspace.build_dir, outputfile)
     _write_matrix_configs(executor, outputpath, configs)
@@ -59,6 +60,11 @@ def _read_matrix_configs(executor, path):
             opts = shlex.split(line)
             configs.append(BuildConfig(opts))
     return configs
+
+def _check_matrix_configs(configs):
+    for config in configs:
+        if not slaves.is_matrix_host(config.host):
+            raise ConfigurationError('non-matrix slave would execute this combination: ' + ' '.join(config.opts))
 
 def _write_matrix_configs(executor, path, configs):
     ext = os.path.splitext(path)[1]

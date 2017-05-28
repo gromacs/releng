@@ -100,6 +100,22 @@ _HOST_LABELS = {
             DOCKER_DEFAULT: {} # TODO
         }
 
+# Specifies the set of hosts that are allowed to execute matrix configurations.
+# This should match the nodes selected on the node axis in the Jenkins matrix jobs.
+# If any config gets assigned to a node outside the Jenkins matrix job axis, Jenkins
+# would silently not build it. This list is used to check the matrix config, so
+# we give a fatal error rather than silently omit a build.
+_MATRIX_HOSTS = {
+            BS_MAC,
+            BS_MIC,
+            BS_NIX1204,
+            BS_NIX1310,
+            BS_NIX1404,
+            BS_NIX_AMD_GPU,
+            BS_NIX_AMD,
+            BS_WIN2012R2
+        }
+
 # Specifies groups of hosts that should only be used if no host outside the
 # group can be used.  For example, use Windows machines only for builds that
 # can only be run there.
@@ -119,6 +135,9 @@ _SPECIAL_HOST_GROUPS = [
 
 def is_label(host):
     return host in ALL_LABELS
+
+def is_matrix_host(host):
+    return host in _MATRIX_HOSTS
 
 def pick_host(labels, opts):
     """Selects a host that can build with a given set of labels."""
