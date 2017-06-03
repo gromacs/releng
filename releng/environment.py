@@ -77,12 +77,13 @@ class BuildEnvironment(object):
         self.clang_analyzer_output_dir = None
         self.extra_cmake_options = dict()
 
-        self._build_jobs = 1
         self._build_prefix_cmd = None
         self._cmd_runner = factory.cmd_runner
         self._workspace = factory.workspace
         self._node_name = factory.jenkins.node_name
         self._cmake_base_dir = None
+
+        self._build_jobs = slaves.get_default_build_parallelism(self._node_name)
 
         if self.system is not None:
             self._init_system()
@@ -173,10 +174,8 @@ class BuildEnvironment(object):
     def _init_system(self):
         if self.system == System.WINDOWS:
             self.cmake_generator = 'NMake Makefiles JOM'
-            self._build_jobs = 4
             self._cmake_base_dir = 'c:\\utils'
         else:
-            self._build_jobs = 2
             self.prepend_path_env('~/bin')
             if self.system == System.OSX:
                 self.set_env_var('CMAKE_PREFIX_PATH', '/opt/local')

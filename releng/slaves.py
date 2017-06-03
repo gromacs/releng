@@ -35,9 +35,6 @@ ALL_LABELS = (DOCKER_DEFAULT,)
 # TODO Remove the "gcc-[56].?" and "clang-4.0" labels once the test
 # matrix specifications in the source repos have all been updated to
 # follow the new style in Redmine #2161.
-#
-# TODO: add some kind of cores/executor information to be able to use reasonable build
-#       parallelism (e.g. we should use -j4 on the Jentson ARM slaves).
 _HOST_LABELS = {
             BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5.2', 'gcc-5',
                               # These CUDA versions are installed, but aren't useful to use
@@ -144,11 +141,22 @@ _SPECIAL_HOST_GROUPS = [
             {BS_NIX_AMD_GPU, BS_NIX1204, BS_NIX1310}
         ]
 
+# For hosts not specifically listed here, a default hard-coded in
+# get_default_build_parallelism() is used.
+_DEFAULT_BUILD_PARALLELISM = {
+            BS_WIN2008: 4,
+            BS_WIN2012R2: 4,
+            BS_JETSON_TK1: 4
+        }
+
 def is_label(host):
     return host in ALL_LABELS
 
 def is_matrix_host(host):
     return host in _MATRIX_HOSTS
+
+def get_default_build_parallelism(host):
+    return _DEFAULT_BUILD_PARALLELISM.get(host, 2)
 
 def pick_host(labels, opts):
     """Selects a host that can build with a given set of labels."""
