@@ -15,6 +15,7 @@ BS_NIX_STATIC_ANALYZER = 'bs_nix-static_analyzer'
 BS_WIN2008 = 'bs_Win2008_64'
 BS_WIN2012R2 = 'bs-win2012r2'
 BS_JETSON_TK1 = 'bs_jetson_tk1'
+BS_JETSON_TX1 = 'bs_jetson_tx1'
 
 DOCKER_DEFAULT = 'docker-ubuntu-15.04'
 
@@ -102,6 +103,10 @@ _HOST_LABELS = {
                               'arm_neon',
                               'cmake-3.8.1',
                               'cuda-6.5' },
+            BS_JETSON_TX1:  { 'gcc-4.8', 'gcc-4.9', 'gcc-5',
+                              'arm_neon_asimd',
+                              'cmake-3.5.1',
+                              'cuda-8.0' },
             DOCKER_DEFAULT: {} # TODO
         }
 
@@ -119,6 +124,7 @@ _MATRIX_HOSTS = {
             BS_NIX_AMD_GPU,
             BS_NIX_AMD,
             BS_JETSON_TK1,
+            BS_JETSON_TX1,
             BS_WIN2012R2
         }
 
@@ -136,7 +142,7 @@ _SPECIAL_HOST_GROUPS = [
             {BS_NIX_STATIC_ANALYZER},
             {BS_NIX_DOCS},
             # ARM slaves
-            {BS_JETSON_TK1},
+            {BS_JETSON_TK1, BS_JETSON_TX1},
             # GPU slaves
             {BS_NIX_AMD_GPU, BS_NIX1204, BS_NIX1310}
         ]
@@ -146,7 +152,8 @@ _SPECIAL_HOST_GROUPS = [
 _DEFAULT_BUILD_PARALLELISM = {
             BS_WIN2008: 4,
             BS_WIN2012R2: 4,
-            BS_JETSON_TK1: 4
+            BS_JETSON_TK1: 4,
+            BS_JETSON_TX1: 4
         }
 
 def is_label(host):

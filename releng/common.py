@@ -133,7 +133,7 @@ BuildType = Enum.create('BuildType',
 Simd = Enum.create('Simd',
     'None', 'Reference', 'MIC', 'SSE2', 'SSE4.1',
     'AVX_128_FMA', 'AVX_256', 'AVX2_256',
-    'ARM_NEON',
+    'ARM_NEON', 'ARM_NEON_ASIMD',
     doc="""Enum to identify the SIMD instruction set to use""")
 
 # There is no special significance with these strings.
