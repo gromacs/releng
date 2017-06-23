@@ -86,18 +86,22 @@ def runRelengScriptNoCheckout(contents, propagate = true)
 
 def runRelengScriptInternal(prepareScript, contents, propagate)
 {
-    def script = prepareScript.stripIndent()
-    script += """\
+    def statusFile = 'logs/status.json'
+    def script = """\
         import os
         import sys
-        os.environ['STATUS_FILE'] = 'logs/status.json'
-        os.environ['WORKSPACE'] = os.getcwd()
+        try:
+            os.remove('${statusFile}')
+        except:
+            pass
+        os.environ['STATUS_FILE'] = '${statusFile}'
         sys.path.append(os.path.abspath('releng'))
-        import releng
         """.stripIndent()
     if (!propagate) {
         script += "os.environ['NO_PROPAGATE_FAILURE'] = '1'\n"
     }
+    script += prepareScript.stripIndent()
+    script += "import releng\n"
     script += contents.stripIndent()
     try {
         def returncode = runPythonScript(script)
@@ -108,10 +112,10 @@ def runRelengScriptInternal(prepareScript, contents, propagate)
             throw new hudson.AbortException("releng script exited with ${returncode}")
         }
     } catch (err) {
-        handleRelengError()
+        handleRelengError(statusFile)
         throw err
     }
-    def status = readJsonFile('logs/status.json')
+    def status = readJsonFile(statusFile)
     if (propagate) {
         processRelengStatus(status)
     }
@@ -133,11 +137,11 @@ def isAbortCode(returncode)
     return returncode == 137 || returncode == 143;
 }
 
-def handleRelengError()
+def handleRelengError(statusFile)
 {
     def reason = null
-    if (fileExists('logs/status.json')) {
-        reason = readJsonFile('logs/status.json').reason
+    if (fileExists(statusFile)) {
+        reason = readJsonFile(statusFile).reason
         setGerritReview unsuccessfulMessage: reason
     }
     addRelengErrorSummary(reason)
