@@ -3,7 +3,8 @@ Interacting with builds in Jenkins
 
 This page documents what kind of information |Gromacs| builds provide in
 Jenkins, how to access it, and how to interact with the builds (e.g., trigger
-new ones).
+new ones).  This also covers how the builds appear when reported back to Gerrit
+for builds triggered from there.
 
 General
 -------
@@ -153,8 +154,13 @@ links on the change page.  Depending on how the job does the checkout, Jenkins
 may again need to be added as a reviewer for draft changes before manual
 triggering is possible.
 
+Individual build types
+----------------------
+
+These sections specify details of particular build types.
+
 Matrix builds
--------------
+^^^^^^^^^^^^^
 
 Current matrix/multi-configuration builds are actually composed of two
 different Jenkins jobs: a triggering workflow build (see
@@ -168,7 +174,84 @@ summary page across all configurations, and you can navigate to individual
 issues through these links.  If this is not sufficient to understand why the
 build fails/is unstable, you can check the console output of individual
 configuration builds by clicking on the build ball in the configuration matrix.
-Note a few caveats:
+
+To retrigger a build triggered from Gerrit, you will need to navigate to the
+parent workflow job.  You will find the link towards the top of the build
+summary page, as "Started by upstream project ... build number NNN", and
+clicking on the build number will take you to the parent build.  You can also
+retrigger the job directly from the dropdown that is available next to the
+build number link.
+
+Similarly, to trigger a matrix build manually, you will need to do that for the
+workflow job.
+
+Documentation
+^^^^^^^^^^^^^
+
+TODO
+
+clang static analyzer
+^^^^^^^^^^^^^^^^^^^^^
+
+The build summary page shows the number of warnings/issues found in the console
+output of the analyzer.  You can see the individual issues through the link.
+Note that issues reported from code in the header are not handled well by the
+tools we use, and we ignore those, but they are still shown in this list.
+
+The build is unstable only if there are issues found from source files (not
+headers).  Details on each issue is accessible through Analysis Report link on
+the left.  This also includes the steps that the analyzer thinks leads to the
+issue.
+
+cppcheck
+^^^^^^^^
+
+Summary of the changes is visible on the build summary page, and individual
+issues can be browsed by clicking on the links.  The build is unstable if any
+issues are found.
+
+uncrustify
+^^^^^^^^^^
+
+To see the full list of issues, look at the console log.
+
+.. TODO: Other types
+
+Known issues and limitations
+----------------------------
+
+The following issues, limitations, and potentially confusing behavior with the
+current Jenkins setup are known:
+
+* Post-submit builds are triggered by Gerrit Trigger, but the results are not
+  posted back to Gerrit.  This is because new Gerrit versions are not
+  compatible with the way the plugin posts the results (see `JENKINS-39132`_).
+* If builds are aborted, some bogus errors can get reported back to Gerrit, but
+  the build status should say ABORTED.  This is because there is no reasonable
+  way to detect in all cases whether a build got aborted or failed because of
+  other reasons.  This is related to `JENKINS-28822`_.
+* If Jenkins gets restarted while builds triggered from Gerrit are running/queued,
+  some of these builds may get resumed after the restart.  The in-memory state
+  of Gerrit Trigger is not properly maintained, and the vote from Jenkins only
+  reflects the results from a subset of the builds.  You can see this happening
+  in Gerrit if there are less links to different builds than usual when Jenkins
+  votes.
+
+On-demand builds
+^^^^^^^^^^^^^^^^
+
+* Only one on-demand build can be run at a time for the same patch set.
+  If you post another ``[JENKINS]`` comment to a patch set
+  before the previous such build has finished, such a comment will get silently
+  ignored.  This is how Gerrit Trigger plugin works.
+* If an on-demand build is aborted (either manually, or because of a timeout),
+  Jenkins votes -2 on the change in Gerrit.  For all other build results
+  (either success or failure), Jenkins does not change its vote (the pre-submit
+  verification vote stays).  This is a limitation in Gerrit Trigger (see
+  `JENKINS-38743`_).
+
+Matrix builds
+^^^^^^^^^^^^^
 
 * If the build was aborted, there is no visual cue in the configuration matrix
   for the configurations that were not yet finished by the time the build was
@@ -182,47 +265,13 @@ Note a few caveats:
   take you to the project page, not to the individual build, so you will need
   to click another time to get to the actual build.  The child configuration
   builds always have the same build number as the matrix parent.
+* If a matrix build contains configurations that are assigned to build slaves
+  that are not part of the (static) matrix node axis, these are not built.
+  The matrix build still passes, but the triggering workflow build will detect
+  this issue.  The matrix build still shows up as successful in such a
+  scenario, but the link posted to Gerrit says it failed.
 
+.. _JENKINS-28822: https://issues.jenkins-ci.org/browse/JENKINS-28822
 .. _JENKINS-30437: https://issues.jenkins-ci.org/browse/JENKINS-30437
-
-To retrigger a build triggered from Gerrit, you will need to navigate to the
-parent workflow job.  You will find the link towards the top of the build
-summary page, as "Started by upstream project ... build number NNN", and
-clicking on the build number will take you to the parent build.  You can also
-retrigger the job directly from the dropdown that is available next to the
-build number link.
-
-Similarly, to trigger a matrix build manually, you will need to do that for the
-workflow job.
-
-Documentation
--------------
-
-TODO
-
-clang static analyzer
----------------------
-
-The build summary page shows the number of warnings/issues found in the console
-output of the analyzer.  You can see the individual issues through the link.
-Note that issues reported from code in the header are not handled well by the
-tools we use, and we ignore those, but they are still shown in this list.
-
-The build is unstable only if there are issues found from source files (not
-headers).  Details on each issue is accessible through Analysis Report link on
-the left.  This also includes the steps that the analyzer thinks leads to the
-issue.
-
-cppcheck
---------
-
-Summary of the changes is visible on the build summary page, and individual
-issues can be browsed by clicking on the links.  The build is unstable if any
-issues are found.
-
-uncrustify
-----------
-
-To see the full list of issues, look at the console log.
-
-.. TODO: Other types
+.. _JENKINS-38743: https://issues.jenkins-ci.org/browse/JENKINS-38743
+.. _JENKINS-39132: https://issues.jenkins-ci.org/browse/JENKINS-39132

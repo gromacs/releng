@@ -63,8 +63,11 @@ def doBuild()
     }
     parallel tasks
     setBuildResult(builds)
+    def messages = doPostBuildActions(builds, actions.gerrit_info)
     addSummaryForTriggeredBuilds(builds)
-    setGerritOutput(builds, actions.gerrit_info)
+    if (messages) {
+        setGerritReview customUrl: messages.url, unsuccessfulMessage: messages.message
+    }
 }
 
 @NonCPS
@@ -279,16 +282,10 @@ def addSummaryForTriggeredBuilds(builds)
     manager.createSummary('empty').appendText(text, false)
 }
 
-def setGerritOutput(builds, gerrit_info)
-{
-    def messages = doPostBuildActions(builds, gerrit_info)
-    setGerritReview customUrl: messages.url, unsuccessfulMessage: messages.message
-}
-
 def doPostBuildActions(builds, gerrit_info)
 {
     def data = [
-            'builds': getBuildInfoForReleng(builds),
+            'builds': getBuildInfosForReleng(builds),
             'gerrit_info': gerrit_info
         ]
     def messages
@@ -305,7 +302,8 @@ def doPostBuildActions(builds, gerrit_info)
             //   }
             def status = utils.runRelengScript("""\
                 releng.do_ondemand_post_build('build/actions.json')
-                """)
+                """, false)
+            utils.processRelengStatus(status)
             messages = status.return_value
         }
     }
@@ -313,17 +311,25 @@ def doPostBuildActions(builds, gerrit_info)
 }
 
 @NonCPS
-def getBuildInfoForReleng(builds)
+def getBuildInfosForReleng(builds)
 {
-    return builds.collect {
-            [
-                'title': it.title,
-                'url': it.url,
-                'desc': it.desc,
-                'result': it.status.result,
-                'reason': it.status.reason
-            ]
-        }
+    return builds.collect { getBuildInfoForReleng(it) }
+}
+
+@NonCPS
+def getBuildInfoForReleng(bld)
+{
+    def info = [
+            'title': bld.title,
+            'url': bld.url,
+            'desc': bld.desc,
+            'result': bld.status.result,
+            'reason': bld.status.reason
+        ]
+    if (bld.matrix) {
+        info.matrix = bld.matrix
+    }
+    return info
 }
 
 return this

@@ -21,11 +21,15 @@ workflow does these things:
    trigger.  The workflow triggers the matrix job, forwarding all relevant build
    parameters to it, and adding the build configuration axis as an additional
    parameter.
-4. After the matrix build finishes, the workflow adds a link to the matrix
-   build to the build summary page (while the build is running, the link can be
-   found from the console log).  The build status of the matrix build is also
-   propagated to the status of the workflow job.
-5. Also, as the last step in the workflow, it sets the URL to post back to
+4. After the matrix build finishes, the workflow calls
+   ``process_multi_configuration_build_results()``, which uses the Jenkins REST
+   API to verify that all configurations were actually built.
+   If not, the build is marked failed.
+5. The workflow also adds a link to the matrix build to the build summary page
+   (while the build is running, the link can be found from the console log).
+   The build status of the matrix build is also propagated to the status of the
+   workflow job.
+6. Also, as the last step in the workflow, it sets the URL to post back to
    Gerrit to point to the matrix build.  This means that the presence of this
    launcher job is mostly invisible during normal usage.  Only if the workflow
    itself fails before reaching this step, you actually see a link to the

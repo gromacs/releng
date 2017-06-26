@@ -14,6 +14,9 @@ def doBuild(matrixJobName)
     parameters += [$class: 'StringParameterValue', name: 'OPTIONS', value: matrix.as_axis]
     def matrixBuild = build job: matrixJobName, parameters: parameters, propagate: false
     currentBuild.setResult(matrixBuild.result)
+    node('pipeline-general') {
+        utils.processMatrixResults(matrix, matrixBuild)
+    }
     addSummaryForTriggeredBuild(matrixJobName, matrixBuild)
     setGerritReview customUrl: matrixBuild.absoluteUrl
 }

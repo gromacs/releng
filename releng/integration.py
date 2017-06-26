@@ -7,11 +7,13 @@ configuration and passing information back to workflow Groovy scripts.
 """
 from __future__ import print_function
 
+import ast
 import base64
 import json
 import os
 import re
 import traceback
+import urllib
 
 from common import AbortError, BuildError, ConfigurationError
 from common import Project
@@ -277,6 +279,24 @@ class JenkinsIntegration(object):
             self.node_name = 'unknown'
         self.params = BuildParameters(factory)
 
+    def query_matrix_build(self, url):
+        """Queries basic information about a matrix build from Jenkins REST API.
+
+        Args:
+            url (str): Base absolute URL of the Jenkins build to query.
+        """
+        result = self._query_build(url, 'number,runs[number,url]')
+        # For some reason, Jenkins returns runs also for previous builds in case
+        # those are no longer part of the current matrix.  Those that actually
+        # belong to the queried run can be identified by matching build numbers.
+        filtered_runs = [x for x in result['runs'] if x['number'] == result['number']]
+        result['runs'] = filtered_runs
+        return result
+
+    def _query_build(self, url, tree):
+        query_url = '{0}/api/python?tree={1}'.format(url, tree)
+        return ast.literal_eval(urllib.urlopen(query_url).read())
+
 
 class StatusReporter(object):
     """Handles tracking and reporting of failures during the build.
@@ -387,7 +407,7 @@ class StatusReporter(object):
                     'result': result,
                     'reason': reason
                 }
-            if result == 'SUCCESS' and self.return_value:
+            if self.return_value:
                 output['return_value'] = self.return_value
             contents = json.dumps(output, indent=2)
         elif reason:

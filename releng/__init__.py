@@ -76,6 +76,24 @@ def prepare_multi_configuration_build(configfile):
     with factory.status_reporter:
         prepare_build_matrix(factory, configfile)
 
+def process_multi_configuration_build_results(inputfile):
+    """Processes results after a matrix build has been run.
+
+    Reads a JSON file that provides information about the configurations
+    (the output from prepare_multi_configuration_build()) and the URL of
+    the finished Jenkins matrix build.
+    Reads information about the executed build using Jenkins REST API and
+    verifies that all configurations were built.
+
+    Args:
+        inputfile (str): File to read the input from, relative to working dir.
+    """
+    from factory import ContextFactory
+    from matrixbuild import process_matrix_results
+    factory = ContextFactory()
+    with factory.status_reporter as status:
+        status.return_value = process_matrix_results(factory, inputfile)
+
 def get_actions_from_triggering_comment():
     """Processes Gerrit comment that triggered the build.
 

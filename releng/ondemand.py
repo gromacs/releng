@@ -7,7 +7,7 @@ import re
 
 from common import BuildError, JobType, Project
 from integration import RefSpec
-from matrixbuild import get_matrix_info
+from matrixbuild import get_matrix_info, get_matrix_failure_reason
 from script import BuildScript
 
 def get_actions_from_triggering_comment(factory):
@@ -194,10 +194,12 @@ class RequestParser(object):
 def do_post_build(factory, inputfile):
     data = json.loads(''.join(factory.executor.read_file(inputfile)))
 
-    build_messages = _get_build_messages(data)
+    reasons = _get_reasons(factory, data)
+    build_messages = _get_build_messages(data, reasons)
     url, reason = None, None
     if len(data['builds']) == 1:
-        url, reason = _get_single_url_and_reason(data)
+        url = _get_single_url(data)
+        reason = reasons[0]
     elif build_messages:
         reason = '\n'.join(build_messages)
     if data.has_key('gerrit_info') and data['gerrit_info']:
@@ -207,14 +209,28 @@ def do_post_build(factory, inputfile):
         factory.gerrit.post_cross_verify_finish(change, patchset, build_messages)
     return { 'url': url, 'message': reason }
 
-def _get_build_messages(data):
+def _get_reasons(factory, data):
     builds = data['builds']
-    return [_get_message(x) for x in builds]
+    return [_get_reason(factory, x) for x in builds]
 
-def _get_message(build):
-    message = '{0}: {1}'.format(_get_title(build), build['result'])
+def _get_reason(factory, build):
+    if build.has_key('matrix') and build['matrix']:
+        reason = get_matrix_failure_reason(factory, build['matrix']['configs'], build['url'])
+        if reason:
+            factory.status_reporter.mark_failed(reason)
+            return reason
     if build.has_key('reason') and build['reason']:
-        message += ' <<<\n' + build['reason'].rstrip() + '\n>>>'
+        return build['reason'].rstrip()
+    return None
+
+def _get_build_messages(data, reasons):
+    builds = data['builds']
+    return [_get_message(x, y) for x, y in zip(builds, reasons)]
+
+def _get_message(build, reason):
+    message = '{0}: {1}'.format(_get_title(build), build['result'])
+    if reason:
+        message += ' <<<\n' + reason + '\n>>>'
     return message
 
 def _get_title(build):
@@ -233,10 +249,6 @@ def _append_desc(text, build):
         text += ' ({0})'.format(build['desc'])
     return text
 
-def _get_single_url_and_reason(data):
+def _get_single_url(data):
     build = data['builds'][0]
-    url = _append_desc(_get_url(build), build)
-    reason = None
-    if build.has_key('reason') and build['reason']:
-        reason = build['reason'].rstrip()
-    return url, reason
+    return _append_desc(_get_url(build), build)

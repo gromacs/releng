@@ -164,24 +164,26 @@ def addRelengErrorSummary(reason)
 
 def processRelengStatus(status)
 {
-    def result = hudson.model.Result.fromString(status.result)
-    if (result.isWorseThan(hudson.model.Result.SUCCESS) && status.reason) {
+    if (!isRelengStatusSuccess(status) && status.reason) {
         def summary = manager.createSummary('empty')
         summary.appendText("<pre>\n",false)
         summary.appendText(status.reason, true)
         summary.appendText("</pre>", false)
         setGerritReview unsuccessfulMessage: status.reason
     }
-    if (currentBuild.result) {
-        def prevResult = hudson.model.Result.fromString(currentBuild.result)
-        result = prevResult.combine(result)
-    }
-    currentBuild.setResult(result.toString())
+    combineResultToCurrentBuild(status.result)
 }
 
 def isRelengStatusSuccess(status)
 {
     return status.result == 'SUCCESS'
+}
+
+def combineResultToCurrentBuild(result)
+{
+    if (currentBuild.resultIsBetterOrEqualTo(result)) {
+        currentBuild.setResult(result)
+    }
 }
 
 def readBuildRevisions()
@@ -283,6 +285,16 @@ def processMatrixConfigs(filename)
         releng.prepare_multi_configuration_build('${filename}')
         """)
     return status.return_value
+}
+
+def processMatrixResults(matrix, bld)
+{
+    def data = [ 'matrix': matrix, 'build_url': bld.absoluteUrl ]
+    writeJsonFile('build/matrix.json', data)
+    def status = runRelengScript("""\
+        releng.process_multi_configuration_build_results('build/matrix.json')
+        """, false)
+    processRelengStatus(status)
 }
 
 def readSourceVersion()

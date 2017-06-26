@@ -5,11 +5,12 @@ See __init__.py for documentation (the functions are called essentially
 directly from there).
 """
 
+import json
 import os.path
 import pipes
 import shlex
 
-from common import ConfigurationError, Project
+from common import BuildError, ConfigurationError, Project
 from options import BuildConfig, select_build_hosts
 import slaves
 
@@ -24,6 +25,20 @@ def prepare_build_matrix(factory, configfile):
 def get_matrix_info(factory, configfile):
     configs = _get_build_configs(factory, configfile)
     return _create_return_value(configs)
+
+def process_matrix_results(factory, inputfile):
+    data = json.loads(''.join(factory.executor.read_file(inputfile)))
+    configs = data['matrix']['configs']
+    build_url = data['build_url']
+    reason = get_matrix_failure_reason(factory, configs, build_url)
+    if reason:
+        factory.status_reporter.mark_failed(reason)
+
+def get_matrix_failure_reason(factory, configs, build_url):
+    build_info = factory.jenkins.query_matrix_build(build_url)
+    if len(configs) != len(build_info['runs']):
+        return 'Some matrix configurations were not built (likely matrix axis is missing build slaves)'
+    return None
 
 def _get_build_configs(factory, configfile):
     executor = factory.executor
