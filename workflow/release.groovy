@@ -3,7 +3,7 @@ packaging = load 'releng/workflow/packaging.groovy'
 utils.setEnvForReleng('releng')
 utils.checkoutDefaultProject()
 buildRevisions = utils.readBuildRevisions()
-testConfigs = utils.processMatrixConfigs('release-matrix.txt')
+testMatrix = utils.processMatrixConfigs('release-matrix.txt')
 sourceVersionInfo = utils.readSourceVersion()
 
 RELEASE = (RELEASE == 'true')
@@ -20,7 +20,7 @@ def doBuild(sourcePackageJob, regressiontestsPackageJob)
         return
     }
     setTarballEnvironmentVariablesForReleng()
-    if (testTarballs(tarballBuilds, testConfigs)) {
+    if (testTarballs(tarballBuilds, testMatrix)) {
         createWebsitePackage(tarballBuilds)
     }
 }
@@ -138,18 +138,18 @@ def setTarballEnvironmentVariablesForReleng()
     env.REGRESSIONTESTS_REFSPEC = 'tarballs/regressiontests'
 }
 
-def testTarballs(tarballBuilds, testConfigs)
+def testTarballs(tarballBuilds, testMatrix)
 {
     def tasks = [:]
-    for (int i = 0; i != testConfigs.size(); ++i) {
-        def config = testConfigs[i]
+    for (int i = 0; i != testMatrix.configs.size(); ++i) {
+        def config = testMatrix.configs[i]
         tasks[config.opts] = {
             runSingleTestConfig(tarballBuilds, config)
         }
     }
     parallel tasks
-    addConfigurationSummary(testConfigs)
-    return setBuildResult(testConfigs)
+    addConfigurationSummary(testMatrix.configs)
+    return setBuildResult(testMatrix.configs)
 }
 
 def runSingleTestConfig(tarballBuilds, config)

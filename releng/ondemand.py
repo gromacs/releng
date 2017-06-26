@@ -7,7 +7,7 @@ import re
 
 from common import BuildError, JobType, Project
 from integration import RefSpec
-from matrixbuild import get_build_configs, get_options_string
+from matrixbuild import get_matrix_info
 from script import BuildScript
 
 def get_actions_from_triggering_comment(factory):
@@ -164,9 +164,9 @@ class RequestParser(object):
             build_type = build['type']
             if build_type == 'matrix':
                 self._workspace._checkout_project(Project.GROMACS)
-                configs = get_build_configs(self._factory, build['matrix-file'])
+                matrix = get_matrix_info(self._factory, build['matrix-file'])
                 del build['matrix-file']
-                build['options'] = get_options_string(configs)
+                build['matrix'] = matrix
             elif build_type == 'update-regtest-hash':
                 self._workspace._checkout_project(Project.GROMACS)
                 build_script_path = self._workspace._resolve_build_input_file('get-version-info', '.py')

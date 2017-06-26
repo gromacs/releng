@@ -12,6 +12,26 @@ from releng.ondemand import do_post_build
 from releng.test.utils import TestHelper
 
 class TestGetActionsFromTriggeringComment(unittest.TestCase):
+    _MATRIX_INPUT_LINES = [
+            'gcc-4.6 gpu cuda-5.0',
+            'msvc-2013'
+        ]
+    _MATRIX_EXPECTED_RESULT = {
+            'configs': [
+                {
+                    'host': 'bs_nix1310',
+                    'labels': 'cuda-5.0 && gcc-4.6',
+                    'opts': ['gcc-4.6', 'gpu', 'cuda-5.0']
+                },
+                {
+                    'host': 'bs-win2012r2',
+                    'labels': 'msvc-2013',
+                    'opts': ['msvc-2013']
+                }
+            ],
+            'as_axis': '"{0} host=bs_nix1310" "{1} host=bs-win2012r2"'.format(*[x.strip() for x in _MATRIX_INPUT_LINES])
+        }
+
     def test_CoverageRequest(self):
         helper = TestHelper(self, workspace='ws', env={
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Coverage')
@@ -68,12 +88,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         helper = TestHelper(self, workspace='ws', env={
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Post-submit')
             })
-        input_lines = [
-                'gcc-4.6 gpu cuda-5.0',
-                'msvc-2013'
-            ]
         helper.add_input_file('ws/gromacs/admin/builds/post-submit-matrix.txt',
-                '\n'.join(input_lines) + '\n')
+                '\n'.join(self._MATRIX_INPUT_LINES) + '\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
         self.assertEqual(result, {
@@ -81,7 +97,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         {
                             'type': 'matrix',
                             'desc': 'post-submit',
-                            'options': '"{0} host=bs_nix1310" "{1} host=bs-win2012r2"'.format(*[x.strip() for x in input_lines])
+                            'matrix': self._MATRIX_EXPECTED_RESULT
                         }
                     ]
             })
@@ -90,12 +106,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         helper = TestHelper(self, workspace='ws', env={
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] release-2016')
             })
-        input_lines = [
-                'gcc-4.6 gpu cuda-5.0',
-                'msvc-2013'
-            ]
         helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
-                '\n'.join(input_lines) + '\n')
+                '\n'.join(self._MATRIX_INPUT_LINES) + '\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
         self.assertEqual(result, {
@@ -103,7 +115,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         {
                             'type': 'matrix',
                             'desc': 'release-2016',
-                            'options': '"{0} host=bs_nix1310" "{1} host=bs-win2012r2"'.format(*[x.strip() for x in input_lines])
+                            'matrix': self._MATRIX_EXPECTED_RESULT
                         },
                         { 'type': 'clang-analyzer', 'desc': 'release-2016' },
                         { 'type': 'cppcheck', 'desc': 'release-2016' },
@@ -126,12 +138,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                 'GERRIT_PATCHSET_NUMBER': '3',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234')
             })
-        input_lines = [
-                'gcc-4.6 gpu cuda-5.0',
-                'msvc-2013'
-            ]
         helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
-                '\n'.join(input_lines) + '\n')
+                '\n'.join(self._MATRIX_INPUT_LINES) + '\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
         self.assertEqual(result, {
@@ -139,7 +147,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         {
                             'type': 'matrix',
                             'desc': 'cross-verify',
-                            'options': '"{0} host=bs_nix1310" "{1} host=bs-win2012r2"'.format(*[x.strip() for x in input_lines])
+                            'matrix': self._MATRIX_EXPECTED_RESULT
                         }
                     ],
                 'env': {
@@ -161,12 +169,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                 'GERRIT_PATCHSET_NUMBER': '3',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet')
             })
-        input_lines = [
-                'gcc-4.6 gpu cuda-5.0',
-                'msvc-2013'
-            ]
         helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
-                '\n'.join(input_lines) + '\n')
+                '\n'.join(self._MATRIX_INPUT_LINES) + '\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
         self.assertEqual(result, {
@@ -174,7 +178,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         {
                             'type': 'matrix',
                             'desc': 'cross-verify',
-                            'options': '"{0} host=bs_nix1310" "{1} host=bs-win2012r2"'.format(*[x.strip() for x in input_lines])
+                            'matrix': self._MATRIX_EXPECTED_RESULT
                         }
                     ],
                 'env': {
@@ -214,12 +218,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                 'GERRIT_PATCHSET_NUMBER': '3',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet')
             })
-        input_lines = [
-                'gcc-4.6 gpu cuda-5.0',
-                'msvc-2013'
-            ]
         helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
-                '\n'.join(input_lines) + '\n')
+                '\n'.join(self._MATRIX_INPUT_LINES) + '\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
         self.assertEqual(result, {
@@ -227,7 +227,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         {
                             'type': 'matrix',
                             'desc': 'cross-verify',
-                            'options': '"{0} host=bs_nix1310" "{1} host=bs-win2012r2"'.format(*[x.strip() for x in input_lines])
+                            'matrix': self._MATRIX_EXPECTED_RESULT
                         },
                         { 'type': 'clang-analyzer', 'desc': 'cross-verify' },
                         { 'type': 'cppcheck', 'desc': 'cross-verify' },

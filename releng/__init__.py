@@ -58,27 +58,23 @@ def read_build_script_config(script_name):
         config = BuildContext._read_build_script_config(factory, script_name)
         status.return_value = config
 
-def prepare_multi_configuration_build(configfile, as_axis=False):
+def prepare_multi_configuration_build(configfile):
     """Main entry point for preparing matrix builds.
 
     Reads a file with configurations to use (one configuration per line,
     with a list of space-separated build options on each line; comments
     starting with # and empty lines ignored).
-    By default, returns the configurations as a list of structures, but
-    ``as_axis`` can be used to instead return a dynamic axis.
 
     Args:
         configfile (str): File that contains the configurations to use.
             Names without directory separators are interpreted as
             :file:`gromacs/admin/builds/{configfile}.txt`.
-        as_axis (bool): If True, writes the configurations as a single string
-            suitable for passing as a dynamic axis to a matrix build.
     """
     from factory import ContextFactory
     from matrixbuild import prepare_build_matrix
     factory = ContextFactory()
     with factory.status_reporter:
-        prepare_build_matrix(factory, configfile, as_axis)
+        prepare_build_matrix(factory, configfile)
 
 def get_actions_from_triggering_comment():
     """Processes Gerrit comment that triggered the build.

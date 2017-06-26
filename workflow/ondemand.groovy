@@ -112,7 +112,7 @@ def doDocumentation(bld)
 def doMatrix(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
-    parameters += [$class: 'StringParameterValue', name: 'OPTIONS', value: bld.options]
+    parameters += [$class: 'StringParameterValue', name: 'OPTIONS', value: bld.matrix.as_axis]
     doChildBuild(bld, matrixJobName, parameters)
 }
 

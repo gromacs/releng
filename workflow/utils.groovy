@@ -264,27 +264,21 @@ def processBuildScriptConfig(script)
     return status.return_value
 }
 
-def processMatrixConfigsToBuildAxis(filename)
-{
-    // Information is returned as a string suitable as a dynamic axis
-    // in a matrix build.
-    def status = runRelengScriptNoCheckout("""\
-        releng.prepare_multi_configuration_build('${filename}', as_axis=True)
-        """)
-    return status.return_value
-}
-
 def processMatrixConfigs(filename)
 {
-    // Information is returned as a list of configurations:
-    //   [
-    //     {
-    //       opts: [...],
-    //       host: ...,
-    //       labels: ...
-    //     },
-    //     ...
-    //  ]
+    // Information is returned as a list of configurations and as a string
+    // suitable as a dynamic axis in a matrix build:
+    //   {
+    //     configs: [
+    //       {
+    //         opts: [...],
+    //         host: ...,
+    //         labels: ...
+    //       },
+    //       ...
+    //    ],
+    //    as_axis: ...
+    //  }
     def status = runRelengScriptNoCheckout("""\
         releng.prepare_multi_configuration_build('${filename}')
         """)

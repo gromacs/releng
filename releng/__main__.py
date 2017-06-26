@@ -62,6 +62,6 @@ if not args.run:
 factory.init_gerrit_integration(user=args.user)
 with factory.status_reporter:
     if args.matrix:
-        prepare_build_matrix(factory, args.matrix, as_axis=False)
+        prepare_build_matrix(factory, args.matrix)
     else:
         BuildContext._run_build(factory, args.build, args.job_type, args.opts)

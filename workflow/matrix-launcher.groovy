@@ -5,13 +5,13 @@ utils.readBuildRevisions()
 
 def loadMatrixConfigs(filename)
 {
-    optionsString = utils.processMatrixConfigsToBuildAxis(filename)
+    matrix = utils.processMatrixConfigs(filename)
 }
 
 def doBuild(matrixJobName)
 {
     def parameters = utils.currentBuildParametersForJenkins()
-    parameters += [$class: 'StringParameterValue', name: 'OPTIONS', value: optionsString]
+    parameters += [$class: 'StringParameterValue', name: 'OPTIONS', value: matrix.as_axis]
     def matrixBuild = build job: matrixJobName, parameters: parameters, propagate: false
     currentBuild.setResult(matrixBuild.result)
     addSummaryForTriggeredBuild(matrixJobName, matrixBuild)
