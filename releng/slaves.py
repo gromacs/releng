@@ -110,6 +110,24 @@ _HOST_LABELS = {
             DOCKER_DEFAULT: {} # TODO
         }
 
+# Specifies an installed gcc (ie found in the list above) for each
+# host that should be used for compilers (ie icc and clang) that need
+# to use an external C++ standard library, such as one from gcc.
+_DEFAULT_GCC_FOR_LIBSTDCXX = {
+            BS_MAC: 'gcc-6',
+            BS_MIC: 'gcc-4.9',
+            BS_NIX1204: 'gcc-5',
+            BS_NIX1310: 'gcc-5',
+            BS_NIX1404: 'gcc-7',
+            BS_NIX_AMD_GPU: 'gcc-5',
+            BS_NIX_AMD: 'gcc-5',
+            BS_JETSON_TK1: 'gcc-5',
+            BS_JETSON_TX1: 'gcc-5'
+    }
+
+def get_default_gcc_for_libstdcxx(host):
+    return _DEFAULT_GCC_FOR_LIBSTDCXX.get(host, None)
+
 # Specifies the set of hosts that are allowed to execute matrix configurations.
 # This should match the nodes selected on the node axis in the Jenkins matrix jobs.
 # If any config gets assigned to a node outside the Jenkins matrix job axis, Jenkins

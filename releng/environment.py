@@ -230,27 +230,36 @@ class BuildEnvironment(object):
         Use this function to configure compilers (gcc, icc or clang) to
         use the standard library from a particular gcc installation on the
         particular host in use, since the system gcc may be too old.
+
+        Requires that self.compiler describe the actual compiler to use.
         """
 
-        # TODO should setting gcctoolchain go in node-specific
-        # setup somewhere? Or the C++ standard library become
-        # a build option?
-        gcctoolchainpath=None
-        if self._node_name == slaves.BS_MIC:
-            # icc is used here, and is buggy with respect to libstdc++ in gcc-5
-            gcctoolchainpath='/opt/gcc/4.9.3'
-        if self.compiler == Compiler.GCC and self.compiler_version == '7':
-            gcc_exe = self._cmd_runner.find_executable(self.c_compiler)
-            gcc_exe_real_path = os.path.dirname(os.path.realpath(gcc_exe))
-            gcctoolchainpath = os.path.join(gcc_exe_real_path, '..')
+        # Artefacts built by all C++ compilers require link-time
+        # access to a C++ standard library, and often other libraries
+        # such as for OpenMP or sanitizers are typically installed
+        # alongside that standard library. So for gcc, we ensure that
+        # we link to components from the matching gcc version, rather
+        # than the system default gcc. For clang and icc, we link to a
+        # gcc specified for each build slave.
+        gcc_name=None
+        if self.compiler == Compiler.GCC:
+            gcc_name = self.c_compiler
+        elif self.compiler == Compiler.CLANG or self.compiler == Compiler.INTEL:
+            gcc_name = slaves.get_default_gcc_for_libstdcxx(self._node_name)
 
-        if gcctoolchainpath:
+        gcc_toolchain_path=None
+        if gcc_name:
+            gcc_exe = self._cmd_runner.find_executable(gcc_name)
+            gcc_exe_dirname = os.path.dirname(gcc_exe)
+            gcc_toolchain_path = os.path.join(gcc_exe_dirname, '..')
+
+        if gcc_toolchain_path:
             if format_for_stdlib_flag:
-                stdlibflag=format_for_stdlib_flag.format(gcctoolchain=gcctoolchainpath)
+                stdlibflag=format_for_stdlib_flag.format(gcctoolchain=gcc_toolchain_path)
                 self.append_to_env_var('CFLAGS', stdlibflag)
                 self.append_to_env_var('CXXFLAGS', stdlibflag)
             format_for_linker_flags="-Wl,-rpath,{gcctoolchain}/lib64 -L{gcctoolchain}/lib64"
-            self.extra_cmake_options['CMAKE_CXX_LINK_FLAGS'] = format_for_linker_flags.format(gcctoolchain=gcctoolchainpath)
+            self.extra_cmake_options['CMAKE_CXX_LINK_FLAGS'] = format_for_linker_flags.format(gcctoolchain=gcc_toolchain_path)
 
     def _init_clang(self, version):
         """Initializes the build to use given clang version as the compiler.
@@ -267,12 +276,12 @@ class BuildEnvironment(object):
         self.c_compiler = 'clang-' + version
         self.cxx_compiler = 'clang++-' + version
         # Need a suitable standard library for C++11 support, so get
-        # one from a gcc on the host.
+        # one from a specified gcc on the host.
         self._manage_stdlib_from_gcc('--gcc-toolchain={gcctoolchain}')
         # Symbolizer is only required for ASAN builds, but should not do any
         # harm to always set it (and that is much simpler).
         clang_path = self._cmd_runner.find_executable(self.c_compiler)
-        clang_path = os.path.dirname(os.path.realpath(clang_path))
+        clang_path = os.path.dirname(clang_path)
         symbolizer_path = os.path.join(clang_path, 'llvm-symbolizer')
         self.set_env_var('ASAN_SYMBOLIZER_PATH', symbolizer_path)
         # Test binaries compiled with clang OpenMP support need to
@@ -286,6 +295,7 @@ class BuildEnvironment(object):
                 raise ConfigurationError('need to specify msvc version for icc on Windows')
             self.c_compiler = 'icl'
             self.cxx_compiler = 'icl'
+            self.compiler = Compiler.INTEL
             self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/machine:x64"'
             if version == '15.0':
                 self.run_env_script(r'"C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs' + self.compiler_version)
@@ -296,6 +306,7 @@ class BuildEnvironment(object):
         else:
             self.c_compiler = 'icc'
             self.cxx_compiler = 'icpc'
+            self.compiler = Compiler.INTEL
             if version == '16.0':
                 self.run_env_script('. /opt/intel/compilers_and_libraries_2016/linux/bin/compilervars.sh intel64')
             elif version == '15.0':
@@ -309,12 +320,13 @@ class BuildEnvironment(object):
             else:
                 raise ConfigurationError('only icc 12.1, 13.0, 14.0, 15.0, 16.0 are supported, got icc-' + version)
 
-            # Need a suitable standard library for C++11 support.
-            # icc on Linux is required to use the C++ headers and
-            # standard libraries from a gcc installation, and defaults
-            # to that of the gcc it finds in the path.
+            # Need a suitable standard library for C++11 support.  icc
+            # on Linux is required to use the C++ headers and standard
+            # libraries from a gcc installation, and defaults to that
+            # of the gcc it finds in the path, which is not always
+            # suitable. Instead we organize to use a specified gcc on
+            # each slave.
             self._manage_stdlib_from_gcc('-gcc-name={gcctoolchain}/bin/gcc')
-        self.compiler = Compiler.INTEL
         self.compiler_version = version
 
     def _init_msvc(self, version):

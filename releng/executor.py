@@ -91,6 +91,13 @@ class Executor(object):
         with open(path, 'w') as fp:
             fp.write(contents)
 
+    def find_executable_with_path(self, name, environment_path):
+        """Returns the full path to the given executable,
+        including resolving symlinks."""
+        # If we at some point require Python 3.3, shutil.which() would be
+        # more obvious.
+        return os.path.realpath(find_executable(name, environment_path))
+
 class DryRunExecutor(object):
     """Executor replacement for manual testing dry runs."""
 
@@ -131,6 +138,10 @@ class DryRunExecutor(object):
     def write_file(self, path, contents):
         print('write: ' + path + ' <<<')
         print(contents + '<<<')
+
+    def find_executable_with_path(self, name, environment_path):
+        print('find: ' + name)
+        return '/usr/local/bin/' + name
 
 class CurrentDirectoryTracker(object):
     """Helper class for tracking the current directory for command execution."""
@@ -285,6 +296,4 @@ class CommandRunner(object):
 
     def find_executable(self, name):
         """Returns the full path to the given executable."""
-        # If we at some point require Python 3.3, shutil.which() would be
-        # more obvious.
-        return find_executable(name, path=self._env['PATH'])
+        return self._executor.find_executable_with_path(name, environment_path=self._env['PATH'])
