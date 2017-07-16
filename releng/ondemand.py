@@ -73,6 +73,8 @@ class RequestParser(object):
                         'desc': 'pre-submit',
                         'matrix-file': 'pre-submit-matrix'
                     })
+            elif token == 'regtest-package':
+                self._builds.append({ 'type': 'regtest-package' })
             elif token == 'release':
                 build = { 'type': 'release', 'release_flag': False }
                 if tokens and tokens[0].lower() == 'no-dev':
@@ -167,7 +169,7 @@ class RequestParser(object):
                 matrix = get_matrix_info(self._factory, build['matrix-file'])
                 del build['matrix-file']
                 build['matrix'] = matrix
-            elif build_type == 'update-regtest-hash':
+            elif build_type in ('regtest-package', 'update-regtest-hash'):
                 self._workspace._checkout_project(Project.GROMACS)
                 build_script_path = self._workspace._resolve_build_input_file('get-version-info', '.py')
                 script = BuildScript(self._factory.executor, build_script_path)

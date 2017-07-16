@@ -65,11 +65,13 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         self.assertEqual(factory.executor.method_calls, [])
 
     def test_PackageRequestForReleng(self):
-        helper = TestHelper(self, workspace='ws', env={
+        helper = TestHelper(self, workspace='/ws', env={
                 'GERRIT_PROJECT': 'releng',
                 'GERRIT_REFSPEC': 'HEAD',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Package')
             })
+        helper.add_input_file('/ws/gromacs/admin/builds/get-version-info.py',
+                'def do_build(context):\n    context.set_version_info("2017", "1234567890abcdef")\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
         self.assertEqual(result, {
@@ -78,11 +80,12 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                             'type': 'source-package'
                         },
                         {
-                            'type': 'regtest-package'
+                            'type': 'regtest-package',
+                            'version': '2017',
+                            'md5sum': '1234567890abcdef'
                         }
                     ]
             })
-        self.assertEqual(factory.executor.method_calls, [])
 
     def test_PostSubmitRequest(self):
         helper = TestHelper(self, workspace='ws', env={

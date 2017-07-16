@@ -122,7 +122,7 @@ def doMatrix(bld)
 def doRegressionTestsPackage(bld)
 {
     bld.title = 'Regressiontests package'
-    createRegressionTestsPackage(bld, 'test', false)
+    createRegressionTestsPackage(bld, bld.version, false)
 }
 
 def createRegressionTestsPackage(bld, version, release)
