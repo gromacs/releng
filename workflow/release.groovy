@@ -140,12 +140,8 @@ def setTarballEnvironmentVariablesForReleng()
 
 def testTarballs(tarballBuilds, testMatrix)
 {
-    def tasks = [:]
-    for (int i = 0; i != testMatrix.configs.size(); ++i) {
-        def config = testMatrix.configs[i]
-        tasks[config.opts] = {
-            runSingleTestConfig(tarballBuilds, config)
-        }
+    def tasks = testMatrix.configs.collectEntries {
+        [(it.opts): { runSingleTestConfig(tarballBuilds, it) }]
     }
     parallel tasks
     addConfigurationSummary(testMatrix.configs)
@@ -199,8 +195,7 @@ def addConfigurationSummary(testConfigs)
             <td>Result</td>
           </tr>
         """.stripIndent()
-    for (int i = 0; i != testConfigs.size(); ++i) {
-        def config = testConfigs[i]
+    for (def config : testConfigs) {
         def opts = config.opts.join(' ')
         text += """\
             <tr>

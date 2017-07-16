@@ -55,11 +55,9 @@ def setEnvFromActions(overrides)
 def doBuild()
 {
     def builds = actions.builds
-    def tasks = [:]
     def builders = getBuildersMap()
-    for (int i = 0; i != builds.size(); ++i) {
-        def bld = builds[i]
-        tasks[bld.type] = { builders[bld.type](bld) }
+    def tasks = builds.collectEntries {
+        [(it.type): { builders[it.type](it) }]
     }
     parallel tasks
     setBuildResult(builds)
@@ -240,8 +238,7 @@ def addSummaryForTriggeredBuilds(builds)
         Builds:
         <table>
         """.stripIndent()
-    for (int i = 0; i != builds.size(); ++i) {
-        def bld = builds[i]
+    for (def bld : builds) {
         def summary = bld.status.result
         if (bld.summary) {
             summary = bld.summary

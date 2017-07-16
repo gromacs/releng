@@ -95,12 +95,12 @@ def runRelengScriptInternal(prepareScript, contents, propagate)
         except:
             pass
         os.environ['STATUS_FILE'] = '${statusFile}'
-        sys.path.append(os.path.abspath('releng'))
         """.stripIndent()
     if (!propagate) {
         script += "os.environ['NO_PROPAGATE_FAILURE'] = '1'\n"
     }
     script += prepareScript.stripIndent()
+    script += "sys.path.append(os.path.abspath('releng'))\n"
     script += "import releng\n"
     script += contents.stripIndent()
     try {
@@ -224,8 +224,7 @@ def addBuildRevisionsSummary(revisionList)
         Built revisions:
         <table>
         """.stripIndent()
-    for (int i = 0; i != revisionList.size(); ++i) {
-        def rev = revisionList[i]
+    for (def rev : revisionList) {
         text += """\
             <tr>
               <td>${rev.project}:</td>
@@ -314,8 +313,8 @@ def readSourceVersion()
 def setCombinedBuildResult(results)
 {
     def combinedResult = hudson.model.Result.SUCCESS
-    for (int i = 0; i != results.size(); ++i) {
-        def result = hudson.model.Result.fromString(results[i])
+    for (def resultStr : results) {
+        def result = hudson.model.Result.fromString(resultStr)
         combinedResult = combinedResult.combine(result)
     }
     currentBuild.setResult(combinedResult.toString())
