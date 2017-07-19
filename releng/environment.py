@@ -85,6 +85,11 @@ class BuildEnvironment(object):
 
         self._build_jobs = slaves.get_default_build_parallelism(self._node_name)
 
+        environment_command = slaves.get_environment_subshell(self._node_name)
+        if environment_command:
+            environment_dump_command = environment_command + ' -- {0} -E environment'.format(self.cmake_command)
+            self._cmd_runner.import_env(environment_dump_command)
+
         if self.system is not None:
             self._init_system()
 
@@ -169,7 +174,9 @@ class BuildEnvironment(object):
         self._cmd_runner.append_to_env_var('PATH', os.path.expanduser(path), sep=os.pathsep)
 
     def run_env_script(self, env_cmd):
-        self._cmd_runner.import_env(env_cmd, self.cmake_command)
+        # Capture the environment created by sourcing env_cmd
+        env_dump_cmd = env_cmd + ' && {0} -E environment'.format(self.cmake_command)
+        self._cmd_runner.import_env(env_dump_cmd)
 
     def _init_system(self):
         if self.system == System.WINDOWS:

@@ -193,9 +193,16 @@ class CommandRunner(object):
         else:
             self._env[variable] = value
 
-    def import_env(self, env_cmd, cmake_command):
-        cmd = env_cmd + ' && {0} -E environment'.format(cmake_command)
-        new_env = self.check_output(cmd, shell=True)
+    def import_env(self, env_dump_cmd):
+        """Runs env_dump_cmd and uses its output to import values into the current environment.
+
+        The output of env_dump_cmd should contain lines of "key=value"
+        for the environment variables present, e.g. as created by
+        cmake -E environment.  Normally used to capture and import the
+        environment resulting from sourcing a script that sets up the
+        environment to use a particular build toolchain.
+        """
+        new_env = self.check_output(env_dump_cmd, shell=True)
         if new_env:
             for line in new_env.splitlines():
                 if re.match(r'\w+=', line):
