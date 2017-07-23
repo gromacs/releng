@@ -39,8 +39,9 @@ class BuildContext(object):
         self.job_type = job_type
         self._status_reporter = factory.status_reporter
         self._cwd = factory.cwd
-        self._executor = factory.executor
         self._cmd_runner = factory.cmd_runner
+        self._executor = factory.executor
+        self._projects = factory.projects
         self._version = None
         self.workspace = factory.workspace
         self.env, self.opts = process_build_options(factory, opts, extra_options)
@@ -239,7 +240,7 @@ class BuildContext(object):
                 working directory.
             version (str): Version for the package.
         """
-        project_info = self.workspace.get_project_info(project)
+        project_info = self._projects.get_project_info(project)
         values = {
                 'HEAD_HASH': project_info.head_hash,
                 'BUILD_NUMBER': os.environ['BUILD_NUMBER'],
@@ -439,9 +440,10 @@ class BuildContext(object):
         """Runs the actual build.
 
         This method is the top-level driver for the build."""
+        projects = factory.projects
         workspace = factory.workspace
         workspace._clear_workspace_dirs()
-        workspace._checkout_project(factory.default_project)
+        projects.checkout_project(factory.default_project)
         build_script_path = workspace._resolve_build_input_file(build, '.py')
         script = BuildScript(factory.executor, build_script_path)
         if script.build_opts:
@@ -450,9 +452,9 @@ class BuildContext(object):
             opts.extend(script.build_opts)
         context = factory.create_context(job_type, opts, script.extra_options)
         for project in script.extra_projects:
-            workspace._checkout_project(project)
-        workspace._print_project_info()
-        workspace._check_projects()
+            projects.checkout_project(project)
+        projects.print_project_info()
+        projects.check_projects()
         out_of_source = script.build_out_of_source or context.opts.out_of_source
         workspace._init_build_dir(out_of_source)
         if factory.default_project == Project.GROMACS:
@@ -464,9 +466,10 @@ class BuildContext(object):
 
     @staticmethod
     def _read_build_script_config(factory, script_name):
+        projects = factory.projects
         workspace = factory.workspace
         workspace._clear_workspace_dirs()
-        workspace._checkout_project(factory.default_project)
+        projects.checkout_project(factory.default_project)
         build_script_path = workspace._resolve_build_input_file(script_name, '.py')
         script = BuildScript(factory.executor, build_script_path)
         config = BuildConfig(script.build_opts)

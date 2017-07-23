@@ -31,10 +31,12 @@ class TestHelper(object):
                 env['RELENG_REFSPEC'] = 'HEAD'
             if 'REGRESSIONTESTS_REFSPEC' not in env:
                 env['REGRESSIONTESTS_REFSPEC'] = 'HEAD'
+        else:
+            env['WORKSPACE'] = '/ws'
         self.factory = ContextFactory(env=env)
         self.factory.init_executor(instance=self.executor)
         if workspace:
-            self.factory.init_workspace()
+            self.factory.init_workspace_and_projects()
             self.executor.reset_mock()
             self.reset_console_output()
         self._input_files = dict()

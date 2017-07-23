@@ -12,43 +12,22 @@ import tarfile
 from common import BuildError, CommandError, ConfigurationError
 from common import Project
 
-class ProjectInfo(object):
+class CheckedOutProject(object):
     """Information about a checked-out project.
 
     Attributes:
-        project (str): Name of the git project (e.g. gromacs, regressiontests, releng)
         root (str): Root directory where the project has been checked out.
-        refspec (RefSpec): Refspec from which the project has been checked out.
-        head_hash (str): SHA1 of HEAD.
-        head_title (str): Title of the HEAD commit.
-        remote_hash (str): SHA1 of the refspec at the remote repository.
+        tarball_path (str): Path to the tarball where the project has been
+            extracted from (if it exists).
     """
 
-    def __init__(self, project, root, refspec, head_hash, head_title, remote_hash):
-        self.project = project
+    def __init__(self, root, tarball_path=None):
         self.root = root
-        self.refspec = refspec
-        self.head_hash = head_hash
-        self.head_title = head_title
-        self.remote_hash = remote_hash
+        self.tarball_path = tarball_path
 
     @property
     def is_tarball(self):
-        return self.refspec.is_tarball
-
-    def has_correct_hash(self):
-        return self.head_hash == self.remote_hash
-
-    def to_dict(self):
-        return {
-                'project': self.project,
-                'refspec': str(self.refspec),
-                'hash': self.head_hash,
-                'title': self.head_title,
-                'refspec_env': '{0}_REFSPEC'.format(self.project.upper()),
-                'hash_env': '{0}_HASH'.format(self.project.upper())
-            }
-
+        return self.tarball_path is not None
 
 class Workspace(object):
     """Provides access to set up, query, and act within the build workspace,
@@ -61,9 +40,6 @@ class Workspace(object):
     need to be post-processed in Jenkins) are provided. Implements
     functionality for updating commits with new files.
 
-    Internally, this class is also responsible for checking out the projects
-    and for tasks related to it.
-
     Attributes:
         root (str): Root directory of the workspace.
         install_dir (str): Directory for test installation.
@@ -74,35 +50,35 @@ class Workspace(object):
         self._cmd_runner = factory.cmd_runner
         self._gerrit = factory.gerrit
         self._default_project = factory.default_project
-        # The releng project is always checked out, since we are already
-        # executing code from there...
-        existing_projects = { Project.RELENG, self._gerrit.checked_out_project }
-        self._projects = dict()
-        for project in existing_projects:
-            info = self._get_git_project_info(project)
-            self._projects[project] = info
+        self._checkouts = dict()
         self._build_dir = None
         self._out_of_source = None
         self._logs_dir = os.path.join(self.root, 'logs')
         self.install_dir = os.path.join(self.root, 'test-install')
 
-    def _get_git_project_info(self, project):
+    def _set_initial_checkouts(self, projects):
+        """Sets projects checked out externally from Git.
+
+        Called from ProjectsManager to initialize the Workspace with knowledge
+        of projects that have been checked out outside the Python code.
+        """
+        for project in projects:
+            self._checkouts[project] = CheckedOutProject(os.path.join(self.root, project))
+
+    def _get_checkout_info(self, project):
         """Returns the project info for a project that has been checked
+        out from git."""
+        if project not in self._checkouts:
+            raise ConfigurationError('accessing project {0} before checkout'.format(project))
+        return self._checkouts[project]
+
+    def _get_git_head_info(self, project):
+        """Returns the title and SHA1 for a project that has been checked
         out from git."""
         project_dir = os.path.join(self.root, project)
         cmd = ['git', 'rev-list', '-n1', '--format=oneline', 'HEAD']
         sha1, title = self._cmd_runner.check_output(cmd, cwd=project_dir).strip().split(None, 1)
-        refspec = self._gerrit.get_refspec(project)
-        if refspec.is_static:
-            remote_sha1 = self._gerrit.get_remote_hash(project, refspec)
-        else:
-            remote_sha1 = sha1
-        return ProjectInfo(project, project_dir, refspec, sha1, title, remote_sha1)
-
-    def get_project_info(self, project):
-        if project not in self._projects:
-            raise ConfigurationError('accessing project {0} before checkout'.format(project))
-        return self._projects[project]
+        return title, sha1
 
     def _ensure_empty_dir(self, path):
         """Ensures that the given directory exists and is empty."""
@@ -127,12 +103,12 @@ class Workspace(object):
         if self._out_of_source:
             self._ensure_empty_dir(self.build_dir)
         else:
-            project_info = self.get_project_info(self._default_project)
+            project_info = self._get_checkout_info(self._default_project)
             if project_info.is_tarball:
-                self._executor.remove_path(project_info.project_dir)
-                self._extract_tarball(project_info.refspec.tarball_path)
+                self._executor.remove_path(project_info.root)
+                self._extract_tarball(project_info.tarball_path)
             elif not project_info.refspec.is_no_op:
-                self._run_git_clean(project_info.project_dir)
+                self._run_git_clean(project_info.root)
 
     def _resolve_build_input_file(self, path, extension=None):
         """Resolves the name of a build input file.
@@ -173,7 +149,7 @@ class Workspace(object):
         Returns:
             str: Absolute path to the project directory.
         """
-        return self.get_project_info(project).root
+        return self._get_checkout_info(project).root
 
     def get_log_dir(self, category=None):
         """Returns directory for log files.
@@ -215,40 +191,21 @@ class Workspace(object):
         path = self.get_log_dir(category=category)
         return os.path.join(path, name)
 
-    def _get_build_revisions(self):
-        projects = []
-        for project in Project._values:
-            if project in self._projects:
-                info = self._projects[project]
-            else:
-                refspec = self._gerrit.get_refspec(project, allow_none=True)
-                if refspec is None:
-                    continue
-                # TODO: Get the commit title? That would make the build summary
-                # page nicer, but can require some magic, or a real checkout...
-                sha1 = self._gerrit.get_remote_hash(project, refspec)
-                info = ProjectInfo(project, None, refspec, sha1, None, sha1)
-            projects.append(info)
-        return [project.to_dict() for project in projects]
-
-    def _checkout_project(self, project):
-        """Checks out the given project if not yet done for this build."""
-        if project in self._projects:
-            return
-        refspec = self._gerrit.get_refspec(project)
+    def _checkout_project(self, project, refspec):
+        """Checks out the given project."""
         if refspec.is_tarball:
             props = refspec.tarball_props
             # TODO: Remove possible other directories from earlier extractions.
             project_dir = os.path.join(self.root, '{0}-{1}'.format(project, props['PACKAGE_VERSION']))
             self._executor.remove_path(project_dir)
             self._extract_tarball(refspec.tarball_path)
-            # TODO: Populate more useful information for _print_project_info()
-            info = ProjectInfo(project, project_dir, refspec, refspec.checkout, 'From tarball', refspec.checkout)
+            project_info = CheckedOutProject(project_dir, refspec.tarball_path)
         else:
             if not refspec.is_no_op:
                 self._do_git_checkout(project, refspec)
-            info = self._get_git_project_info(project)
-        self._projects[project] = info
+            project_dir = os.path.join(self.root, project)
+            project_info = CheckedOutProject(project_dir)
+        self._checkouts[project] = project_info
 
     def _extract_tarball(self, tarball_path):
         with tarfile.open(tarball_path) as tar:
@@ -267,40 +224,6 @@ class Workspace(object):
 
     def _run_git_clean(self, project_dir):
         self._cmd_runner.check_call(['git', 'clean', '-ffdxq'], cwd=project_dir)
-
-    def _print_project_info(self):
-        """Prints information about the revisions used in this build."""
-        console = self._executor.console
-        projects = [self._projects[p] for p in sorted(self._projects.iterkeys())]
-        print('-----------------------------------------------------------', file=console)
-        print('Building using versions:', file=console)
-        for project_info in projects:
-            correct_info = ''
-            if not project_info.has_correct_hash():
-                correct_info = ' (WRONG)'
-            print('{0:16} {1:26} {2}{3}'.format(
-                project_info.project + ':', project_info.refspec, project_info.head_hash, correct_info),
-                file=console)
-            if project_info.head_title:
-                print('{0:19}{1}'.format('', project_info.head_title), file=console)
-        print('-----------------------------------------------------------', file=console)
-
-    def _check_projects(self):
-        """Checks that all checked-out projects are at correct revisions.
-
-        In the past, there have been problems with not all projects getting
-        correctly checked out.  It is unknown whether this was a Jenkins bug
-        or something else, and whether the issue still exists.
-        """
-        all_correct = True
-        for project in sorted(self._projects.iterkeys()):
-            project_info = self._projects[project]
-            if not project_info.has_correct_hash():
-                print('Checkout of {0} failed: HEAD is {1}, expected {2}'.format(
-                    project, project_info.head_hash, project_info.remote_hash))
-                all_correct = False
-        if not all_correct:
-            raise BuildError('Checkout failed (Jenkins issue)')
 
     def upload_revision(self, project, file_glob="*"):
         """Upload a new version of the patch that triggered this build, but

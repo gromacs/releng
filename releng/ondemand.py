@@ -21,6 +21,7 @@ class RequestParser(object):
         self._factory = factory
         self._workspace = factory.workspace
         self._gerrit = factory.gerrit
+        self._projects = factory.projects
         self._branch = None
         self._branch_projects = { Project.GROMACS, Project.REGRESSIONTESTS }
         triggering_project = self._gerrit.get_triggering_project()
@@ -109,7 +110,7 @@ class RequestParser(object):
             self._branch = change.branch
         if project in self._branch_projects:
             self._branch_projects.remove(project)
-        self._gerrit.override_refspec(project, refspec)
+        self._projects.override_refspec(project, refspec)
         self._env['{0}_REFSPEC'.format(project.upper())] = refspec.fetch
         self._env['{0}_HASH'.format(project.upper())] = refspec.checkout
         self._default_builds = [{
@@ -140,7 +141,7 @@ class RequestParser(object):
         gromacs_refspec = RefSpec(spec)
         gromacs_hash = self._gerrit.get_remote_hash(Project.GROMACS, gromacs_refspec)
         gromacs_refspec = RefSpec(spec, gromacs_hash)
-        self._gerrit.override_refspec(Project.GROMACS, gromacs_refspec)
+        self._projects.override_refspec(Project.GROMACS, gromacs_refspec)
         self._default_builds = [
                 {
                     'type': 'matrix',
@@ -165,12 +166,12 @@ class RequestParser(object):
         for build in self._builds:
             build_type = build['type']
             if build_type == 'matrix':
-                self._workspace._checkout_project(Project.GROMACS)
+                self._projects.checkout_project(Project.GROMACS)
                 matrix = get_matrix_info(self._factory, build['matrix-file'])
                 del build['matrix-file']
                 build['matrix'] = matrix
             elif build_type in ('regtest-package', 'update-regtest-hash'):
-                self._workspace._checkout_project(Project.GROMACS)
+                self._projects.checkout_project(Project.GROMACS)
                 build_script_path = self._workspace._resolve_build_input_file('get-version-info', '.py')
                 script = BuildScript(self._factory.executor, build_script_path)
                 context = self._factory.create_context(JobType.GERRIT, None, None)

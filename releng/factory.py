@@ -8,7 +8,7 @@ import platform
 from common import Project, System
 from context import BuildContext
 from executor import CommandRunner, CurrentDirectoryTracker, Executor
-from integration import GerritIntegration, JenkinsIntegration, StatusReporter
+from integration import GerritIntegration, JenkinsIntegration, ProjectsManager, StatusReporter
 from workspace import Workspace
 
 class ContextFactory(object):
@@ -40,9 +40,10 @@ class ContextFactory(object):
         self._cwd = CurrentDirectoryTracker()
         self._executor = None
         self._cmd_runner = None
-        self._status_reporter = None
         self._gerrit = None
         self._jenkins = None
+        self._projects = None
+        self._status_reporter = None
         self._workspace = None
 
     @property
@@ -94,10 +95,17 @@ class ContextFactory(object):
         return self._jenkins
 
     @property
+    def projects(self):
+        """Returns the ProjectsManager instance for the build."""
+        if self._projects is None:
+            self.init_workspace_and_projects()
+        return self._projects
+
+    @property
     def workspace(self):
         """Returns the Workspace instance for the build."""
         if self._workspace is None:
-            self.init_workspace()
+            self.init_workspace_and_projects()
         return self._workspace
 
     def init_executor(self, cls=None, instance=None):
@@ -141,13 +149,13 @@ class ContextFactory(object):
         assert self._jenkins is None
         self._jenkins = JenkinsIntegration(factory=self)
 
-    def init_workspace(self):
-        """Initializes Workspace with given parameters.
-
-        If not called, the object will be created with default parameters.
-        """
+    def init_workspace_and_projects(self):
+        """Initializes Workspace and ProjectsManager."""
+        assert self._projects is None
         assert self._workspace is None
-        self._workspace = Workspace(self)
+        self._workspace = Workspace(factory=self)
+        self._projects = ProjectsManager(factory=self)
+        self._projects.init_workspace()
 
     def create_context(self, *args):
         """Creates a BuildContext with given arguments."""

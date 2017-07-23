@@ -137,6 +137,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         helper = TestHelper(self, workspace='ws', env={
                 'BUILD_URL': 'http://build',
                 'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_REFSPEC': 'refs/changes/12/3546/3',
                 'GERRIT_CHANGE_URL': 'http://gerrit',
                 'GERRIT_PATCHSET_NUMBER': '3',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234')
@@ -168,6 +169,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         helper = TestHelper(self, workspace='ws', env={
                 'BUILD_URL': 'http://build',
                 'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_REFSPEC': 'refs/changes/12/3546/3',
                 'GERRIT_CHANGE_URL': 'http://gerrit',
                 'GERRIT_PATCHSET_NUMBER': '3',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet')
@@ -194,6 +196,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         helper = TestHelper(self, workspace='ws', env={
                 'BUILD_URL': 'http://build',
                 'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_REFSPEC': 'refs/changes/12/3546/3',
                 'GERRIT_CHANGE_URL': 'http://gerrit',
                 'GERRIT_PATCHSET_NUMBER': '3',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet clang-analyzer')

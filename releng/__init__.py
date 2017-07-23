@@ -134,7 +134,7 @@ def get_build_revisions():
     from factory import ContextFactory
     factory = ContextFactory()
     with factory.status_reporter as status:
-        status.return_value = factory.workspace._get_build_revisions()
+        status.return_value = factory.projects.get_build_revisions()
 
 def read_source_version_info():
     """Reads version info from the source repository.

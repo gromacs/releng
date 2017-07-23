@@ -15,10 +15,10 @@ from options import BuildConfig, select_build_hosts
 import slaves
 
 def prepare_build_matrix(factory, configfile):
-    workspace = factory.workspace
-    workspace._checkout_project(Project.GROMACS)
-    workspace._print_project_info()
-    workspace._check_projects()
+    projects = factory.projects
+    projects.checkout_project(Project.GROMACS)
+    projects.print_project_info()
+    projects.check_projects()
     result = get_matrix_info(factory, configfile)
     factory.status_reporter.return_value = result
 

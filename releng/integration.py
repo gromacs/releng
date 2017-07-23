@@ -97,72 +97,19 @@ class GerritChange(object):
 
 class GerritIntegration(object):
 
-    """Provides access to Gerrit and Jenkins configuration related to checkouts.
+    """Provides access to Gerrit and Gerrit Trigger configuration.
 
-    Attributes:
-        checked_out_project (Project): Project initially checked out by Jenkins.
+    Methods encapsulate calls to Gerrit SSH commands (and possibly in the
+    future, REST calls) and access to environment variables/build parameters
+    set by Gerrit Trigger.
     """
 
     def __init__(self, factory, user=None):
         if user is None:
             user = 'jenkins'
         self._env = factory.env
-        self._executor = factory.executor
         self._cmd_runner = factory.cmd_runner
-        self._overrides = dict()
         self._user = user
-        self.checked_out_project, self._checked_out_refspec = self._get_checked_out_project()
-
-    def _get_checked_out_project(self):
-        """Determines the project initially checked out by Jenkins.
-
-        If the build is triggered by Gerrit Trigger, then GERRIT_PROJECT
-        environment variable exists, and the Jenkins build configuration needs
-        to check out this project to properly integrate with different plugins.
-
-        For other cases, CHECKOUT_PROJECT can also be used.
-
-        Returns:
-          Tuple[Project,RefSpec]: The checked out project and refspec.
-        """
-        checkout_project = self._env.get('CHECKOUT_PROJECT', None)
-        gerrit_project = self._env.get('GERRIT_PROJECT', None)
-        if checkout_project is not None:
-            checkout_project = Project.parse(checkout_project)
-            refspec = self._env.get('CHECKOUT_REFSPEC', None)
-            if refspec is None:
-                raise ConfigurationError('CHECKOUT_REFSPEC not set')
-            sha1 = self._env.get('{0}_HASH'.format(checkout_project.upper()), None)
-            return checkout_project, RefSpec(refspec, sha1)
-        if gerrit_project is not None:
-            gerrit_project = Project.parse(gerrit_project)
-            refspec = self._env.get('GERRIT_REFSPEC', None)
-            if refspec is None:
-                raise ConfigurationError('GERRIT_REFSPEC not set')
-            return gerrit_project, RefSpec(refspec)
-        raise ConfigurationError('Neither CHECKOUT_PROJECT nor GERRIT_PROJECT is set')
-
-    def get_refspec(self, project, allow_none=False):
-        """Returns the refspec that is being built for the given project."""
-        if self.checked_out_project == project:
-            return self._checked_out_refspec
-        if project in self._overrides:
-            return self._overrides[project]
-        env_name = '{0}_REFSPEC'.format(project.upper())
-        refspec = self._env.get(env_name, None)
-        env_name = '{0}_HASH'.format(project.upper())
-        sha1 = self._env.get(env_name, None)
-        gerrit_project = self.get_triggering_project()
-        if not RefSpec.is_tarball_refspec(refspec) and gerrit_project is not None:
-            if gerrit_project == project:
-                refspec = self._env.get('GERRIT_REFSPEC', None)
-                if refspec is None:
-                    raise ConfigurationError('GERRIT_REFSPEC not set')
-        if refspec is None:
-            if allow_none:
-                return None
-            raise ConfigurationError(env_name + ' is not set')
-        return RefSpec(refspec, sha1, executor=self._executor)
 
     def get_remote_hash(self, project, refspec):
         """Fetch hash of a refspec on the Gerrit server."""
@@ -182,6 +129,12 @@ class GerritIntegration(object):
             return None
         return Project.parse(gerrit_project)
 
+    def get_triggering_refspec(self):
+        refspec = self._env.get('GERRIT_REFSPEC', None)
+        if refspec is None:
+            raise ConfigurationError('GERRIT_REFSPEC not set')
+        return RefSpec(refspec)
+
     def get_triggering_branch(self):
         return self._env.get('GERRIT_BRANCH', None)
 
@@ -195,9 +148,6 @@ class GerritIntegration(object):
             return match.group(1).strip()
         text = self._env.get('MANUAL_COMMENT_TEXT', None)
         return text
-
-    def override_refspec(self, project, refspec):
-        self._overrides[project] = refspec
 
     def query_unique_change(self, query):
         cmd = self._get_ssh_query_cmd()
@@ -233,6 +183,209 @@ class GerritIntegration(object):
     def _get_ssh_review_cmd(self, change, patchset, message):
         changeref = '{0},{1}'.format(change, patchset)
         return self._get_ssh_gerrit_cmd('review') + [changeref, '-m', '"' + message + '"']
+
+
+class ProjectInfo(object):
+    """Information about a checked-out project.
+
+    Attributes:
+        project (str): Name of the git project (e.g. gromacs, regressiontests, releng)
+        refspec (RefSpec): Refspec from which the project has been checked out.
+        head_hash (str): SHA1 of HEAD.
+        head_title (str): Title of the HEAD commit.
+        remote_hash (str): SHA1 of the refspec at the remote repository.
+    """
+
+    def __init__(self, project, refspec, head_hash, head_title, remote_hash):
+        self.project = project
+        self.refspec = refspec
+        self.head_hash = head_hash
+        self.head_title = head_title
+        self.remote_hash = remote_hash
+
+    @property
+    def is_tarball(self):
+        return self.refspec.is_tarball
+
+    def has_correct_hash(self):
+        return self.head_hash == self.remote_hash
+
+    def to_dict(self):
+        return {
+                'project': self.project,
+                'refspec': str(self.refspec),
+                'hash': self.head_hash,
+                'title': self.head_title,
+                'refspec_env': '{0}_REFSPEC'.format(self.project.upper()),
+                'hash_env': '{0}_HASH'.format(self.project.upper())
+            }
+
+
+class ProjectsManager(object):
+    """Manages project refspecs and checkouts.
+
+    This class is mainly responsible of managing the state related to project
+    checkouts, including those checked out external to the Python code (in
+    pipeline code, or in Jenkins job configuration).
+    """
+
+    def __init__(self, factory):
+        self._cmd_runner = factory.cmd_runner
+        self._env = factory.env
+        self._executor = factory.executor
+        self._gerrit = factory.gerrit
+        self._workspace = factory.workspace
+        self._refspecs, initial_projects = self._get_refspecs_and_initial_projects()
+        self._projects = dict()
+        for project in initial_projects:
+            info = self._get_git_project_info(project)
+            self._projects[project] = info
+
+    def _get_refspecs_and_initial_projects(self):
+        """Determines the refspecs to be used, and initially checked out projects.
+
+        If the build is triggered by Gerrit Trigger, then GERRIT_PROJECT
+        environment variable exists, and the Jenkins build configuration needs
+        to check out this project to properly integrate with different plugins.
+
+        For other cases, CHECKOUT_PROJECT can also be used.
+
+        Returns:
+          Tuple[Dict[Project,RefSpec],Set[Project]]: The refspecs and initial
+            projects.
+        """
+        refspecs = dict()
+        # The releng project is always checked out, since we are already
+        # executing code from there...
+        initial_projects = { Project.RELENG }
+        for project in Project._values:
+            refspec = self._parse_refspec(project)
+            if refspec:
+                refspecs[project] = refspec
+        checkout_project = self._parse_checkout_project()
+        gerrit_project = self._gerrit.get_triggering_project()
+        if gerrit_project is not None and not refspecs[gerrit_project].is_tarball:
+            refspec = self._gerrit.get_triggering_refspec()
+            refspecs[gerrit_project] = refspec
+        if checkout_project is not None:
+            refspec = self._env.get('CHECKOUT_REFSPEC', None)
+            if refspec is None:
+                raise ConfigurationError('CHECKOUT_REFSPEC not set')
+            sha1 = self._env.get('{0}_HASH'.format(checkout_project.upper()), None)
+            refspecs[checkout_project] = RefSpec(refspec, sha1)
+            initial_projects.add(checkout_project)
+        elif gerrit_project is not None:
+            initial_projects.add(gerrit_project)
+        else:
+            raise ConfigurationError('Neither CHECKOUT_PROJECT nor GERRIT_PROJECT is set')
+        return refspecs, initial_projects
+
+    def _parse_refspec(self, project):
+        env_name = '{0}_REFSPEC'.format(project.upper())
+        refspec = self._env.get(env_name, None)
+        if refspec:
+            env_name = '{0}_HASH'.format(project.upper())
+            sha1 = self._env.get(env_name, None)
+            return RefSpec(refspec, sha1, executor=self._executor)
+        return None
+
+    def _parse_checkout_project(self):
+        checkout_project = self._env.get('CHECKOUT_PROJECT', None)
+        if checkout_project is None:
+            return None
+        return Project.parse(checkout_project)
+
+    def _get_git_project_info(self, project):
+        """Returns the project info for a project that has been checked
+        out from git."""
+        title, sha1 = self._workspace._get_git_head_info(project)
+        refspec = self._get_refspec(project)
+        if refspec.is_static:
+            remote_sha1 = self._gerrit.get_remote_hash(project, refspec)
+        else:
+            remote_sha1 = sha1
+        return ProjectInfo(project, refspec, sha1, title, remote_sha1)
+
+    def _get_refspec(self, project, allow_none=False):
+        """Returns the refspec that is being built for the given project."""
+        refspec = self._refspecs.get(project, None)
+        if refspec is None and not allow_none:
+            raise ConfigurationError(project.upper() + '_REFSPEC is not set')
+        return refspec
+
+    def init_workspace(self):
+        self._workspace._set_initial_checkouts(self._projects.keys())
+
+    def checkout_project(self, project):
+        """Checks out the given project if not yet done for this build."""
+        if project in self._projects:
+            return
+        refspec = self._get_refspec(project)
+        self._workspace._checkout_project(project, refspec)
+        if refspec.is_tarball:
+            # TODO: Populate more useful information for print_project_info()
+            info = ProjectInfo(project, refspec, refspec.checkout, 'From tarball', refspec.checkout)
+        else:
+            info = self._get_git_project_info(project)
+        self._projects[project] = info
+
+    def get_project_info(self, project):
+        if project not in self._projects:
+            raise ConfigurationError('accessing project {0} before checkout'.format(project))
+        return self._projects[project]
+
+    def print_project_info(self):
+        """Prints information about the revisions used in this build."""
+        console = self._executor.console
+        projects = [self._projects[p] for p in sorted(self._projects.iterkeys())]
+        print('-----------------------------------------------------------', file=console)
+        print('Building using versions:', file=console)
+        for project_info in projects:
+            correct_info = ''
+            if not project_info.has_correct_hash():
+                correct_info = ' (WRONG)'
+            print('{0:16} {1:26} {2}{3}'.format(
+                project_info.project + ':', project_info.refspec, project_info.head_hash, correct_info),
+                file=console)
+            if project_info.head_title:
+                print('{0:19}{1}'.format('', project_info.head_title), file=console)
+        print('-----------------------------------------------------------', file=console)
+
+    def check_projects(self):
+        """Checks that all checked-out projects are at correct revisions.
+
+        In the past, there have been problems with not all projects getting
+        correctly checked out.  It is unknown whether this was a Jenkins bug
+        or something else, and whether the issue still exists.
+        """
+        all_correct = True
+        for project in sorted(self._projects.iterkeys()):
+            project_info = self._projects[project]
+            if not project_info.has_correct_hash():
+                print('Checkout of {0} failed: HEAD is {1}, expected {2}'.format(
+                    project, project_info.head_hash, project_info.remote_hash))
+                all_correct = False
+        if not all_correct:
+            raise BuildError('Checkout failed (Jenkins issue)')
+
+    def get_build_revisions(self):
+        projects = []
+        for project in Project._values:
+            if project in self._projects:
+                info = self._projects[project]
+            else:
+                refspec = self._get_refspec(project, allow_none=True)
+                if refspec is None:
+                    continue
+                # TODO: Get the commit title? That would make the build summary
+                # page nicer, but can require some magic, or a real checkout...
+                sha1 = self._gerrit.get_remote_hash(project, refspec)
+                info = ProjectInfo(project, refspec, sha1, None, sha1)
+            projects.append(info)
+        return [project.to_dict() for project in projects]
+
+    def override_refspec(self, project, refspec):
+        self._refspecs[project] = refspec
 
 
 class BuildParameters(object):

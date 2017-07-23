@@ -60,7 +60,7 @@ class TestRefSpec(unittest.TestCase):
         self.assertEqual(str(refspec), 'tarballs/gromacs')
 
 
-class TestGerritIntegration(unittest.TestCase):
+class TestProjectsManager(unittest.TestCase):
     def test_ManualTrigger(self):
         helper = TestHelper(self, env={
                 'CHECKOUT_PROJECT': 'gromacs',
@@ -68,11 +68,10 @@ class TestGerritIntegration(unittest.TestCase):
                 'GROMACS_REFSPEC': 'refs/changes/34/1234/5',
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
-        gerrit = helper.factory.gerrit
-        self.assertEqual(gerrit.checked_out_project, Project.GROMACS)
-        self.assertEqual(gerrit.get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
-        self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
-        self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        projects = helper.factory.projects
+        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
+        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_GerritTrigger(self):
         helper = TestHelper(self, env={
@@ -83,11 +82,10 @@ class TestGerritIntegration(unittest.TestCase):
                 'GROMACS_REFSPEC': 'refs/heads/master',
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
-        gerrit = helper.factory.gerrit
-        self.assertEqual(gerrit.checked_out_project, Project.GROMACS)
-        self.assertEqual(gerrit.get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
-        self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
-        self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        projects = helper.factory.projects
+        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
+        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_GerritTriggerInWorkflowSecondaryCheckout(self):
         helper = TestHelper(self, env={
@@ -98,11 +96,10 @@ class TestGerritIntegration(unittest.TestCase):
                 'GROMACS_REFSPEC': 'refs/heads/master',
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
-        gerrit = helper.factory.gerrit
-        self.assertEqual(gerrit.checked_out_project, Project.RELENG)
-        self.assertEqual(gerrit.get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
-        self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
-        self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        projects = helper.factory.projects
+        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
+        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_ManualTriggerWithEmptyHash(self):
         helper = TestHelper(self, env={
@@ -113,11 +110,10 @@ class TestGerritIntegration(unittest.TestCase):
                 'RELENG_REFSPEC': 'refs/heads/master',
                 'RELENG_HASH': ''
             })
-        gerrit = helper.factory.gerrit
-        self.assertEqual(gerrit.checked_out_project, Project.GROMACS)
-        self.assertEqual(gerrit.get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
-        self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
-        self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        projects = helper.factory.projects
+        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
+        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_ManualTriggerWithHash(self):
         helper = TestHelper(self, env={
@@ -128,12 +124,11 @@ class TestGerritIntegration(unittest.TestCase):
                 'RELENG_REFSPEC': 'refs/heads/master',
                 'RELENG_HASH': '5678abcd'
             })
-        gerrit = helper.factory.gerrit
-        self.assertEqual(gerrit.checked_out_project, Project.GROMACS)
-        self.assertEqual(gerrit.get_refspec(Project.GROMACS).fetch, 'refs/heads/master')
-        self.assertEqual(gerrit.get_refspec(Project.GROMACS).checkout, '1234abcd')
-        self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
-        self.assertEqual(gerrit.get_refspec(Project.RELENG).checkout, '5678abcd')
+        projects = helper.factory.projects
+        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/heads/master')
+        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, '1234abcd')
+        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        self.assertEqual(projects._get_refspec(Project.RELENG).checkout, '5678abcd')
 
     def test_TarballsWithManualTrigger(self):
         helper = TestHelper(self, env={
@@ -145,10 +140,9 @@ class TestGerritIntegration(unittest.TestCase):
         helper.add_input_file('tarballs/gromacs/package-info.log', """\
                 HEAD_HASH = 1234abcd
                 """)
-        gerrit = helper.factory.gerrit
-        self.assertEqual(gerrit.checked_out_project, Project.RELENG)
-        self.assertTrue(gerrit.get_refspec(Project.GROMACS).is_tarball)
-        self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        projects = helper.factory.projects
+        self.assertTrue(projects._get_refspec(Project.GROMACS).is_tarball)
+        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_TarballsWithGerritTrigger(self):
         helper = TestHelper(self, env={
@@ -162,11 +156,93 @@ class TestGerritIntegration(unittest.TestCase):
         helper.add_input_file('tarballs/gromacs/package-info.log', """\
                 HEAD_HASH = 1234abcd
                 """)
-        gerrit = helper.factory.gerrit
-        self.assertEqual(gerrit.checked_out_project, Project.RELENG)
-        self.assertTrue(gerrit.get_refspec(Project.GROMACS).is_tarball)
-        self.assertEqual(gerrit.get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        projects = helper.factory.projects
+        self.assertTrue(projects._get_refspec(Project.GROMACS).is_tarball)
+        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
+    def test_Checkout(self):
+        helper = TestHelper(self, env={
+                'CHECKOUT_PROJECT': 'releng',
+                'CHECKOUT_REFSPEC': 'refs/changes/34/1234/5',
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'RELENG_REFSPEC': 'refs/heads/master'
+            })
+        projects = helper.factory.projects
+        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/heads/master')
+        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
+        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/changes/34/1234/5')
+        projects.checkout_project(Project.GROMACS)
+        # TODO: Verify some of the results
+
+    def test_GetBuildRevisions(self):
+        helper = TestHelper(self, env={
+                'WORKSPACE': 'ws',
+                'CHECKOUT_PROJECT': 'gromacs',
+                'CHECKOUT_REFSPEC': 'refs/changes/34/1234/5',
+                'GROMACS_REFSPEC': 'refs/changes/34/1234/5',
+                'REGRESSIONTESTS_REFSPEC': 'refs/heads/master',
+                'RELENG_REFSPEC': 'refs/heads/master'
+            })
+        projects = helper.factory.projects
+        result = projects.get_build_revisions()
+        self.assertEqual(result, [
+                {
+                    'project': 'gromacs',
+                    'hash_env': 'GROMACS_HASH',
+                    'refspec_env': 'GROMACS_REFSPEC',
+                    'refspec': 'refs/changes/34/1234/5',
+                    'hash': '1234567890abcdef0123456789abcdef01234567',
+                    'title': 'Mock title'
+                },
+                {
+                    'project': 'regressiontests',
+                    'hash_env': 'REGRESSIONTESTS_HASH',
+                    'refspec_env': 'REGRESSIONTESTS_REFSPEC',
+                    'refspec': 'refs/heads/master',
+                    'hash': '1234567890abcdef0123456789abcdef01234567',
+                    'title': None
+                },
+                {
+                    'project': 'releng',
+                    'hash_env': 'RELENG_HASH',
+                    'refspec_env': 'RELENG_REFSPEC',
+                    'refspec': 'refs/heads/master',
+                    'hash': '1234567890abcdef0123456789abcdef01234567',
+                    'title': 'Mock title'
+                }
+            ])
+
+    def test_GetBuildRevisionsNoRegressionTests(self):
+        helper = TestHelper(self, env={
+                'WORKSPACE': 'ws',
+                'CHECKOUT_PROJECT': 'gromacs',
+                'CHECKOUT_REFSPEC': 'refs/changes/34/1234/5',
+                'GROMACS_REFSPEC': 'refs/changes/34/1234/5',
+                'RELENG_REFSPEC': 'refs/heads/master'
+            })
+        projects = helper.factory.projects
+        result = projects.get_build_revisions()
+        self.assertEqual(result, [
+                {
+                    'project': 'gromacs',
+                    'hash_env': 'GROMACS_HASH',
+                    'refspec_env': 'GROMACS_REFSPEC',
+                    'refspec': 'refs/changes/34/1234/5',
+                    'hash': '1234567890abcdef0123456789abcdef01234567',
+                    'title': 'Mock title'
+                },
+                {
+                    'project': 'releng',
+                    'hash_env': 'RELENG_HASH',
+                    'refspec_env': 'RELENG_REFSPEC',
+                    'refspec': 'refs/heads/master',
+                    'hash': '1234567890abcdef0123456789abcdef01234567',
+                    'title': 'Mock title'
+                }
+            ])
+
+
+class TestGerritIntegration(unittest.TestCase):
     def test_SimpleTriggeringComment(self):
         helper = TestHelper(self, env={
                 'CHECKOUT_PROJECT': 'releng',
