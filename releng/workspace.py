@@ -72,12 +72,17 @@ class Workspace(object):
             raise ConfigurationError('accessing project {0} before checkout'.format(project))
         return self._checkouts[project]
 
-    def _get_git_head_info(self, project):
+    def _get_git_commit_info(self, project, commit, allow_none=False):
         """Returns the title and SHA1 for a project that has been checked
         out from git."""
         project_dir = os.path.join(self.root, project)
-        cmd = ['git', 'rev-list', '-n1', '--format=oneline', 'HEAD']
-        sha1, title = self._cmd_runner.check_output(cmd, cwd=project_dir).strip().split(None, 1)
+        cmd = ['git', 'rev-list', '-n1', '--format=oneline', commit, '--']
+        try:
+            sha1, title = self._cmd_runner.check_output(cmd, cwd=project_dir).strip().split(None, 1)
+        except: # TODO: Do not eat unexpected exceptions
+            if allow_none:
+                return None, None
+            raise
         return title, sha1
 
     def _ensure_empty_dir(self, path):

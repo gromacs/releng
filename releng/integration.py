@@ -16,7 +16,7 @@ import traceback
 import urllib
 
 from common import AbortError, BuildError, ConfigurationError
-from common import Project
+from common import Project, System
 import utils
 
 class RefSpec(object):
@@ -34,12 +34,18 @@ class RefSpec(object):
         self._remote = value
         if remote_hash:
             self._remote = remote_hash
+        self.branch = None
+        self.change_number = None
         self._tar_props = None
         if self.is_tarball_refspec(value):
             assert executor is not None
             prop_path = os.path.join(self._value, 'package-info.log')
             self._tar_props = utils.read_property_file(executor, prop_path)
             self._remote = self._tar_props['HEAD_HASH']
+        elif value.startswith('refs/changes/'):
+            self.change_number = value.split('/')[3]
+        elif value.startswith('refs/heads/'):
+            self.branch = value.split('/')[2]
 
     @property
     def is_no_op(self):
@@ -88,6 +94,7 @@ class GerritChange(object):
         self.project = Project.parse(json_data['project'])
         self.branch = json_data['branch']
         self.number = int(json_data['number'])
+        self.title = json_data['subject']
         self.url = json_data['url']
         self.is_open = json_data['open']
         patchset = json_data['currentPatchSet']
@@ -110,6 +117,7 @@ class GerritIntegration(object):
         self._env = factory.env
         self._cmd_runner = factory.cmd_runner
         self._user = user
+        self._is_windows = (factory.system == System.WINDOWS)
 
     def get_remote_hash(self, project, refspec):
         """Fetch hash of a refspec on the Gerrit server."""
@@ -149,11 +157,15 @@ class GerritIntegration(object):
         text = self._env.get('MANUAL_COMMENT_TEXT', None)
         return text
 
-    def query_unique_change(self, query):
+    def query_change(self, query, expect_unique=True):
+        if self._is_windows:
+            return None
         cmd = self._get_ssh_query_cmd()
         cmd.extend(['--current-patch-set', '--', query])
         lines = self._cmd_runner.check_output(cmd).splitlines()
-        if len(lines) != 2:
+        if len(lines) < 2:
+            raise BuildError(query + ' does not match any change')
+        if len(lines) > 2 and expect_unique:
             raise BuildError(query + ' does not identify a unique change')
         return GerritChange(json.loads(lines[0]))
 
@@ -196,8 +208,9 @@ class ProjectInfo(object):
         remote_hash (str): SHA1 of the refspec at the remote repository.
     """
 
-    def __init__(self, project, refspec, head_hash, head_title, remote_hash):
+    def __init__(self, project, branch, refspec, head_hash, head_title, remote_hash):
         self.project = project
+        self.branch = branch
         self.refspec = refspec
         self.head_hash = head_hash
         self.head_title = head_title
@@ -213,6 +226,7 @@ class ProjectInfo(object):
     def to_dict(self):
         return {
                 'project': self.project,
+                'branch': self.branch,
                 'refspec': str(self.refspec),
                 'hash': self.head_hash,
                 'title': self.head_title,
@@ -238,7 +252,7 @@ class ProjectsManager(object):
         self._refspecs, initial_projects = self._get_refspecs_and_initial_projects()
         self._projects = dict()
         for project in initial_projects:
-            info = self._get_git_project_info(project)
+            info = self._create_project_info(project)
             self._projects[project] = info
 
     def _get_refspecs_and_initial_projects(self):
@@ -295,16 +309,33 @@ class ProjectsManager(object):
             return None
         return Project.parse(checkout_project)
 
-    def _get_git_project_info(self, project):
-        """Returns the project info for a project that has been checked
-        out from git."""
-        title, sha1 = self._workspace._get_git_head_info(project)
+    def _create_project_info(self, project, is_checked_out=True):
         refspec = self._get_refspec(project)
-        if refspec.is_static:
-            remote_sha1 = self._gerrit.get_remote_hash(project, refspec)
+        if refspec.is_tarball:
+            # TODO: Populate more useful information for print_project_info()
+            return ProjectInfo(project, None, refspec, refspec.checkout, 'From tarball', refspec.checkout)
+        if is_checked_out:
+            title, sha1 = self._workspace._get_git_commit_info(project, 'HEAD')
+            if refspec.is_static:
+                remote_sha1 = self._gerrit.get_remote_hash(project, refspec)
+            else:
+                remote_sha1 = sha1
         else:
+            sha1 = self._gerrit.get_remote_hash(project, refspec)
             remote_sha1 = sha1
-        return ProjectInfo(project, refspec, sha1, title, remote_sha1)
+            title, dummy = self._workspace._get_git_commit_info(project, sha1, allow_none=True)
+        branch = refspec.branch
+        change = None
+        if refspec.change_number:
+            change = self._gerrit.query_change(refspec.change_number)
+        elif title is None or branch is None:
+            change = self._gerrit.query_change('commit:' + sha1, expect_unique=False)
+        if change:
+            if title is None:
+                title = change.title
+            if branch is None:
+                branch = change.branch
+        return ProjectInfo(project, branch, refspec, sha1, title, remote_sha1)
 
     def _get_refspec(self, project, allow_none=False):
         """Returns the refspec that is being built for the given project."""
@@ -322,11 +353,7 @@ class ProjectsManager(object):
             return
         refspec = self._get_refspec(project)
         self._workspace._checkout_project(project, refspec)
-        if refspec.is_tarball:
-            # TODO: Populate more useful information for print_project_info()
-            info = ProjectInfo(project, refspec, refspec.checkout, 'From tarball', refspec.checkout)
-        else:
-            info = self._get_git_project_info(project)
+        info = self._create_project_info(project)
         self._projects[project] = info
 
     def get_project_info(self, project):
@@ -377,10 +404,7 @@ class ProjectsManager(object):
                 refspec = self._get_refspec(project, allow_none=True)
                 if refspec is None:
                     continue
-                # TODO: Get the commit title? That would make the build summary
-                # page nicer, but can require some magic, or a real checkout...
-                sha1 = self._gerrit.get_remote_hash(project, refspec)
-                info = ProjectInfo(project, refspec, sha1, None, sha1)
+                info = self._create_project_info(project, is_checked_out=False)
             projects.append(info)
         return [project.to_dict() for project in projects]
 

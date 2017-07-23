@@ -188,6 +188,7 @@ class TestProjectsManager(unittest.TestCase):
         self.assertEqual(result, [
                 {
                     'project': 'gromacs',
+                    'branch': 'master',
                     'hash_env': 'GROMACS_HASH',
                     'refspec_env': 'GROMACS_REFSPEC',
                     'refspec': 'refs/changes/34/1234/5',
@@ -196,14 +197,16 @@ class TestProjectsManager(unittest.TestCase):
                 },
                 {
                     'project': 'regressiontests',
+                    'branch': 'master',
                     'hash_env': 'REGRESSIONTESTS_HASH',
                     'refspec_env': 'REGRESSIONTESTS_REFSPEC',
                     'refspec': 'refs/heads/master',
                     'hash': '1234567890abcdef0123456789abcdef01234567',
-                    'title': None
+                    'title': 'Mock title'
                 },
                 {
                     'project': 'releng',
+                    'branch': 'master',
                     'hash_env': 'RELENG_HASH',
                     'refspec_env': 'RELENG_REFSPEC',
                     'refspec': 'refs/heads/master',
@@ -225,6 +228,7 @@ class TestProjectsManager(unittest.TestCase):
         self.assertEqual(result, [
                 {
                     'project': 'gromacs',
+                    'branch': 'master',
                     'hash_env': 'GROMACS_HASH',
                     'refspec_env': 'GROMACS_REFSPEC',
                     'refspec': 'refs/changes/34/1234/5',
@@ -233,6 +237,7 @@ class TestProjectsManager(unittest.TestCase):
                 },
                 {
                     'project': 'releng',
+                    'branch': 'master',
                     'hash_env': 'RELENG_HASH',
                     'refspec_env': 'RELENG_REFSPEC',
                     'refspec': 'refs/heads/master',

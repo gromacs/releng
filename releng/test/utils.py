@@ -47,7 +47,7 @@ class TestHelper(object):
         type(self.executor).console = mock.PropertyMock(return_value=self._console)
 
     def _check_output(self, cmd, **kwargs):
-        if cmd == ['git', 'rev-list', '-n1', '--format=oneline', 'HEAD']:
+        if cmd[:4] == ['git', 'rev-list', '-n1', '--format=oneline']:
             sha1 = '1234567890abcdef0123456789abcdef01234567'
             title = 'Mock title'
             return '{0} {1}\n'.format(sha1, title)
@@ -60,6 +60,7 @@ class TestHelper(object):
                     'project': 'regressiontests',
                     'branch': 'master',
                     'number': '1234',
+                    'subject': 'Mock title',
                     'url': 'URL',
                     'open': True,
                     'currentPatchSet': {

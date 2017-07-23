@@ -109,7 +109,7 @@ class RequestParser(object):
     def _parse_cross_verify(self, tokens):
         triggering_project = self._gerrit.get_triggering_project()
         token = tokens.pop(0)
-        change = self._gerrit.query_unique_change(token)
+        change = self._gerrit.query_change(token)
         project = change.project
         refspec = change.refspec
         if triggering_project and project == triggering_project:

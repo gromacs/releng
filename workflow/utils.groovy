@@ -192,6 +192,7 @@ def readBuildRevisions()
     //   [
     //     {
     //       project: ...,
+    //       branch: ...,
     //       refspec: ...,
     //       hash: ...,
     //       title: ...,
@@ -229,6 +230,7 @@ def addBuildRevisionsSummary(revisionList)
             <tr>
               <td>${rev.project}:</td>
               <td>${rev.refspec}</td>
+              <td>${rev.branch}</td>
               <td>${rev.hash}</td>
             </tr>
             """.stripIndent()
@@ -236,7 +238,7 @@ def addBuildRevisionsSummary(revisionList)
             text += """\
                 <tr>
                   <td />
-                  <td colspan=2>${rev.title}</td>
+                  <td colspan=3>${rev.title}</td>
                 </tr>
                 """.stripIndent()
         }
