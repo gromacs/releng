@@ -11,6 +11,7 @@ from common import ConfigurationError
 from common import Compiler,System
 import cmake
 import slaves
+import re
 
 # TODO: Check that the paths returned/used actually exists and raise nice
 # errors instead of mysteriously breaking builds if the node configuration is
@@ -306,15 +307,21 @@ class BuildEnvironment(object):
             self.extra_cmake_options['CMAKE_EXE_LINKER_FLAGS'] = '"/machine:x64"'
             if version == '15.0':
                 self.run_env_script(r'"C:\Program Files (x86)\Intel\Composer XE 2015\bin\compilervars.bat" intel64 vs' + self.compiler_version)
+            # TODO remove the next clause when no matrices use it any more
             elif version == '16.0':
                 self.run_env_script(r'"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016\windows\bin\compilervars.bat" intel64 vs' + self.compiler_version)
+            elif re.match('^(\d\d)$', version):
+                self.run_env_script(r'"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_20{0}\windows\bin\compilervars.bat" intel64 vs{1}'.format(version, self.compiler_version))
             else:
-                raise ConfigurationError('only icc 16.0 is supported for Windows builds with the Intel compiler')
+                raise ConfigurationError('invalid icc version: got icc-{0}. Try a version with two digits, e.g. 18 for 2018 release.'.format(version))
         else:
             self.c_compiler = 'icc'
             self.cxx_compiler = 'icpc'
             self.compiler = Compiler.INTEL
-            if version == '16.0':
+            if re.match('^(\d\d)$', version):
+                self.run_env_script('. /opt/intel/compilers_and_libraries_20{0}/linux/bin/compilervars.sh intel64'.format(version))
+            # TODO remove the next clause when no matrices use it any more
+            elif version == '16.0':
                 self.run_env_script('. /opt/intel/compilers_and_libraries_2016/linux/bin/compilervars.sh intel64')
             elif version == '15.0':
                 self.run_env_script('. /opt/intel/composer_xe_2015/bin/compilervars.sh intel64')
@@ -325,7 +332,7 @@ class BuildEnvironment(object):
             elif version == '12.1':
                 self.run_env_script('. /opt/intel/composer_xe_2011_sp1/bin/compilervars.sh intel64')
             else:
-                raise ConfigurationError('only icc 12.1, 13.0, 14.0, 15.0, 16.0 are supported, got icc-' + version)
+                raise ConfigurationError('invalid icc version: got icc-{0}. Try a version with two digits, e.g. 18 for 2018 release.'.format(version))
 
             # Need a suitable standard library for C++11 support.  icc
             # on Linux is required to use the C++ headers and standard
