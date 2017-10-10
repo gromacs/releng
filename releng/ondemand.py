@@ -62,6 +62,18 @@ class RequestParser(object):
                     self._builds.append({ 'type': 'source-package' })
                 if project in (Project.REGRESSIONTESTS, Project.RELENG):
                     self._builds.append({ 'type': 'regtest-package' })
+            elif token == 'weekly':
+                self._builds.append({
+                        'type': 'matrix',
+                        'desc': 'weekly',
+                        'matrix-file': 'weekly-matrix'
+                    })
+            elif token == 'nightly':
+                self._builds.append({
+                        'type': 'matrix',
+                        'desc': 'nightly',
+                        'matrix-file': 'nightly-matrix'
+                    })
             elif token == 'post-submit':
                 self._builds.append({
                         'type': 'matrix',
