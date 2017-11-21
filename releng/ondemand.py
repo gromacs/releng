@@ -94,6 +94,9 @@ class RequestParser(object):
                     tokens.pop(0)
                     build['release_flag'] = True
                 self._builds.append(build)
+                if tokens and tokens[1].lower() == 'doi':
+                    self._builds.append({
+                        'type': 'register-doi' })
             elif token == 'uncrustify':
                 self._builds.append({ 'type': 'uncrustify' })
             elif token == 'update':

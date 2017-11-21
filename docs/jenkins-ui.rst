@@ -115,7 +115,10 @@ With any of the above variants, possible builds are:
 * ``Release``: Triggers a release workflow build for testing the release
   process.  If ``no-dev`` is also specified (as ``Release no-dev``), the
   workflow builds the tarballs without -dev suffixes for actually doing a
-  release.
+  release. If ``doi`` is specified in addition to ``no-dev`` (as in
+  ``Release no-dev doi``) a `DOI`_ will be registered for both the source
+  code tarball and manual for this release. The registration is done using
+  Zenodo.
 * ``Uncrustify``: Triggers the per-patchset uncrustify code style checker build.
 * ``Update``: When triggered from a regressiontests change, generates reference
   data for tests that are missing it, and uploads those back to Gerrit.
@@ -215,6 +218,12 @@ uncrustify
 
 To see the full list of issues, look at the console log.
 
+register-doi
+^^^^^^^^^^^^
+
+Build type that actually registers the `DOI`_ for source code and manual.
+Should only be triggered for release builds as indicated above.
+
 .. TODO: Other types
 
 Known issues and limitations
@@ -271,6 +280,7 @@ Matrix builds
   this issue.  The matrix build still shows up as successful in such a
   scenario, but the link posted to Gerrit says it failed.
 
+.. _DOI: http://dx.doi.org/
 .. _JENKINS-28822: https://issues.jenkins-ci.org/browse/JENKINS-28822
 .. _JENKINS-30437: https://issues.jenkins-ci.org/browse/JENKINS-30437
 .. _JENKINS-38743: https://issues.jenkins-ci.org/browse/JENKINS-38743
