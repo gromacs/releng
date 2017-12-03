@@ -42,7 +42,7 @@ _HOST_LABELS = {
                               # 'cuda-6.5', 'cuda-7.0', 'cuda-7.5',
                               'icc-14.0', 'icc-15.0', 'icc-16.0', 'icc-16', 'icc-17', 'icc-18',
                               'phi',
-                              'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1', 'cmake-3.8.1',
+                              'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1', 'cmake-3.8.1', 'cmake-3.9.6', 'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'mic',
                               'tsan'
                             },
@@ -56,7 +56,7 @@ _HOST_LABELS = {
             BS_NIX1204:     { 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-5.4', 'gcc-5',
                               'clang-4', 'clang-5',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-8.0', 'cuda-9.0',
-                              'cmake-2.8.8', 'cmake-3.6.1',# 'cmake-3.8.1',
+                              'cmake-2.8.8', 'cmake-3.6.1',# 'cmake-3.8.1', 'cmake-3.9.6', 'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
                               'valgrind' },
@@ -68,7 +68,7 @@ _HOST_LABELS = {
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0',
                               # These are installed, but we prefer to target such jobs to bs_nix1204
                               # 'cuda-9.0',
-                              'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1',
+                              'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1', # 'cmake-3.9.6', 'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
                               'valgrind', 'tsan' },
