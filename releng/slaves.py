@@ -68,6 +68,7 @@ _HOST_LABELS = {
                               # 'clang-3.4', 'clang-4', 'clang-5',
                               # These are installed, but have no active license.
                               # 'icc-15.0', 'icc-16.0',
+                              'icc-18',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0',
                               # These are installed, but we prefer to target such jobs to bs_nix1204
                               # 'cuda-9.0',
@@ -130,7 +131,7 @@ _DEFAULT_GCC_FOR_LIBSTDCXX = {
             BS_MAC: 'gcc-6',
             BS_MIC: 'gcc-4.9',
             BS_NIX1204: 'gcc-5',
-            BS_NIX1310: 'gcc-5',
+            BS_NIX1310: 'gcc-4.8',
             BS_NIX1404: 'gcc-7',
             BS_NIX_AMD_GPU: 'gcc-5',
             BS_NIX_AMD: 'gcc-5',
