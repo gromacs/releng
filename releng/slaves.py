@@ -67,7 +67,7 @@ _HOST_LABELS = {
                               # These clang are installed, but we don't want to use it if we can avoid it.
                               # 'clang-3.4', 'clang-4', 'clang-5',
                               # These are installed, but have no active license.
-                              # 'icc-15.0', 'icc-16.0',
+                              # 'icc-16.0',
                               'icc-18',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0',
                               # These are installed, but we prefer to target such jobs to bs_nix1204
