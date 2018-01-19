@@ -196,8 +196,12 @@ _SPECIAL_HOST_GROUPS = [
 _DEFAULT_BUILD_PARALLELISM = {
             BS_WIN2008: 4,
             BS_WIN2012R2: 4,
+            # The following slaves are limited to a single executor, so we
+            # should use all the cores (or hyperthreads, if a relevant
+            # slave would have them).
             BS_JETSON_TK1: 4,
-            BS_JETSON_TX1: 4
+            BS_JETSON_TX1: 4,
+            BS_NIX_AMD_GPU: 4
         }
 
 def is_label(host):
