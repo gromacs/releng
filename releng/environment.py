@@ -351,9 +351,11 @@ class BuildEnvironment(object):
         elif version == '2013':
             self.run_env_script(r'"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" amd64')
         elif version == '2015':
-            self.run_env_script(r'"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64')
+            self.run_env_script(r'"C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64 -vcvars_ver=14.0')
+        elif version == '2017':
+            self.run_env_script(r'"C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64')
         else:
-            raise ConfigurationError('only Visual Studio 2010, 2013, and 2015 are supported, got msvc-' + version)
+            raise ConfigurationError('only Visual Studio 2010, 2013, 2015, and 2017 are supported, got msvc-' + version)
 
     def _init_clang_static_analyzer(self, version):
         scan_build = 'scan-build-' + version
