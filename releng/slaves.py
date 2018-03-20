@@ -101,8 +101,8 @@ _HOST_LABELS = {
             BS_NIX_DOCS:    { 'cmake-3.6.1'
                             },
             BS_NIX_STATIC_ANALYZER: {
-                              'clang-3.8', 'clang-4', 'clang-5',
-                              'clang-static-analyzer-3.8', 'clang-static-analyzer-4', 'clang-static-analyzer-5',
+                              'clang-3.8', 'clang-4', 'clang-5', 'clang-6',
+                              'clang-static-analyzer-3.8', 'clang-static-analyzer-4', 'clang-static-analyzer-5', 'clang-static-analyzer-6',
                               'cmake-3.5.1', 'cmake-3.7.2'
                             },
             BS_WIN2008:     { 'msvc-2010',
