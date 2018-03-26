@@ -16,6 +16,7 @@ BS_WIN2008 = 'bs_Win2008_64'
 BS_WIN2012R2 = 'bs-win2012r2'
 BS_JETSON_TK1 = 'bs_jetson_tk1'
 BS_JETSON_TX1 = 'bs_jetson_tx1'
+BS_OVERDRIVE_1000 = 'bs_overdrive_1000'
 
 DOCKER_DEFAULT = 'docker-ubuntu-15.04'
 
@@ -117,6 +118,9 @@ _HOST_LABELS = {
                               'arm_neon_asimd',
                               'cmake-3.5.1',
                               'cuda-8.0' },
+            BS_OVERDRIVE_1000: { 'armclang-1.4', 'gcc-7',
+                                 'arm_neon_asimd',
+                                 'cmake-3.5.1'},
             DOCKER_DEFAULT: {} # TODO
         }
 
@@ -132,7 +136,8 @@ _DEFAULT_GCC_FOR_LIBSTDCXX = {
             BS_NIX_AMD_GPU: 'gcc-5',
             BS_NIX_AMD: 'gcc-5',
             BS_JETSON_TK1: 'gcc-5',
-            BS_JETSON_TX1: 'gcc-5'
+            BS_JETSON_TX1: 'gcc-5',
+            BS_OVERDRIVE_1000: 'gcc-4.8'
     }
 
 def get_default_gcc_for_libstdcxx(host):
@@ -165,6 +170,7 @@ _MATRIX_HOSTS = {
             BS_NIX_AMD,
             BS_JETSON_TK1,
             BS_JETSON_TX1,
+            BS_OVERDRIVE_1000,
             BS_WIN2012R2
         }
 
@@ -182,7 +188,7 @@ _SPECIAL_HOST_GROUPS = [
             {BS_NIX_STATIC_ANALYZER},
             {BS_NIX_DOCS},
             # ARM slaves
-            {BS_JETSON_TK1, BS_JETSON_TX1},
+            {BS_JETSON_TK1, BS_JETSON_TX1, BS_OVERDRIVE_1000},
             # GPU slaves
             {BS_NIX_AMD_GPU, BS_NIX1204, BS_NIX1310}
         ]
@@ -195,6 +201,7 @@ _DEFAULT_BUILD_PARALLELISM = {
             # should use all the hardware threads
             BS_JETSON_TK1: 4,
             BS_JETSON_TX1: 4,
+            BS_OVERDRIVE_1000: 4,
             BS_NIX_AMD_GPU: 4,
             BS_WIN2012R2: 8 # 4 physical cores, each with 2 hyperthreads
         }
