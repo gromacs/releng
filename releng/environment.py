@@ -297,6 +297,22 @@ class BuildEnvironment(object):
         # (libgomp.so is not suitable).
         self.set_env_var('LD_LIBRARY_PATH', os.path.join(clang_path, '../lib'))
 
+    def _init_armclang(self, version):
+        """Initializes the build to use given armclang version as the compiler.
+
+        This method is called internally if the build options set the compiler
+        (with armclang-X.Y), but it can also be called directly from a build
+        script if the build does not use options.
+
+        Args:
+            version (str): armclang version number (major.minor) to use.
+        """
+        self.compiler = Compiler.ARMCLANG
+        self.compiler_version = version
+        self.c_compiler = 'armclang-' + version
+        self.cxx_compiler = 'armclang++-' + version
+
+
     def _init_icc(self, version):
         if self.system == System.WINDOWS:
             if self.compiler is None or self.compiler != Compiler.MSVC:
@@ -369,6 +385,10 @@ class BuildEnvironment(object):
                 '-o', html_output_dir]
         self.extra_cmake_options['GMX_STDLIB_CXX_FLAGS'] = '-stdlib=libc++'
         self.extra_cmake_options['GMX_STDLIB_LIBRARIES'] = '-lc++abi -lc++'
+
+    def _init_armhpc(self, version):
+        if version == 18.2:
+            self.run_env_script('module load Generic-AArch64/SUSE/12/arm-hpc-compiler/18.2')
 
     def _init_cuda(self, version):
         self.cuda_root = '/opt/cuda_' + version

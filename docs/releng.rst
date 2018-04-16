@@ -229,6 +229,8 @@ cmake-X.Y.Z
   Use the specified CMake version to generate the build system.
 gcc-X.Y
   Use the specified gcc version as the compiler.
+armclang-X.Y
+  Use the specified armclang version as the compiler.
 clang-X.Y
   Use the specified clang version as the compiler.
 clang-static-analyzer-X.Y
@@ -242,6 +244,9 @@ cuda-X.Y
   Use the specified CUDA version.
 amdappsdk-X.Y
   Use the specified AMD SDK version.
+armhpc-X.Y
+  Use the specified ARM HPC compiler toolchain with the specified version; this
+  sets up the environment for either armclang with the same version or the bundled gcc.
 phi
   Build for Xeon Phi.
 tsan

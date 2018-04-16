@@ -120,7 +120,7 @@ JobType = Enum.create('JobType',
            scope of testing.""")
 
 Compiler = Enum.create('Compiler',
-    'gcc', 'clang', 'msvc', INTEL='icc',
+    'gcc', 'clang', 'armclang', 'msvc', INTEL='icc',
     doc="""Enum to identify the compiler used in the build""")
 
 BuildType = Enum.create('BuildType',

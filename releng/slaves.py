@@ -118,9 +118,12 @@ _HOST_LABELS = {
                               'arm_neon_asimd',
                               'cmake-3.5.1',
                               'cuda-8.0' },
-            BS_OVERDRIVE_1000: { 'armclang-1.4', 'gcc-7',
+            BS_OVERDRIVE_1000: { # The ARM compiler for HPC toolkit switched versioning from 1.x to 1x.x,
+                                 # so we have right now armclang 1.4 based on LLVM 5.0.0svn and 18.2 based on LLVM 5.0.1.
+                                 'armclang-1.4', 'armclang-18.2', 'gcc-7',
                                  'arm_neon_asimd',
-                                 'cmake-3.5.1'},
+                                 'cmake-3.5.1',
+                                 'armhpc', 'armhpc-18.2' },
             DOCKER_DEFAULT: {} # TODO
         }
 
