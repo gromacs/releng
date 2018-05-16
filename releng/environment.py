@@ -407,15 +407,6 @@ class BuildEnvironment(object):
         self.set_env_var('CMAKE_LIBRARY_PATH', '/usr/lib/atlas-base')
 
     def _init_mpi(self):
-        # Set the host compiler to the underlying compiler.
-        # Normally, C++ compiler should be used, but nvcc <=v5.0 does not
-        # recognize icpc, only icc, so for simplicity the C compiler is used
-        # for all cases, as it works as well.
-        if self.compiler in (Compiler.GCC, Compiler.INTEL) and self.system != System.WINDOWS:
-            c_compiler_path = self._cmd_runner.find_executable(self.c_compiler)
-            if not c_compiler_path:
-                raise ConfigurationError("Could not determine the full path to the compiler ({0})".format(self.c_compiler))
-            self.cuda_host_compiler = c_compiler_path
         self.set_env_var('OMPI_CC', self.c_compiler)
         self.set_env_var('OMPI_CXX', self.cxx_compiler)
         self.c_compiler = 'mpicc'
