@@ -389,6 +389,8 @@ class BuildEnvironment(object):
     def _init_armhpc(self, version):
         if version == 18.2:
             self.run_env_script('module load Generic-AArch64/SUSE/12/arm-hpc-compiler/18.2')
+        else:
+            raise ConfigurationError('Invalid ARM HPC compiler version: ' + version)
 
     def _init_cuda(self, version):
         self.cuda_root = '/opt/cuda_' + version

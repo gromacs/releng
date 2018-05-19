@@ -10,6 +10,7 @@ BS_NIX1310 = 'bs_nix1310'
 BS_NIX1404 = 'bs_nix1404'
 BS_NIX_AMD_GPU = 'bs_nix-amd_gpu'
 BS_NIX_AMD = 'bs_nix-amd'
+BS_GPU01 = 'bs_gpu01'
 BS_NIX_DOCS = 'bs_nix-docs'
 BS_NIX_STATIC_ANALYZER = 'bs_nix-static_analyzer'
 BS_WIN2008 = 'bs_Win2008_64'
@@ -98,6 +99,16 @@ _HOST_LABELS = {
                               'cmake-2.8.12.2', 'cmake-3.4.3', 'cmake-3.11.4',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi', 'tidy' },
+            BS_GPU01:       { 'gcc-5', 'gcc-7', 'gcc-8',
+                              'clang-4', 'clang-5', 'clang-6',
+                              'cmake-3.4.3', 'cmake-3.12.1',
+                              'sse2', 'sse4.1', 'avx_256', 'avx2_256',
+                              'mpi', 'opencl-1.1', 'opencl-1.2', 'opencl-2.0',
+                              'clFFT-2.14',
+                              'gpu=amd',
+                              'tidy',
+                              'amdappsdk-3.0', # TODO: remove
+                            },
             BS_NIX_DOCS:    { 'cmake-3.6.1'
                             },
             BS_NIX_STATIC_ANALYZER: {
@@ -141,6 +152,7 @@ _DEFAULT_GCC_FOR_LIBSTDCXX = {
             BS_NIX1310: 'gcc-4.8',
             BS_NIX1404: 'gcc-7',
             BS_NIX_AMD_GPU: 'gcc-5',
+            BS_GPU01: 'gcc-5',
             BS_NIX_AMD: 'gcc-5',
             BS_JETSON_TK1: 'gcc-5',
             BS_JETSON_TX1: 'gcc-5',
@@ -175,6 +187,7 @@ _MATRIX_HOSTS = {
             BS_NIX1404,
             BS_NIX_AMD_GPU,
             BS_NIX_AMD,
+            BS_GPU01,
             BS_JETSON_TK1,
             BS_JETSON_TX1,
             BS_OVERDRIVE_1000,
@@ -197,7 +210,9 @@ _SPECIAL_HOST_GROUPS = [
             # ARM slaves
             {BS_JETSON_TK1, BS_JETSON_TX1, BS_OVERDRIVE_1000},
             # GPU slaves
-            {BS_NIX_AMD_GPU, BS_NIX1204, BS_NIX1310}
+            {BS_GPU01, BS_NIX1204, BS_NIX1310},
+            # Deprecated GPU slaves
+            {BS_NIX_AMD_GPU}
         ]
 
 # For hosts not specifically listed here, a default hard-coded in
@@ -210,6 +225,7 @@ _DEFAULT_BUILD_PARALLELISM = {
             BS_JETSON_TX1: 4,
             BS_OVERDRIVE_1000: 4,
             BS_NIX_AMD_GPU: 4,
+            BS_GPU01: 8, # 8 cores with HT, 2 executors
             BS_WIN2012R2: 8 # 4 physical cores, each with 2 hyperthreads
         }
 
