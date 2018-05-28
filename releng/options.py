@@ -343,6 +343,7 @@ def _define_handlers(e, extra_options):
             _VersionOptionHandler('icc', e._init_icc, label=OPT),
             _VersionOptionHandler('cuda', e._init_cuda, label=OPT),
             _VersionOptionHandler('amdappsdk', e._init_amdappsdk, label=OPT), # TODO: remove
+            _VersionOptionHandler('clFFT', e._init_clFFT, label=OPT),
             _VersionOptionHandler('armhpc', e._init_armhpc, label=OPT),
             _SimpleOptionHandler('phi', e._init_phi, label=OPT),
             _SimpleOptionHandler('tsan', e._init_tsan, label=OPT),

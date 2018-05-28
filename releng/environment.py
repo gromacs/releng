@@ -396,6 +396,9 @@ class BuildEnvironment(object):
     def _init_amdappsdk(self, version):
         self.amdappsdk_root = '/opt/AMDAPPSDK-' + version
 
+    def _init_clFFT(self, version):
+        self.clFFT_root = '/opt/clFFT/' + version
+
     def _init_phi(self):
         self.extra_cmake_options['CMAKE_PREFIX_PATH'] = os.path.expanduser('~/utils/libxml2')
 

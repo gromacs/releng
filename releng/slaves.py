@@ -69,6 +69,7 @@ _HOST_LABELS = {
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0',
                               # These are installed, but we prefer to target such jobs to bs_nix1204
                               # 'cuda-9.0',
+                              'clFFT-2.14',
                               'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1', # 'cmake-3.9.6', 'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
@@ -86,6 +87,7 @@ _HOST_LABELS = {
                             },
             BS_NIX_AMD_GPU: { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5',
                               'amdappsdk-3.0',
+                              'clFFT-2.14',
                               'cmake-2.8.12.2', 'cmake-3.5.2',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi' },
