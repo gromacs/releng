@@ -350,7 +350,8 @@ def _define_handlers(e, extra_options):
             _SimpleOptionHandler('atlas', e._init_atlas),
             _SimpleOptionHandler('x11', label=OPT),
             _EnumOptionHandler('simd', Simd, label=simd_label),
-            _SimpleOptionHandler('mpi', e._init_mpi, label=OPT)
+            _SimpleOptionHandler('mpi', e._init_mpi, label=OPT),
+            _SimpleOptionHandler('tidy', label=OPT)
         ]
     if extra_options:
         for name, builder in extra_options.iteritems():

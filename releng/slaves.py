@@ -93,9 +93,9 @@ _HOST_LABELS = {
                               'mpi' },
             BS_NIX_AMD:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5',
                               'clang-3.4', 'clang-4', 'clang-5', 'clang-6',
-                              'cmake-2.8.12.2', 'cmake-3.4.3',
+                              'cmake-2.8.12.2', 'cmake-3.4.3', 'cmake-3.11.4',
                               'sse2', 'sse4.1', 'avx_128_fma',
-                              'mpi' },
+                              'mpi', 'tidy' },
             BS_NIX_DOCS:    { 'cmake-3.6.1'
                             },
             BS_NIX_STATIC_ANALYZER: {
