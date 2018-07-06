@@ -108,7 +108,7 @@ _HOST_LABELS = {
             BS_WIN2008:     { 'msvc-2010',
                               'icc-12.1' },
             BS_WIN2012R2:   { 'msvc-2013', 'msvc-2015', 'msvc-2017',
-                              'icc-16.0', 'icc-16',
+                              'icc-16.0', 'icc-16', 'icc-18',
                               'cmake-2.8.12.2', 'cmake-3.2.3', 'cmake-3.3.0', 'cmake-3.6.1', 'cmake-3.10.2',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                             },
