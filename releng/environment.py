@@ -309,8 +309,9 @@ class BuildEnvironment(object):
         """
         self.compiler = Compiler.ARMCLANG
         self.compiler_version = version
-        self.c_compiler = 'armclang-' + version
-        self.cxx_compiler = 'armclang++-' + version
+
+        self.c_compiler   = 'armclang'
+        self.cxx_compiler = 'armclang++'
 
 
     def _init_icc(self, version):
@@ -387,10 +388,10 @@ class BuildEnvironment(object):
         self.extra_cmake_options['GMX_STDLIB_LIBRARIES'] = '-lc++abi -lc++'
 
     def _init_armhpc(self, version):
-        if version == 18.2:
-            self.run_env_script('module load Generic-AArch64/SUSE/12/arm-hpc-compiler/18.2')
+        if version == '18.3' or version == '18.4':
+            self.run_env_script('. /usr/share/modules/init/sh && module load Generic-AArch64/Ubuntu/16.04/arm-hpc-compiler/' + version)
         else:
-            raise ConfigurationError('Invalid ARM HPC compiler version: ' + version)
+            raise ConfigurationError('Only the ARM HPC compiler 18.3 and 18.4 are supported, was passed ' + version)
 
     def _init_cuda(self, version):
         self.cuda_root = '/opt/cuda_' + version
