@@ -48,16 +48,18 @@ _HOST_LABELS = {
                               'tsan'
                             },
             BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6',
-                              'clang-4',
+                              'clang-4', 'clang-6',
                               'gcov-4.6', 'gcov-6.1', 'gcov-6',
                               'icc-12.1', 'icc-13.0', 'icc-15.0', 'icc-16.0', 'icc-16',
-                              'cmake-3.4.3', 'cmake-3.5.2',
+                              'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.12.1',
                               'sse2', 'sse4.1',
                               'x11' },
             BS_NIX1204:     { 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-5', 'gcc-7',
                               # These gcc are installed, but we don't want to use them if we can avoid it.
                               # 'gcc-6',
                               'clang-4', 'clang-5',
+                              # These clang are installed, but we don't want to use them if we can avoid it.
+                              # 'clang-6',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-8.0', 'cuda-9.1', 'cuda-9.2',
                               # These are installed, but we prefer to target such jobs to bs_nix1310
                               # 'cuda-9.0',
@@ -67,7 +69,7 @@ _HOST_LABELS = {
                               'valgrind' },
             BS_NIX1310:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6',
                               # These clang are installed, but we don't want to use them if we can avoid it.
-                              # 'clang-3.4', 'clang-4', 'clang-5',
+                              # 'clang-3.4', 'clang-4', 'clang-5', 'clang-6',
                               # These are installed, but have no active license.
                               # 'icc-16.0',
                               'icc-18',
@@ -146,7 +148,8 @@ _HOST_LABELS = {
 # host that should be used for compilers (ie icc and clang) that need
 # to use an external C++ standard library, such as one from gcc.
 _DEFAULT_GCC_FOR_LIBSTDCXX = {
-            BS_MAC: 'gcc-6',
+            # This slave uses macports clang that does not need a gcc
+            # BS_MAC: 'gcc-6',
             BS_MIC: 'gcc-4.9',
             BS_NIX1204: 'gcc-5',
             BS_NIX1310: 'gcc-4.8',
