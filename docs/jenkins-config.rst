@@ -195,8 +195,9 @@ clang-static-analyzer-X.Y
   using a version-specific label, based on what is specified in the
   :file:`clang-analyzer.py` build script in the source repository.
 cppcheck
-  Used to run cppcheck builds.  For now, there is no version specification: all
-  used versions of cppcheck must be installed on each node.
+  Used to run cppcheck builds for release-2018 and earlier. For now, there is
+  no version specification: all used versions of cppcheck must be installed on
+  each node.
 doxygen
   Used to run documentation builds.  In addition to Doxygen, also other tools
   needed by the documentation build (Sphinx, Latex) need to be installed here.

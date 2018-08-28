@@ -121,7 +121,6 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                             'matrix': self._MATRIX_EXPECTED_RESULT
                         },
                         { 'type': 'clang-analyzer', 'desc': 'release-2016' },
-                        { 'type': 'cppcheck', 'desc': 'release-2016' },
                         { 'type': 'documentation', 'desc': 'release-2016' },
                         { 'type': 'uncrustify', 'desc': 'release-2016' }
                     ],
@@ -236,7 +235,6 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                             'matrix': self._MATRIX_EXPECTED_RESULT
                         },
                         { 'type': 'clang-analyzer', 'desc': 'cross-verify' },
-                        { 'type': 'cppcheck', 'desc': 'cross-verify' },
                         { 'type': 'documentation', 'desc': 'cross-verify' },
                         { 'type': 'uncrustify', 'desc': 'cross-verify' }
                     ],

@@ -2,7 +2,6 @@
 // TODO: Do more of these actions as part of this workflow, instead of a separate build.
 clangAnalyzerJobName = 'clang_static_analyzer_PreSubmit'
 coverageJobName = 'Coverage_OnDemand'
-cppcheckJobName = 'cppcheck_PreSubmit'
 documentationJobName = 'Documentation_PreSubmit'
 matrixJobName = 'Matrix_OnDemand'
 releaseJobName = 'Release_workflow_master'
@@ -74,7 +73,6 @@ def getBuildersMap()
     return [
             'clang-analyzer': this.&doClangAnalyzer,
             'coverage': this.&doCoverage,
-            'cppcheck': this.&doCppCheck,
             'documentation': this.&doDocumentation,
             'matrix': this.&doMatrix,
             'regtest-package': this.&doRegressionTestsPackage,
@@ -96,12 +94,6 @@ def doCoverage(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
     doChildBuild(bld, coverageJobName, parameters)
-}
-
-def doCppCheck(bld)
-{
-    def parameters = utils.currentBuildParametersForJenkins()
-    doChildBuild(bld, cppcheckJobName, parameters)
 }
 
 def doDocumentation(bld)

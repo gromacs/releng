@@ -50,8 +50,6 @@ class RequestParser(object):
                 self._builds.append({ 'type': 'clang-analyzer' })
             elif token == 'coverage':
                 self._builds.append({ 'type': 'coverage' })
-            elif token == 'cppcheck':
-                self._builds.append({ 'type': 'cppcheck' })
             elif token == 'documentation':
                 self._builds.append({ 'type': 'documentation' })
             elif token == 'package':
@@ -133,7 +131,6 @@ class RequestParser(object):
         if not triggering_project or triggering_project == Project.RELENG:
             self._default_builds.extend([
                     { 'type': 'clang-analyzer', 'desc': 'cross-verify' },
-                    { 'type': 'cppcheck', 'desc': 'cross-verify' },
                     { 'type': 'documentation', 'desc': 'cross-verify' },
                     { 'type': 'uncrustify', 'desc': 'cross-verify' }
                 ])
@@ -161,7 +158,6 @@ class RequestParser(object):
                     'matrix-file': 'pre-submit-matrix'
                 },
                 { 'type': 'clang-analyzer', 'desc': branch },
-                { 'type': 'cppcheck', 'desc': branch },
                 { 'type': 'documentation', 'desc': branch },
                 { 'type': 'uncrustify', 'desc': branch }
             ]
