@@ -11,10 +11,14 @@ def doBuild()
         timestamps {
             // This has at least sometimes remained running forever in Jenkins.
             // If we are lucky, the timeout will actually stop the build at
-            // some point instead of leaving it running forever...
+            // some point around two hours, instead of leaving it running
+            // forever...
+            //
+            // Also note there are 8 cores on the dedicated slave for this
+            // job type.
             timeout(120) {
                 utils.runRelengScript("""\
-                    releng.run_build('clang-analyzer', releng.JobType.GERRIT, ['build-jobs=4'])
+                    releng.run_build('clang-analyzer', releng.JobType.GERRIT, ['build-jobs=8'])
                     """)
             }
             addInformationAboutWarnings()
