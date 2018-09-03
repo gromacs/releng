@@ -193,6 +193,9 @@ class CommandRunner(object):
         else:
             self._env[variable] = value
 
+    def copy_env_var(self, to_variable, from_variable):
+        self._env[to_variable] = self._env[from_variable]
+
     def import_env(self, env_dump_cmd):
         """Runs env_dump_cmd and uses its output to import values into the current environment.
 

@@ -373,6 +373,7 @@ class BuildEnvironment(object):
             self.run_env_script(r'"C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64')
         else:
             raise ConfigurationError('only Visual Studio 2010, 2013, 2015, and 2017 are supported, got msvc-' + version)
+        self._cmd_runner.copy_env_var("caexcludepath", "INCLUDE") #fragile because function is case sensitive
 
     def _init_clang_static_analyzer(self, version):
         scan_build = 'scan-build-' + version
