@@ -12,7 +12,7 @@ import shlex
 
 from common import to_python_identifier
 from common import ConfigurationError
-from common import BuildType, FftLibrary, Simd
+from common import BuildType, FftLibrary, Simd, Gpuhw
 from environment import BuildEnvironment
 import agents
 
@@ -320,6 +320,12 @@ def simd_label(opt, value):
         return None
     return str(value).lower()
 
+def gpuhw_label(opt, value):
+    """Determines the host label needed for selected GPU hardware option."""
+    if value in (Gpuhw.NONE,):
+        return None
+    return str(value).lower()
+
 def _define_handlers(e, extra_options):
     """Defines the list of recognized build options."""
     # The options are processed in the order they are in the tuple, to support
@@ -351,9 +357,22 @@ def _define_handlers(e, extra_options):
             _SimpleOptionHandler('atlas', e._init_atlas),
             _SimpleOptionHandler('x11', label=OPT),
             _EnumOptionHandler('simd', Simd, label=simd_label),
+            _EnumOptionHandler('gpuhw', Gpuhw, label=gpuhw_label),
             _SimpleOptionHandler('mpi', e._init_mpi, label=OPT),
             _SimpleOptionHandler('tidy', label=OPT)
         ]
+    if extra_options and "opencl" in extra_options:
+        # This build is running an old script where opencl was a bool,
+        # so we handle it like that using a handler that will set the
+        # version to a suitable value.
+        #
+        # TODO Remove this when legacy matrices are no longer supported
+        handlers.append(_BoolOptionHandler('opencl', e._init_opencl_legacy, label=OPT))
+    else:
+        # TODO Once the legacy matrices are no longer supported, move
+        # this handler into the initialization of handlers above.
+        handlers.append(_VersionOptionHandler('opencl', e._init_opencl, label=OPT))
+
     if extra_options:
         for name, builder in extra_options.iteritems():
             new_handler = builder(name)
@@ -361,7 +380,7 @@ def _define_handlers(e, extra_options):
             assert len(existing_handlers) <= 1
             if existing_handlers:
                 if type(new_handler) != type(existing_handlers[0]):
-                    raise ConfigurationError('Option {0} redeclared with a different type'.format(name))
+                    raise ConfigurationError('Option {} redeclared with a different type'.format(name))
                 continue
             handlers.append(new_handler)
     return handlers

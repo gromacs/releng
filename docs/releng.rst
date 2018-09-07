@@ -244,8 +244,10 @@ msvc-YYYY
   Use the specified MSVC version as the compiler.
 cuda-X.Y
   Use the specified CUDA version.
+opencl-X.Y
+  Use the specified OpenCL version.
 amdappsdk-X.Y
-  Use the specified AMD SDK version.
+  Use the specified AMD SDK version. Deprecated.
 armhpc-X.Y
   Use the specified ARM HPC compiler toolchain with the specified version; this
   sets up the environment for either armclang with the same version or the bundled gcc.
@@ -260,6 +262,9 @@ x11
 simd=SIMD
   Use the specified SIMD instruction set.
   If not set, SIMD is not used.
+gpuhw=VENDOR
+  Use a GPU with the "VENDOR" vendor or "none" if no
+  GPU should be used.
 mpi
   Do an MPI build.
 

@@ -136,6 +136,12 @@ Simd = Enum.create('Simd',
     'ARM_NEON', 'ARM_NEON_ASIMD',
     doc="""Enum to identify the SIMD instruction set to use""")
 
+# Currently we do not distinguish different hardware capability/generations
+# for the same vendor, but we can later add such info here.
+Gpuhw = Enum.create('Gpuhw',
+    'None', 'amd', 'intel', 'nvidia',
+    doc="""Enum to idetify GPU hardware by vendor""")
+
 # There is no special significance with these strings.
 FftLibrary = Enum.create('FftLibrary',
     'fftpack', 'fftw3', 'mkl',

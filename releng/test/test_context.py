@@ -85,6 +85,22 @@ class TestReadBuildScriptConfig(unittest.TestCase):
                 'labels': 'clang-3.8 && clang-static-analyzer-3.8'
             })
 
+    def test_CudaGpuBuild(self):
+        self.helper.add_input_file('script/build.py',
+                """\
+                build_options = [ 'gcc-4.9', 'cuda-9.0', 'gpuhw=nvidia' ]
+                def do_build(context):
+                    pass
+                """)
+        result = BuildContext._read_build_script_config(self.helper.factory,
+                'script/build.py')
+        self.assertEqual(result, {
+                'opts': [ 'gcc-4.9', 'cuda-9.0', 'gpuhw=nvidia' ],
+                'host': 'bs_nix1310',
+                'labels': 'cuda-9.0 && gcc-4.9 && nvidia'
+            })
+
+
 
 class TestReadCmakeVariableFile(unittest.TestCase):
     def setUp(self):

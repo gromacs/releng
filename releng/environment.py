@@ -54,6 +54,7 @@ class BuildEnvironment(object):
        cmake_generator (str or None): CMake generator being used.
        cuda_root (str or None): Root of the CUDA toolkit being used
            (for passing to CUDA_TOOLKIT_ROOT_DIR CMake option).
+       opencl_version (str or None): OpenCL API version expected to be detected.
        cuda_host_compiler (str or None): Full path to the host compiler used
            with CUDA (for passing to CUDA_HOST_COMPILER CMake option).
        amdappsdk_root (str or None): Root of the AMD SDK being used
@@ -74,6 +75,7 @@ class BuildEnvironment(object):
         self.cmake_version = None
         self.cmake_generator = None
         self.cuda_root = None
+        self.opencl_version = None
         self.cuda_host_compiler = None
         self.amdappsdk_root = None
         self.clang_analyzer_output_dir = None
@@ -423,6 +425,14 @@ class BuildEnvironment(object):
     def _init_cuda(self, version):
         self.cuda_root = '/opt/cuda_' + version
 
+    # TODO: remove when no longer supporting legacy matrix formats
+    def _init_opencl_legacy(self, version):
+        self.opencl_version = '1.1'
+
+    def _init_opencl(self, version):
+        self.opencl_version = version
+
+    # TODO: remove this (and its docs) when no longer supporting legacy matrix formats
     def _init_amdappsdk(self, version):
         self.amdappsdk_root = '/opt/AMDAPPSDK-' + version
 

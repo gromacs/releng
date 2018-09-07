@@ -8,7 +8,7 @@ import os.path
 
 from common import BuildError, ConfigurationError
 from common import Enum
-from common import BuildType, Compiler, FftLibrary, JobType, Project, Simd, System
+from common import BuildType, Compiler, FftLibrary, JobType, Project, Simd, Gpuhw, System
 from integration import ParameterTypes
 from options import OptionTypes
 import utils
@@ -48,6 +48,7 @@ class BuildScript(object):
         build_globals['JobType'] = JobType
         build_globals['Project'] = Project
         build_globals['Simd'] = Simd
+        build_globals['Gpuhw'] = Gpuhw
         build_globals['System'] = System
         try:
             source = ''.join(executor.read_file(path))

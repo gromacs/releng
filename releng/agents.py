@@ -61,8 +61,10 @@ _HOST_LABELS = {
                               # These clang are installed, but we don't want to use them if we can avoid it.
                               # 'clang-6',
                               'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-8.0', 'cuda-9.1', 'cuda-9.2',
+                              'opencl-1.1', 'opencl-1.2',
                               # These are installed, but we prefer to target such jobs to bs_nix1310
                               # 'cuda-9.0',
+                              'nvidia', # GPU vendor
                               'cmake-2.8.8', 'cmake-3.6.1',# 'cmake-3.8.1', 'cmake-3.9.6', 'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
@@ -72,7 +74,9 @@ _HOST_LABELS = {
                               # 'clang-3.4', 'clang-4', 'clang-5', 'clang-6',
                               'icc-18',
                               'cuda-5.0', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0', 'cuda-9.0',
+                              'opencl-1.1', 'opencl-1.2',
                               'clFFT-2.14',
+                              'nvidia', # GPU vendor
                               'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1', # 'cmake-3.9.6', 'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
@@ -91,6 +95,8 @@ _HOST_LABELS = {
             BS_NIX_AMD_GPU: { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-8',
                               'amdappsdk-3.0',
                               'clFFT-2.14',
+                              'amd', # GPU vendor
+                              'opencl-1.1', 'opencl-1.2', 'opencl-2.0',
                               'cmake-2.8.12.2', 'cmake-3.5.2',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi' },
@@ -104,9 +110,10 @@ _HOST_LABELS = {
                               'libcxx-7',
                               'cmake-3.4.3', 'cmake-3.12.1',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
-                              'mpi', 'opencl-1.1', 'opencl-1.2', 'opencl-2.0',
+                              'mpi',
+                              'opencl-1.1', 'opencl-1.2', 'opencl-2.0',
                               'clFFT-2.14',
-                              'gpu=amd',
+                              'amd', # GPU vendor
                               'tidy', 'tsan',
                               'amdappsdk-3.0', # TODO: remove
                             },
@@ -129,12 +136,16 @@ _HOST_LABELS = {
                               'clang-3.9',
                               'arm_neon',
                               'cmake-3.8.1',
-                              'cuda-6.5' },
+                              'cuda-6.5',
+                              'nvidia', # GPU vendor
+                             },
             BS_JETSON_TX1:  { 'gcc-4.8', 'gcc-4.9', 'gcc-5',
                               'clang-3.9',
                               'arm_neon_asimd',
                               'cmake-3.5.1',
-                              'cuda-8.0' },
+                              'cuda-8.0'
+                              'nvidia', # GPU vendor
+                              },
             BS_OVERDRIVE_1000: {
                                  'armclang-18.3', 'armclang-18.4',  'gcc-7',
                                  'arm_neon_asimd',
