@@ -2,7 +2,7 @@
 Build and Jenkins environment handling
 
 This file contains all the code that hardcodes details about the Jenkins build
-slave environment, such as paths to various executables.
+agent environment, such as paths to various executables.
 """
 
 import os
@@ -10,7 +10,7 @@ import os
 from common import ConfigurationError
 from common import Compiler,System
 import cmake
-import slaves
+import agents
 import re
 
 # TODO: Check that the paths returned/used actually exists and raise nice
@@ -84,9 +84,9 @@ class BuildEnvironment(object):
         self._node_name = factory.jenkins.node_name
         self._cmake_base_dir = None
 
-        self._build_jobs = slaves.get_default_build_parallelism(self._node_name)
+        self._build_jobs = agents.get_default_build_parallelism(self._node_name)
 
-        environment_command = slaves.get_environment_subshell(self._node_name)
+        environment_command = agents.get_environment_subshell(self._node_name)
         if environment_command:
             environment_dump_command = environment_command + ' -- {0} -E environment'.format(self.cmake_command)
             self._cmd_runner.import_env(environment_dump_command)
@@ -248,12 +248,12 @@ class BuildEnvironment(object):
         # alongside that standard library. So for gcc, we ensure that
         # we link to components from the matching gcc version, rather
         # than the system default gcc. For clang and icc, we link to a
-        # gcc specified for each build slave.
+        # gcc specified for each build agent.
         gcc_name=None
         if self.compiler == Compiler.GCC:
             gcc_name = self.c_compiler
         elif self.compiler == Compiler.CLANG or self.compiler == Compiler.INTEL:
-            gcc_name = slaves.get_default_gcc_for_libstdcxx(self._node_name)
+            gcc_name = agents.get_default_gcc_for_libstdcxx(self._node_name)
 
         gcc_toolchain_path=None
         if gcc_name:
@@ -356,7 +356,7 @@ class BuildEnvironment(object):
             # libraries from a gcc installation, and defaults to that
             # of the gcc it finds in the path, which is not always
             # suitable. Instead we organize to use a specified gcc on
-            # each slave.
+            # each agent.
             self._manage_stdlib_from_gcc('-gcc-name={gcctoolchain}/bin/gcc')
         self.compiler_version = version
 

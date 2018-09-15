@@ -366,11 +366,11 @@ class BuildContext(object):
         """
 
         # The Jenkins Cppcheck Plugin assumes cppcheck was run on in
-        # the base folder of the slave workspace, but we run it from
+        # the base folder of the agent workspace, but we run it from
         # the directory of the source repo. The docs for the plugin
         # recommend not doing that, or instead doing a sed-style
         # change on all the resulting .xml files to fix it so that the
-        # plugin finds the file in the slave workspace. Thus:
+        # plugin finds the file in the agent workspace. Thus:
         output_with_prefix = '\\1{dir}/'.format(dir=Project.GROMACS)
         for xml_filename in glob.glob(self._cwd.to_abs_path(xml_pattern)):
             contents = ''.join(self._executor.read_file(xml_filename))

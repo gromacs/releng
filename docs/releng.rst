@@ -98,7 +98,7 @@ with ``#``.
 The build host assignment happens through a set of labels: build options that affect
 the possible host for building the configuration map to labels (the mapping is
 defined in :file:`options.py`), and the set of labels supported by each build
-slave is defined in :file:`slaves.py`.
+agent is defined in :file:`agents.py`.
 
 The building is orchestrated by a workflow build that loads and preprocesses
 the configuration matrix, and then triggers a matrix build that takes the

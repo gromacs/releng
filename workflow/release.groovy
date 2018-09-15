@@ -151,7 +151,7 @@ def testTarballs(tarballBuilds, testMatrix)
 def runSingleTestConfig(tarballBuilds, config)
 {
     // TODO: This should be config.labels, once Jenkins has all the labels
-    // defined matching slaves.py.
+    // defined matching agents.py.
     node(config.host) {
         config.host = env.NODE_NAME
         getTarball(tarballBuilds.gromacs)

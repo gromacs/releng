@@ -14,7 +14,7 @@ from common import to_python_identifier
 from common import ConfigurationError
 from common import BuildType, FftLibrary, Simd
 from environment import BuildEnvironment
-import slaves
+import agents
 
 class BuildConfig(object):
     def __init__(self, opts):
@@ -329,7 +329,7 @@ def _define_handlers(e, extra_options):
     # Labels need to be specified for options that require specific features
     # from the build host (e.g., required software versions or special
     # hardware support).  They need to match with the labels defined in
-    # slaves.py.
+    # agents.py.
     handlers = [
             _IntOptionHandler('build-jobs', e._set_build_jobs),
             _SimpleOptionHandler('out-of-source'),
@@ -417,6 +417,6 @@ def select_build_hosts(factory, configs):
                 if label:
                     labels.add(label)
         config.labels = list(labels)
-        config.host = slaves.pick_host(labels, config.opts)
+        config.host = agents.pick_host(labels, config.opts)
         result.append(config)
     return result

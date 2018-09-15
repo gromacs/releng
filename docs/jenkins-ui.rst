@@ -265,7 +265,7 @@ Matrix builds
   take you to the project page, not to the individual build, so you will need
   to click another time to get to the actual build.  The child configuration
   builds always have the same build number as the matrix parent.
-* If a matrix build contains configurations that are assigned to build slaves
+* If a matrix build contains configurations that are assigned to build agents
   that are not part of the (static) matrix node axis, these are not built.
   The matrix build still passes, but the triggering workflow build will detect
   this issue.  The matrix build still shows up as successful in such a

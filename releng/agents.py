@@ -1,5 +1,5 @@
 """
-Information about Jenkins build slaves
+Information about Jenkins build agents
 """
 from common import ConfigurationError
 
@@ -23,12 +23,12 @@ DOCKER_DEFAULT = 'docker-ubuntu-15.04'
 
 ALL_LABELS = (DOCKER_DEFAULT,)
 
-# For each slave that releng-based dynamic matrix builds should be able to run
-# builds on, this should list the labels that the slave supports (see
+# For each agent that releng-based dynamic matrix builds should be able to run
+# builds on, this should list the labels that the agent supports (see
 # options.py and docs/releng.rst for general information about the labels).
 #
 # If we later move to a workflow build, we can skip all this, and directly use
-# the labels assigned to slaves in Jenkins: the workflow plugin supports
+# the labels assigned to agents in Jenkins: the workflow plugin supports
 # selecting the node using a label expression, which we can easily construct
 # directly in options.py.
 #
@@ -38,8 +38,8 @@ _HOST_LABELS = {
             BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-7',
                               # These CUDA versions are installed, but aren't useful to use
                               # 'cuda-6.5', 'cuda-7.5',
-                              # CUDA 7.0 is made available only on this slave, so that we
-                              # can test that a CUDA build on a slave with no GPU works.
+                              # CUDA 7.0 is made available only on this agent, so that we
+                              # can test that a CUDA build on a agent with no GPU works.
                               'cuda-7.0',
                               'icc-14.0', 'icc-15.0', 'icc-16.0', 'icc-16', 'icc-17', 'icc-18',
                               'phi',
@@ -147,7 +147,7 @@ _HOST_LABELS = {
 # host that should be used for compilers (ie icc and clang) that need
 # to use an external C++ standard library, such as one from gcc.
 _DEFAULT_GCC_FOR_LIBSTDCXX = {
-            # This slave uses macports clang that does not need a gcc
+            # This agent uses macports clang that does not need a gcc
             # BS_MAC: 'gcc-6',
             BS_MIC: 'gcc-4.9',
             BS_NIX1204: 'gcc-5',
@@ -166,7 +166,7 @@ def get_default_gcc_for_libstdcxx(host):
 
 # Specifies a shell-like command that establishes an enviroment that should
 # be used on particular hosts in order to access a suitable toolchain.
-# TODO This could be implemented as "slave" BS_MIC_DEVTOOLSET_4, or similar.
+# TODO This could be implemented as "agent" BS_MIC_DEVTOOLSET_4, or similar.
 _ENVIRONMENT_SUBSHELL = {
             # Centos 6.9 on bs_mic uses ancient gcc and ld
             BS_MIC: '/usr/bin/scl enable devtoolset-4'
@@ -209,11 +209,11 @@ _SPECIAL_HOST_GROUPS = [
             # Special-purpose VMs
             {BS_NIX_STATIC_ANALYZER},
             {BS_NIX_DOCS},
-            # ARM slaves
+            # ARM agents
             {BS_JETSON_TK1, BS_JETSON_TX1, BS_OVERDRIVE_1000},
-            # GPU slaves
+            # GPU agents
             {BS_GPU01, BS_NIX1204, BS_NIX1310},
-            # Deprecated GPU slaves
+            # Deprecated GPU agents
             {BS_NIX_AMD_GPU}
         ]
 
@@ -221,7 +221,7 @@ _SPECIAL_HOST_GROUPS = [
 # get_default_build_parallelism() is used.
 _DEFAULT_BUILD_PARALLELISM = {
             BS_WIN2008: 4,
-            # The following slaves are limited to a single executor, so we
+            # The following agents are limited to a single executor, so we
             # should use all the hardware threads
             BS_JETSON_TK1: 4,
             BS_JETSON_TX1: 4,
@@ -253,7 +253,7 @@ def pick_host(labels, opts):
         if labels.issubset(host_labels):
             possible_hosts.append(host)
     if not possible_hosts:
-        raise ConfigurationError('no build slave supports this combination: ' + ' '.join(opts))
+        raise ConfigurationError('no build agent supports this combination: ' + ' '.join(opts))
     # TODO: If there are multiple possible hosts, it would be better to
     # optimize the selection globally over all the configurations to
     # avoid assigning all the builds to the same host.

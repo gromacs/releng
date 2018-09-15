@@ -16,13 +16,13 @@ a bit depending on how similar your configuration is to existing ones:
    upload your changes to Gerrit.
 
    a. If your combination requires a specific combination of software that is
-      not yet available, you will need to update :file:`releng/slaves.py` in
+      not yet available, you will need to update :file:`releng/agents.py` in
       the ``releng`` repo, and possibly install that combination of software on
-      a slave.
+      a agent.
 
 2. If the new configuration requires new options, but those options do not
    affect where the configuration can be built (i.e., do not require special
-   software on the build slaves), you need to update
+   software on the build agents), you need to update
    :file:`admin/builds/gromacs.py` to specify the options and how they affect
    the build, and then add the configurations to the matrix in
    :file:`admin/builds/`.
@@ -31,7 +31,7 @@ a bit depending on how similar your configuration is to existing ones:
    need to update
 
    * :file:`releng/options.py` to specify the new option and a label for it,
-   * :file:`releng/slaves.py` to specify which build slaves support the option,
+   * :file:`releng/agents.py` to specify which build agents support the option,
    * possibly :file:`releng/environment.py` to specify special CMake options or
      other configuration (e.g., changes to ``PATH``) that is required for the
      build to work with this option (if you need this, you also need to specify
@@ -42,27 +42,27 @@ a bit depending on how similar your configuration is to existing ones:
      build beyond the changes above, and
    * finally add the configuration to the matrix and test it.
 
-Add a new build slave
+Add a new build agent
 ---------------------
 
-To add a new slave to be used for builds, the steps are outlined below:
+To add a new agent to be used for builds, the steps are outlined below:
 
-1. Install the slave so that Jenkins can connect to it and the slave can
+1. Install the agent so that Jenkins can connect to it and the agent can
    connect to Gerrit (this configuration is currently outside the scope of this
    documentation).
-2. Install necessary software on the slave to be used in the builds (compilers
+2. Install necessary software on the agent to be used in the builds (compilers
    and other tools).
    Please see :file:`releng/environment.py` for how various programs are
-   located, and install them on the new slave to be found in the same way
-   (if something seems awkward, the approach should be changed on all slaves,
+   located, and install them on the new agent to be found in the same way
+   (if something seems awkward, the approach should be changed on all agents,
    not by adding more variability).
-3. Ensure that the slave is listed in :file:`releng/slaves.py` and has the
+3. Ensure that the agent is listed in :file:`releng/agents.py` and has the
    correct labels and other constraints defined appropriately.
-4. Ensure that the slave has relevant labels defined in Jenkins if it needs to
+4. Ensure that the agent has relevant labels defined in Jenkins if it needs to
    run builds that rely on them (see :doc:`jenkins-config`).
 
-If the slave does not get automatically used, follow steps above for adding a
-new configuration to use the slave if it is intended for building one or more
+If the agent does not get automatically used, follow steps above for adding a
+new configuration to use the agent if it is intended for building one or more
 matrix configurations.
 
 Add builds for a new release branch

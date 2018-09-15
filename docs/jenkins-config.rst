@@ -178,11 +178,11 @@ The following Jenkins plugins are used in |Gromacs| builds:
 
 TODO
 
-Build slave labels
+Build agent labels
 ------------------
 
-The following labels on the Jenkins build slaves are currently used to allocate
-builds to slaves:
+The following labels on the Jenkins build agents are currently used to allocate
+builds to agents:
 
 pipeline-master
   Used to run general steps in workflow jobs that do not do any lengthy
@@ -206,8 +206,8 @@ linux
   Used for regression test packaging builds to get a uniform enough environment.
 windows
   Should not be currently used, but has been used to restrict Unix-specific
-  things in workflows to not run on Windows slaves.
+  things in workflows to not run on Windows agents.
 
-In other cases, slaves are explicitly assigned to a node.  Multi-configuration
+In other cases, agents are explicitly assigned to a node.  Multi-configuration
 builds are currently assigned to nodes based on information in
-:file:`slaves.py`, not on labels configured in Jenkins.
+:file:`agents.py`, not on labels configured in Jenkins.

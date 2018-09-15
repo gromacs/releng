@@ -12,7 +12,7 @@ import shlex
 
 from common import BuildError, ConfigurationError, Project
 from options import BuildConfig, select_build_hosts
-import slaves
+import agents
 
 def prepare_build_matrix(factory, configfile):
     projects = factory.projects
@@ -37,7 +37,7 @@ def process_matrix_results(factory, inputfile):
 def get_matrix_failure_reason(factory, configs, build_url):
     build_info = factory.jenkins.query_matrix_build(build_url)
     if len(configs) != len(build_info['runs']):
-        return 'Some matrix configurations were not built (likely matrix axis is missing build slaves)'
+        return 'Some matrix configurations were not built (likely matrix axis is missing build agents)'
     return None
 
 def _get_build_configs(factory, configfile):
@@ -63,8 +63,8 @@ def _read_matrix_configs(executor, path):
 
 def _check_matrix_configs(configs):
     for config in configs:
-        if not slaves.is_matrix_host(config.host):
-            raise ConfigurationError('non-matrix slave would execute this combination: ' + ' '.join(config.opts))
+        if not agents.is_matrix_host(config.host):
+            raise ConfigurationError('non-matrix agent would execute this combination: ' + ' '.join(config.opts))
 
 def _create_return_value(configs):
     configs_json = [config.to_dict() for config in configs]
@@ -74,7 +74,7 @@ def _get_options_string(configs):
     contents = []
     for config in configs:
         opts = list(config.opts)
-        if slaves.is_label(config.host):
+        if agents.is_label(config.host):
             opts.append('label=' + config.host)
         else:
             opts.append('host=' + config.host)

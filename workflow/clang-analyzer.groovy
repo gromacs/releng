@@ -14,7 +14,7 @@ def doBuild()
             // some point around two hours, instead of leaving it running
             // forever...
             //
-            // Also note there are 8 cores on the dedicated slave for this
+            // Also note there are 8 cores on the dedicated agent for this
             // job type.
             timeout(120) {
                 utils.runRelengScript("""\
