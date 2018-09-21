@@ -187,7 +187,9 @@ class BuildEnvironment(object):
             self.prepend_path_env('~/bin')
             if self.system == System.OSX:
                 self.set_env_var('CMAKE_PREFIX_PATH', '/opt/local')
-            self._init_core_dump()
+            # If/when we want core dumps from builds, enable
+            # the next line
+            # self._init_core_dump()
             self._cmake_base_dir = ('/opt/cmake')
 
     def _init_core_dump(self):
