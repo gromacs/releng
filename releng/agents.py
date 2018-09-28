@@ -35,7 +35,7 @@ ALL_LABELS = (DOCKER_DEFAULT,)
 # Versions that are commented out are installed and working, but are not
 # part of the description, as a crude form of load balancing.
 _HOST_LABELS = {
-            BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-7',
+            BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-7', 'gcc-8',
                               # These CUDA versions are installed, but aren't useful to use
                               # 'cuda-6.5', 'cuda-7.5',
                               # CUDA 7.0 is made available only on this agent, so that we
@@ -47,7 +47,7 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1', 'avx_256', 'mic',
                               'tsan'
                             },
-            BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6',
+            BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6', 'gcc-8',
                               'clang-4', 'clang-6',
                               'gcov-4.6', 'gcov-6.1', 'gcov-6',
                               'icc-12.1', 'icc-13.0', 'icc-15.0', 'icc-16.0', 'icc-16',
@@ -88,7 +88,7 @@ _HOST_LABELS = {
                               # 'tsan',
                               'valgrind', 'msan'
                             },
-            BS_NIX_AMD_GPU: { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5',
+            BS_NIX_AMD_GPU: { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-8',
                               'amdappsdk-3.0',
                               'clFFT-2.14',
                               'cmake-2.8.12.2', 'cmake-3.5.2',
