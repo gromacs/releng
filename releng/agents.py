@@ -70,10 +70,8 @@ _HOST_LABELS = {
             BS_NIX1310:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6',
                               # These clang are installed, but we don't want to use them if we can avoid it.
                               # 'clang-3.4', 'clang-4', 'clang-5', 'clang-6',
-                              # These are installed, but have no active license.
-                              # 'icc-16.0',
                               'icc-18',
-                              'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0', 'cuda-9.0',
+                              'cuda-5.0', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0', 'cuda-9.0',
                               'clFFT-2.14',
                               'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1', # 'cmake-3.9.6', 'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
