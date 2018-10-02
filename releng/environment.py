@@ -46,6 +46,7 @@ class BuildEnvironment(object):
        compiler_version (string): Version number for the selected compiler.
        c_compiler (str or None): Name of the C compiler executable.
        cxx_compiler (str or None): Name of the C++ compiler executable.
+       libcxx_version (str or None): Version of libc++ to use
        gcov_command (str): Name of the gcov executable.
        cmake_command (str): Name of the CMake executable.
        ctest_command (str): Name of the CTest executable.
@@ -76,6 +77,7 @@ class BuildEnvironment(object):
         self.cuda_host_compiler = None
         self.amdappsdk_root = None
         self.clang_analyzer_output_dir = None
+        self.libcxx_version = None
         self.extra_cmake_options = dict()
 
         self._build_prefix_cmd = None
@@ -315,6 +317,26 @@ class BuildEnvironment(object):
         self.c_compiler   = 'armclang'
         self.cxx_compiler = 'armclang++'
 
+    def _init_libcxx(self, version):
+        """Initializes the build to use given libc++ (from LLVM project)
+
+        This method is called internally if the build options specify it
+        (with libcxx-X.Y), but it can also be called directly from a build
+        script if the build does not use options.
+
+        This option is only valid with clang, and only valid with a clang
+        version of the same number
+
+        Args:
+            version (str): libcxx version number (major.minor) to use.
+        """
+        if not self.compiler is Compiler.CLANG:
+            raise ConfigurationError('libcxx only supported with clang')
+        self.libcxx_version = version
+        if self.compiler_version != self.libcxx_version:
+            raise ConfigurationError('libcxx version must match clang version')
+        self.extra_cmake_options['GMX_STDLIB_CXX_FLAGS'] = '-stdlib=libc++'
+        self.extra_cmake_options['GMX_STDLIB_LIBRARIES'] = '-lc++abi -lc++'
 
     def _init_icc(self, version):
         if self.system == System.WINDOWS:
@@ -387,6 +409,8 @@ class BuildEnvironment(object):
         self.cxx_compiler = cxx_analyzer
         self._build_prefix_cmd = [scan_build,
                 '-o', html_output_dir]
+        # TODO Now that we have libcxx option, use that for the static
+        # analyzer configurations.
         self.extra_cmake_options['GMX_STDLIB_CXX_FLAGS'] = '-stdlib=libc++'
         self.extra_cmake_options['GMX_STDLIB_LIBRARIES'] = '-lc++abi -lc++'
 
@@ -407,10 +431,6 @@ class BuildEnvironment(object):
 
     def _init_phi(self):
         self.extra_cmake_options['CMAKE_PREFIX_PATH'] = os.path.expanduser('~/utils/libxml2')
-
-    def _init_tsan(self):
-        # This is only useful for the tsan build with gcc 4.9 on bs_nix1310, but does no harm.
-        self.set_env_var('LD_LIBRARY_PATH', os.path.expanduser('~/tools/gcc-nofutex/lib64'))
 
     def _init_atlas(self):
         self.set_env_var('CMAKE_LIBRARY_PATH', '/usr/lib/atlas-base')

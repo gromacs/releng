@@ -233,6 +233,8 @@ armclang-X.Y
   Use the specified armclang version as the compiler.
 clang-X.Y
   Use the specified clang version as the compiler.
+libcxx-X.Y
+  Use the specified libc++ version (currently only supported with exactly clang-X.Y)
 clang-static-analyzer-X.Y
   Use the specified clang static analyzer as the compiler.
 icc-X.Y

@@ -101,12 +101,13 @@ _HOST_LABELS = {
                               'mpi', 'tidy' },
             BS_GPU01:       { 'gcc-5', 'gcc-7', 'gcc-8',
                               'clang-4', 'clang-5', 'clang-6', 'clang-7',
+                              'libcxx-7',
                               'cmake-3.4.3', 'cmake-3.12.1',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'opencl-1.1', 'opencl-1.2', 'opencl-2.0',
                               'clFFT-2.14',
                               'gpu=amd',
-                              'tidy',
+                              'tidy', 'tsan',
                               'amdappsdk-3.0', # TODO: remove
                             },
             BS_NIX_DOCS:    { 'cmake-3.6.1'
