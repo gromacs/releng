@@ -60,7 +60,7 @@ _HOST_LABELS = {
                               'clang-4', 'clang-5',
                               # These clang are installed, but we don't want to use them if we can avoid it.
                               # 'clang-6',
-                              'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-8.0', 'cuda-9.1', 'cuda-9.2',
+                              'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-8.0', 'cuda-9.1', 'cuda-9.2', 'cuda-10.0',
                               'opencl-1.1', 'opencl-1.2',
                               # These are installed, but we prefer to target such jobs to bs_nix1310
                               # 'cuda-9.0',
