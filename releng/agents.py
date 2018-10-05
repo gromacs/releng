@@ -38,10 +38,10 @@ _HOST_LABELS = {
             BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-7', 'gcc-8',
                               # These CUDA versions are installed, but aren't useful to use
                               # 'cuda-6.5', 'cuda-7.5',
-                              # CUDA 7.0 is made available only on this agent, so that we
+                              # CUDA is made available on this agent only so that we
                               # can test that a CUDA build on a agent with no GPU works.
-                              'cuda-7.0',
-                              'icc-14.0', 'icc-15.0', 'icc-16.0', 'icc-16', 'icc-17', 'icc-18',
+                              'cuda-7.0', 'cuda-10.0',
+                              'icc-16.0', 'icc-16', 'icc-17', 'icc-18', 'icc-19',
                               'phi',
                               'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1', 'cmake-3.8.1', 'cmake-3.9.6', 'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'mic',
@@ -72,7 +72,7 @@ _HOST_LABELS = {
             BS_NIX1310:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6',
                               # These clang are installed, but we don't want to use them if we can avoid it.
                               # 'clang-3.4', 'clang-4', 'clang-5', 'clang-6',
-                              'icc-18',
+                              'icc-18', 'icc-19',
                               'cuda-5.0', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0', 'cuda-9.0',
                               'opencl-1.1', 'opencl-1.2',
                               'clFFT-2.14',
