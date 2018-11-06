@@ -94,8 +94,6 @@ _HOST_LABELS = {
                             },
             BS_NIX_AMD_GPU: { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-8',
                               'amdappsdk-3.0',
-                              'clFFT-2.14',
-                              'amd', # GPU vendor
                               'opencl-1.1', 'opencl-1.2', 'opencl-2.0',
                               'cmake-2.8.12.2', 'cmake-3.5.2',
                               'sse2', 'sse4.1', 'avx_128_fma',
