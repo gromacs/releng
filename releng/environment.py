@@ -52,6 +52,8 @@ class BuildEnvironment(object):
        ctest_command (str): Name of the CTest executable.
        cmake_version (str): Version of the CMake executable.
        cmake_generator (str or None): CMake generator being used.
+       armhpc_version (str or None): The version of the ARM HPC toolchain.
+       armpl_dir (str or None): the ARM Perf Libraries directory
        cuda_root (str or None): Root of the CUDA toolkit being used
            (for passing to CUDA_TOOLKIT_ROOT_DIR CMake option).
        opencl_version (str or None): OpenCL API version expected to be detected.
@@ -74,6 +76,8 @@ class BuildEnvironment(object):
         self.ctest_command = 'ctest'
         self.cmake_version = None
         self.cmake_generator = None
+        self.armhpc_version = None
+        self.armpl_dir = None
         self.cuda_root = None
         self.opencl_version = None
         self.cuda_host_compiler = None
@@ -417,10 +421,29 @@ class BuildEnvironment(object):
         self.extra_cmake_options['GMX_STDLIB_LIBRARIES'] = '-lc++abi -lc++'
 
     def _init_armhpc(self, version):
+        self.armhpc_version = version
         if version == '18.3' or version == '18.4':
             self.run_env_script('. /usr/share/modules/init/sh && module load Generic-AArch64/Ubuntu/16.04/arm-hpc-compiler/' + version)
         else:
             raise ConfigurationError('Only the ARM HPC compiler 18.3 and 18.4 are supported, was passed ' + version)
+
+    def _init_armpl(self):
+        if not self.armhpc_version:
+            raise ConfigurationError('ARM Perf Libs are only supported in conjunction with the ARM HPC compilers' + version)
+        else:
+            # ARMPL module name has the form
+            # Generic-AArch64/Ubuntu/16.04/gcc-X.Y.Z/armpl/J.K.L, where we assume Z == L == 0
+            # Generic-AArch64/Ubuntu/16.04/arm-hpc-compiler-J.K/armpl/J.K.L, where L == 0
+            if self.compiler == Compiler.ARMCLANG:
+                self.run_env_script('. /usr/share/modules/init/sh && module load Generic-AArch64/Ubuntu/16.04/gcc' + version + '.0/armpl/' + version + '.0')
+            elif self.compiler == Compiler.GCC:
+                self.run_env_script('. /usr/share/modules/init/sh && module load Generic-AArch64/Ubuntu/16.04/arm-hpc-compiler' + version + '/armpl/' + version + '.0')
+            else:
+                raise ConfigurationError('ARM Perf Libs will only work with armclang or gcc, but the compiler in use is: ' + self.cxx_compiler)
+            try:
+                self.armpl_dir = os.environ('ARMPL_DIR')
+            except:
+                raise ConfigurationError('ARM Perf Libs library location environment variable $ARMPL_DIR not found')
 
     def _init_cuda(self, version):
         self.cuda_root = '/opt/cuda_' + version

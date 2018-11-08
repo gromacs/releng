@@ -359,6 +359,7 @@ def _define_handlers(e, extra_options):
             _EnumOptionHandler('simd', Simd, label=simd_label),
             _EnumOptionHandler('gpuhw', Gpuhw, label=gpuhw_label),
             _SimpleOptionHandler('mpi', e._init_mpi, label=OPT),
+            _SimpleOptionHandler('armpl', e._init_armpl, label=OPT),
             _SimpleOptionHandler('tidy', label=OPT)
         ]
     if extra_options and "opencl" in extra_options:
