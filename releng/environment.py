@@ -422,8 +422,9 @@ class BuildEnvironment(object):
 
     def _init_armhpc(self, version):
         self.armhpc_version = version
+        module_load = '. /usr/share/modules/init/sh && module load '
         if version == '18.3' or version == '18.4':
-            self.run_env_script('. /usr/share/modules/init/sh && module load Generic-AArch64/Ubuntu/16.04/arm-hpc-compiler/' + version)
+            self.run_env_script(module_load + 'Generic-AArch64/Ubuntu/16.04/arm-hpc-compiler/' + version)
         else:
             raise ConfigurationError('Only the ARM HPC compiler 18.3 and 18.4 are supported, was passed ' + version)
 
@@ -434,14 +435,15 @@ class BuildEnvironment(object):
             # ARMPL module name has the form
             # Generic-AArch64/Ubuntu/16.04/gcc-X.Y.Z/armpl/J.K.L, where we assume Z == L == 0
             # Generic-AArch64/Ubuntu/16.04/arm-hpc-compiler-J.K/armpl/J.K.L, where L == 0
+            module_load = '. /usr/share/modules/init/sh && module load '
             if self.compiler == Compiler.ARMCLANG:
-                self.run_env_script('. /usr/share/modules/init/sh && module load Generic-AArch64/Ubuntu/16.04/arm-hpc-compiler-' + self.compiler_version + '/armpl/' + self.armhpc_version + '.0')
+                self.run_env_script(module_load + 'Generic-AArch64/Ubuntu/16.04/arm-hpc-compiler-' + self.compiler_version + '/armpl/' + self.armhpc_version + '.0')
             elif self.compiler == Compiler.GCC:
-                self.run_env_script('. /usr/share/modules/init/sh && module load Generic-AArch64/Ubuntu/16.04/gcc-' + self.compiler_version + '.0/armpl/' + self.armhpc_version + '.0')
+                self.run_env_script(module_load + 'Generic-AArch64/Ubuntu/16.04/gcc-' + self.compiler_version + '.0/armpl/' + self.armhpc_version + '.0')
             else:
                 raise ConfigurationError('ARM Perf Libs will only work with armclang or gcc, but the compiler in use is: ' + self.cxx_compiler)
             try:
-                self.armpl_dir = os.environ('ARMPL_DIR')
+                self.armpl_dir = self._cmd_runner._env['ARMPL_DIR']
             except:
                 raise ConfigurationError('ARM Perf Libs library location environment variable $ARMPL_DIR not found')
 
