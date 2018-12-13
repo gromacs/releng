@@ -187,6 +187,9 @@ class BuildEnvironment(object):
         env_dump_cmd = env_cmd + ' && {0} -E environment'.format(self.cmake_command)
         self._cmd_runner.import_env(env_dump_cmd)
 
+    def get_env_var(self, variable):
+        return self._cmd_runner.get_env_var(variable)
+
     def _init_system(self):
         if self.system == System.WINDOWS:
             self.cmake_generator = 'NMake Makefiles JOM'
@@ -442,10 +445,7 @@ class BuildEnvironment(object):
                 self.run_env_script(module_load + 'Generic-AArch64/Ubuntu/16.04/gcc-' + self.compiler_version + '.0/armpl/' + self.armhpc_version + '.0')
             else:
                 raise ConfigurationError('ARM Perf Libs will only work with armclang or gcc, but the compiler in use is: ' + self.cxx_compiler)
-            try:
-                self.armpl_dir = self._cmd_runner._env['ARMPL_DIR']
-            except:
-                raise ConfigurationError('ARM Perf Libs library location environment variable $ARMPL_DIR not found')
+            self.armpl_dir = self.get_env_var('ARMPL_DIR')
 
     def _init_cuda(self, version):
         self.cuda_root = '/opt/cuda_' + version
