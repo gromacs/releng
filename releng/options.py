@@ -348,6 +348,8 @@ def _define_handlers(e, extra_options):
             _VersionOptionHandler('clang-static-analyzer', e._init_clang_static_analyzer, label=OPT),
             _VersionOptionHandler('msvc', e._init_msvc, label=OPT),
             _VersionOptionHandler('icc', e._init_icc, label=OPT),
+            _VersionOptionHandler('doxygen', e._init_doxygen, label=OPT),
+            _VersionOptionHandler('sphinx', label=OPT),
             _VersionOptionHandler('cuda', e._init_cuda, label=OPT),
             _VersionOptionHandler('amdappsdk', e._init_amdappsdk, label=OPT), # TODO: remove
             _VersionOptionHandler('clFFT', e._init_clFFT, label=OPT),

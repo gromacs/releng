@@ -115,7 +115,7 @@ _HOST_LABELS = {
                               'tidy', 'tsan',
                               'amdappsdk-3.0', # TODO: remove
                             },
-            BS_NIX_DOCS:    { 'cmake-3.6.1'
+            BS_NIX_DOCS:    { 'cmake-3.6.1', 'doxygen-1.8.5', 'sphinx-1.6.1'
                             },
             BS_NIX_STATIC_ANALYZER: {
                               'clang-3.8', 'clang-4', 'clang-5', 'clang-6', 'clang-7',

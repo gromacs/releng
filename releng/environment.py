@@ -47,6 +47,7 @@ class BuildEnvironment(object):
        c_compiler (str or None): Name of the C compiler executable.
        cxx_compiler (str or None): Name of the C++ compiler executable.
        libcxx_version (str or None): Version of libc++ to use
+       doxygen_command (str): Name of the doxygen executable.
        gcov_command (str): Name of the gcov executable.
        cmake_command (str): Name of the CMake executable.
        ctest_command (str): Name of the CTest executable.
@@ -71,6 +72,7 @@ class BuildEnvironment(object):
         self.compiler_version = None
         self.c_compiler = None
         self.cxx_compiler = None
+        self.doxygen_command = None
         self.gcov_command = None
         self.cmake_command = 'cmake'
         self.ctest_command = 'ctest'
@@ -422,6 +424,9 @@ class BuildEnvironment(object):
         # analyzer configurations.
         self.extra_cmake_options['GMX_STDLIB_CXX_FLAGS'] = '-stdlib=libc++'
         self.extra_cmake_options['GMX_STDLIB_LIBRARIES'] = '-lc++abi -lc++'
+
+    def _init_doxygen(self, version):
+        self.doxygen_command = os.path.expanduser('~/tools/doxygen-{0}/bin/doxygen'.format(version))
 
     def _init_armhpc(self, version):
         self.armhpc_version = version
