@@ -19,8 +19,7 @@ def prepare_build_matrix(factory, configfile):
     projects.checkout_project(Project.GROMACS)
     projects.print_project_info()
     projects.check_projects()
-    result = get_matrix_info(factory, configfile)
-    factory.status_reporter.return_value = result
+    return get_matrix_info(factory, configfile)
 
 def get_matrix_info(factory, configfile):
     configs = _get_build_configs(factory, configfile)
@@ -63,7 +62,7 @@ def _read_matrix_configs(executor, path):
 
 def _check_matrix_configs(configs):
     for config in configs:
-        if not agents.is_matrix_host(config.host):
+        if config.host and not agents.is_matrix_host(config.host):
             raise ConfigurationError('non-matrix agent would execute this combination: ' + ' '.join(config.opts))
 
 def _create_return_value(configs):
@@ -74,10 +73,11 @@ def _get_options_string(configs):
     contents = []
     for config in configs:
         opts = list(config.opts)
-        if agents.is_label(config.host):
-            opts.append('label=' + config.host)
-        else:
-            opts.append('host=' + config.host)
+        if config.host:
+            if agents.is_label(config.host):
+                opts.append('label=' + config.host)
+            else:
+                opts.append('host=' + config.host)
         quoted_opts = [pipes.quote(x) for x in opts]
         contents.append('"{0}"'.format(' '.join(quoted_opts)))
     return ' '.join(contents)

@@ -441,5 +441,8 @@ def select_build_hosts(factory, configs):
                     labels.add(label)
         config.labels = list(labels)
         config.host = agents.pick_host(labels, config.opts)
+        if not config.host:
+            reason = 'no build agent supports this combination: ' + ' '.join(opts)
+            factory.status_reporter.mark_failed(reason)
         result.append(config)
     return result

@@ -60,8 +60,8 @@ if not args.run:
     from executor import DryRunExecutor
     factory.init_executor(cls=DryRunExecutor)
 factory.init_gerrit_integration(user=args.user)
-with factory.status_reporter:
+with factory.status_reporter as status:
     if args.matrix:
-        prepare_build_matrix(factory, args.matrix)
+        status.return_value = prepare_build_matrix(factory, args.matrix)
     else:
         BuildContext._run_build(factory, args.build, args.job_type, args.opts)

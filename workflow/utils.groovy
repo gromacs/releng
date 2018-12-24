@@ -14,6 +14,23 @@ def checkoutDefaultProject()
             url: "ssh://jenkins@gerrit.gromacs.org/${project}.git"]]]
 }
 
+def checkoutSilent(project)
+{
+    def projectUpper = project.toUpperCase()
+    def fetch_refspec = env."${projectUpper}_REFSPEC"
+    def checkout_refspec = 'FETCH_HEAD'
+    sh """\
+        set -e
+        mkdir -p ${project}
+        cd ${project}
+        git init
+        git fetch ssh://jenkins@gerrit.gromacs.org/${project}.git ${fetch_refspec}
+        git checkout -qf ${checkout_refspec}
+        git clean -ffdxq
+        git gc
+        """.stripIndent()
+}
+
 @NonCPS
 def currentBuildParametersForJenkins()
 {

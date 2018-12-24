@@ -22,8 +22,8 @@ class TestPrepareBuildMatrix(unittest.TestCase):
             ]
         self.helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(input_lines) + '\n')
-        prepare_build_matrix(factory, 'pre-submit-matrix')
-        self.assertEqual(factory.status_reporter.return_value, {
+        result = prepare_build_matrix(factory, 'pre-submit-matrix')
+        self.assertEqual(result, {
                 "configs": [
                     {
                         "host": "bs_nix1310",

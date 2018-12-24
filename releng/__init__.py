@@ -73,8 +73,8 @@ def prepare_multi_configuration_build(configfile):
     from factory import ContextFactory
     from matrixbuild import prepare_build_matrix
     factory = ContextFactory()
-    with factory.status_reporter:
-        prepare_build_matrix(factory, configfile)
+    with factory.status_reporter as status:
+        status.return_value = prepare_build_matrix(factory, configfile)
 
 def process_multi_configuration_build_results(inputfile):
     """Processes results after a matrix build has been run.

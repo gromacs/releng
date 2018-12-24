@@ -264,7 +264,7 @@ def pick_host(labels, opts):
         if labels.issubset(host_labels):
             possible_hosts.append(host)
     if not possible_hosts:
-        raise ConfigurationError('no build agent supports this combination: ' + ' '.join(opts))
+        return None
     # TODO: If there are multiple possible hosts, it would be better to
     # optimize the selection globally over all the configurations to
     # avoid assigning all the builds to the same host.
