@@ -1,34 +1,17 @@
-@NonCPS
-def setEnvForReleng(defaultProject)
-{
-    env.CHECKOUT_PROJECT = 'releng'
-    env.CHECKOUT_REFSPEC = params.RELENG_REFSPEC
-    if (params.GERRIT_PROJECT == 'releng') {
-        env.CHECKOUT_REFSPEC = params.GERRIT_REFSPEC
-    }
-    if (params.GERRIT_PROJECT) {
-        this.defaultProject = params.GERRIT_PROJECT
-        this.defaultProjectRefspec = params.GERRIT_REFSPEC
-    } else {
-        this.defaultProject = defaultProject
-        this.defaultProjectRefspec = params."${defaultProject.toUpperCase()}_REFSPEC"
-    }
-}
-
 def checkoutDefaultProject()
 {
-    def checkout_project = defaultProject
-    def checkout_refspec = defaultProjectRefspec
+    def project = this.defaultProject
+    def refspec = this.defaultProjectRefspec
     checkout scm: [$class: 'GitSCM',
-        branches: [[name: checkout_refspec]],
+        branches: [[name: refspec]],
         doGenerateSubmoduleConfigurations: false,
         extensions: [
-            [$class: 'RelativeTargetDirectory', relativeTargetDir: checkout_project],
+            [$class: 'RelativeTargetDirectory', relativeTargetDir: project],
             [$class: 'CleanCheckout'],
             [$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]],
         submoduleCfg: [],
-        userRemoteConfigs: [[refspec: checkout_refspec,
-            url: "ssh://jenkins@gerrit.gromacs.org/${checkout_project}.git"]]]
+        userRemoteConfigs: [[refspec: refspec,
+            url: "ssh://jenkins@gerrit.gromacs.org/${project}.git"]]]
 }
 
 @NonCPS
@@ -42,7 +25,7 @@ def currentBuildParametersForJenkins()
     parameters = addBuildParameterIfExists(parameters, 'RELENG_REFSPEC')
     parameters = addBuildParameterIfExists(parameters, 'RELENG_HASH')
     // We cannot forward the Gerrit Trigger parameters, because of SECURITY-170.
-    // Instead, they are dealt with in readBuildRevisions() such that the
+    // Instead, they are dealt with in initBuildRevisions() such that the
     // project-specific REFSPEC parameters contain the correct references.
     // Passing CHECKOUT_PROJECT allows the Changes section work properly.
     parameters += [$class: 'StringParameterValue', name: 'CHECKOUT_PROJECT', value: defaultProject]
@@ -70,7 +53,7 @@ def runRelengScript(contents, propagate = true)
         os.chdir('releng')
         subprocess.check_call(['git', 'init'])
         subprocess.check_call(['git', 'fetch',
-            'ssh://jenkins@gerrit.gromacs.org/releng.git', os.environ['CHECKOUT_REFSPEC']])
+            'ssh://jenkins@gerrit.gromacs.org/releng.git', os.environ['RELENG_REFSPEC']])
         subprocess.check_call(['git', 'checkout', '-qf', os.environ['RELENG_HASH']])
         subprocess.check_call(['git', 'clean', '-ffdxq'])
         subprocess.check_call(['git', 'gc'])
@@ -186,7 +169,7 @@ def combineResultToCurrentBuild(result)
     }
 }
 
-def readBuildRevisions()
+def initBuildRevisions(defaultProject)
 {
     // Information is returned as a list of projects:
     //   [
@@ -207,6 +190,13 @@ def readBuildRevisions()
     def revisionList = status.return_value
     setRevisionsToEnv(revisionList)
     addBuildRevisionsSummary(revisionList)
+    if (params.GERRIT_PROJECT) {
+        this.defaultProject = params.GERRIT_PROJECT
+        this.defaultProjectRefspec = params.GERRIT_REFSPEC
+    } else {
+        this.defaultProject = defaultProject
+        this.defaultProjectRefspec = env."${defaultProject.toUpperCase()}_REFSPEC"
+    }
     return revisionListToRevisionMap(revisionList)
 }
 
@@ -230,7 +220,7 @@ def addBuildRevisionsSummary(revisionList)
             <tr>
               <td>${rev.project}:</td>
               <td>${rev.refspec}</td>
-              <td>${rev.branch}</td>
+              <td>(${rev.branch})</td>
               <td>${rev.hash}</td>
             </tr>
             """.stripIndent()

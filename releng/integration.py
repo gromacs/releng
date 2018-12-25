@@ -249,11 +249,7 @@ class ProjectsManager(object):
         self._executor = factory.executor
         self._gerrit = factory.gerrit
         self._workspace = factory.workspace
-        self._refspecs, initial_projects = self._get_refspecs_and_initial_projects()
-        self._projects = dict()
-        for project in initial_projects:
-            info = self._create_project_info(project)
-            self._projects[project] = info
+        self._refspecs, self._projects = self._get_refspecs_and_initial_projects()
 
     def _get_refspecs_and_initial_projects(self):
         """Determines the refspecs to be used, and initially checked out projects.
@@ -265,8 +261,8 @@ class ProjectsManager(object):
         For other cases, CHECKOUT_PROJECT can also be used.
 
         Returns:
-          Tuple[Dict[Project,RefSpec],Set[Project]]: The refspecs and initial
-            projects.
+          Tuple[Dict[Project,RefSpec],Dict[Project,ProjectInfo]]: The refspecs
+            and initial projects.
         """
         refspecs = dict()
         # The releng project is always checked out, since we are already
@@ -283,16 +279,17 @@ class ProjectsManager(object):
             refspecs[gerrit_project] = refspec
         if checkout_project is not None:
             refspec = self._env.get('CHECKOUT_REFSPEC', None)
-            if refspec is None:
-                raise ConfigurationError('CHECKOUT_REFSPEC not set')
-            sha1 = self._env.get('{0}_HASH'.format(checkout_project.upper()), None)
-            refspecs[checkout_project] = RefSpec(refspec, sha1)
+            if refspec is not None:
+                sha1 = self._env.get('{0}_HASH'.format(checkout_project.upper()), None)
+                refspecs[checkout_project] = RefSpec(refspec, sha1)
             initial_projects.add(checkout_project)
-        elif gerrit_project is not None:
-            initial_projects.add(gerrit_project)
-        else:
-            raise ConfigurationError('Neither CHECKOUT_PROJECT nor GERRIT_PROJECT is set')
-        return refspecs, initial_projects
+
+        projects = dict()
+        for project in initial_projects:
+            info = self._create_project_info(project, refspecs[project])
+            projects[project] = info
+
+        return refspecs, projects
 
     def _parse_refspec(self, project):
         env_name = '{0}_REFSPEC'.format(project.upper())
@@ -309,8 +306,7 @@ class ProjectsManager(object):
             return None
         return Project.parse(checkout_project)
 
-    def _create_project_info(self, project, is_checked_out=True):
-        refspec = self._get_refspec(project)
+    def _create_project_info(self, project, refspec, is_checked_out=True):
         if refspec.is_tarball:
             # TODO: Populate more useful information for print_project_info()
             return ProjectInfo(project, None, refspec, refspec.checkout, 'From tarball', refspec.checkout)
@@ -353,7 +349,7 @@ class ProjectsManager(object):
             return
         refspec = self._get_refspec(project)
         self._workspace._checkout_project(project, refspec)
-        info = self._create_project_info(project)
+        info = self._create_project_info(project, refspec)
         self._projects[project] = info
 
     def get_project_info(self, project):
@@ -404,7 +400,7 @@ class ProjectsManager(object):
                 refspec = self._get_refspec(project, allow_none=True)
                 if refspec is None:
                     continue
-                info = self._create_project_info(project, is_checked_out=False)
+                info = self._create_project_info(project, refspec, is_checked_out=False)
             projects.append(info)
         return [project.to_dict() for project in projects]
 

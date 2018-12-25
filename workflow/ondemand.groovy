@@ -9,15 +9,13 @@ uncrustifyJobName = 'uncrustify_PreSubmit'
 
 utils = load 'releng/workflow/utils.groovy'
 packaging = load 'releng/workflow/packaging.groovy'
-utils.setEnvForReleng('releng')
 actions = processTriggeringCommentAndGetActions()
 setEnvFromActions(actions.env)
+utils.initBuildRevisions('gromacs')
 utils.checkoutDefaultProject()
-utils.readBuildRevisions()
 
 def processTriggeringCommentAndGetActions()
 {
-    env.MANUAL_COMMENT_TEXT = MANUAL_COMMENT_TEXT
     // Information is returned as
     //   {
     //     builds: [

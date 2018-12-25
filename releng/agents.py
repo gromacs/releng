@@ -238,7 +238,7 @@ _DEFAULT_BUILD_PARALLELISM = {
             BS_JETSON_TX1: 4,
             BS_OVERDRIVE_1000: 4,
             BS_NIX_AMD_GPU: 4,
-            # 8 VM cores, but the relevant setting is hard coded in clang-analyzer.groovy
+            # 8 VM cores
             BS_NIX_STATIC_ANALYZER: 8,
             # 8 cores with HT, 2 executors
             BS_GPU01: 8,

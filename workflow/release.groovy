@@ -1,13 +1,12 @@
 utils = load 'releng/workflow/utils.groovy'
 packaging = load 'releng/workflow/packaging.groovy'
-utils.setEnvForReleng('releng')
+buildRevisions = utils.initBuildRevisions('gromacs')
 utils.checkoutDefaultProject()
-buildRevisions = utils.readBuildRevisions()
 testMatrix = utils.processMatrixConfigs('release-matrix.txt')
 sourceVersionInfo = utils.readSourceVersion()
 
-RELEASE = (RELEASE == 'true')
-FORCE_REPACKAGING = (FORCE_REPACKAGING == 'true')
+RELEASE = (params.RELEASE == 'true')
+FORCE_REPACKAGING = (params.FORCE_REPACKAGING == 'true')
 
 def doBuild(sourcePackageJob, regressiontestsPackageJob)
 {
@@ -91,10 +90,10 @@ def existingBuildIsValid(buildInfo, version)
     def infoMessage = "Existing ${buildInfo.jobName} build ${buildInfo.buildNumber}"
     infoMessage += "\n  Version: ${buildInfo.version}"
     if (version) {
-        infoMessage += "  Expected: ${version}"
+        infoMessage += "  Needed: ${version}"
     }
-    infoMessage += "\n  Release: ${buildInfo.isRelease}  Expected: ${RELEASE}"
-    infoMessage += "\n  HEAD:    ${buildInfo.props.HEAD_HASH}  Expected: ${buildInfo.revision.hash}"
+    infoMessage += "\n  Release: ${buildInfo.isRelease}  Needed: ${RELEASE}"
+    infoMessage += "\n  HEAD:    ${buildInfo.props.HEAD_HASH}  Needed: ${buildInfo.revision.hash}"
     echo infoMessage
     def versionMatches = (buildInfo.isRelease == RELEASE)
     if (versionMatches && version) {

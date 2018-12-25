@@ -1,7 +1,6 @@
 utils = load 'releng/workflow/utils.groovy'
-utils.setEnvForReleng('gromacs')
+utils.initBuildRevisions('gromacs')
 utils.checkoutDefaultProject()
-utils.readBuildRevisions()
 
 def loadMatrixConfigs(filename)
 {

@@ -127,14 +127,14 @@ input from the Jenkins job (or from a workflow build script):
   commit with the provided hash available.
 ``CHECKOUT_PROJECT``
   Needs to be set to the project (``gromacs``, ``regressiontests``, or
-  ``releng``) that Jenkins has checked out.  Needs to be set, unless
-  ``GERRIT_PROJECT`` is set.
+  ``releng``) that Jenkins has checked out.  If not set, the scripts assume
+  ``releng``.
 ``CHECKOUT_REFSPEC``
-  Refspec used to checkout ``CHECKOUT_PROJECT``.  This will override the
-  project-specific refspec for that project.
+  Refspec used to checkout ``CHECKOUT_PROJECT``.  If set, this will override the
+  project-specific refspec variable.
 ``GERRIT_PROJECT`` ``GERRIT_REFSPEC``
-  These are set by Gerrit Trigger, and can be used for simplicity instead of
-  ``CHECKOUT_PROJECT`` and ``CHECKOUT_REFSPEC``.
+  These are set by Gerrit Trigger, and override values from the project-specific
+  refspec variable.
   ``GERRIT_PROJECT`` is also used in some cases for interpreting
   ``GERRIT_EVENT_COMMENT_TEXT``.
 ``GERRIT_BRANCH``
@@ -242,6 +242,8 @@ icc-X.Y
   purposes only and should match whatever is installed on the build nodes).
 msvc-YYYY
   Use the specified MSVC version as the compiler.
+doxygen-X.Y.Z
+  Use the specified Doxygen version for the documentation build.
 cuda-X.Y
   Use the specified CUDA version.
 opencl-X.Y
