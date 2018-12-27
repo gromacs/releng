@@ -28,7 +28,6 @@ class RequestParser(object):
         if triggering_project and triggering_project in self._branch_projects:
             self._branch = self._gerrit.get_triggering_branch()
             self._branch_projects.remove(triggering_project)
-        self._env = dict()
         self._cross_verify_info = None
         self._builds = []
         self._default_builds = []
@@ -115,14 +114,12 @@ class RequestParser(object):
         if triggering_project and project == triggering_project:
             raise BuildError('Cross-verify is not possible with another change from the same repository')
         if project == Project.RELENG:
-            raise BuildError('Cross-verify with releng changes should be initiated from the releng change in Gerrit')
+            raise BuildError('Cross-verify with releng changes should be initiated from the releng change')
         if self._branch is None:
             self._branch = change.branch
         if project in self._branch_projects:
             self._branch_projects.remove(project)
         self._projects.override_refspec(project, refspec)
-        self._env['{0}_REFSPEC'.format(project.upper())] = refspec.fetch
-        self._env['{0}_HASH'.format(project.upper())] = refspec.checkout
         self._default_builds = [{
                 'type': 'matrix',
                 'desc': 'cross-verify',
@@ -146,11 +143,6 @@ class RequestParser(object):
             raise BuildError('Release branch verification only makes sense for releng changes')
         assert self._branch is None
         self._branch = branch
-        spec = 'refs/heads/' + branch
-        gromacs_refspec = RefSpec(spec)
-        gromacs_hash = self._gerrit.get_remote_hash(Project.GROMACS, gromacs_refspec)
-        gromacs_refspec = RefSpec(spec, gromacs_hash)
-        self._projects.override_refspec(Project.GROMACS, gromacs_refspec)
         self._default_builds = [
                 {
                     'type': 'matrix',
@@ -166,9 +158,7 @@ class RequestParser(object):
         if self._branch and self._branch_projects:
             for project in sorted(self._branch_projects):
                 spec = 'refs/heads/' + self._branch
-                sha1 = self._gerrit.get_remote_hash(project, RefSpec(spec))
-                self._env['{0}_REFSPEC'.format(project.upper())] = spec
-                self._env['{0}_HASH'.format(project.upper())] = sha1
+                self._projects.override_refspec(project, RefSpec(spec))
         if not self._builds:
             self._builds = self._default_builds
         for build in self._builds:
@@ -192,9 +182,10 @@ class RequestParser(object):
                 version, md5sum = context._get_version_info()
                 build['version'] = version
                 build['md5sum'] = md5sum
-        result = { 'builds': self._builds }
-        if self._env:
-            result['env'] = self._env
+        result = {
+            'builds': self._builds,
+            'revisions': self._projects.get_build_revisions()
+        }
         if self._cross_verify_info:
             result['gerrit_info'] = self._cross_verify_info
             number = self._cross_verify_info['change']

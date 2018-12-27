@@ -10,8 +10,7 @@ uncrustifyJobName = 'uncrustify_PreSubmit'
 utils = load 'releng/workflow/utils.groovy'
 packaging = load 'releng/workflow/packaging.groovy'
 actions = processTriggeringCommentAndGetActions()
-setEnvFromActions(actions.env)
-utils.initBuildRevisions('gromacs')
+utils.initFromBuildRevisions(actions.revisions, 'gromacs')
 utils.checkoutDefaultProject()
 
 def processTriggeringCommentAndGetActions()
@@ -25,9 +24,7 @@ def processTriggeringCommentAndGetActions()
     //       },
     //       ...
     //     ],
-    //     env: {
-    //       ...
-    //     },
+    //     revisions: <same data as in initBuildRevisions()>,
     //     gerrit_info: {
     //       // opaque data passed back to do_ondemand_post_build()
     //     }
@@ -36,17 +33,6 @@ def processTriggeringCommentAndGetActions()
         releng.get_actions_from_triggering_comment()
         """)
     return status.return_value
-}
-
-@NonCPS
-def setEnvFromActions(overrides)
-{
-    if (!overrides) {
-        return
-    }
-    overrides.each {
-        key, value -> env."$key" = value
-    }
 }
 
 def doBuild()

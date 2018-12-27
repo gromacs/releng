@@ -33,7 +33,10 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         }
 
     def test_CoverageRequest(self):
-        helper = TestHelper(self, env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Coverage')
             })
         factory = helper.factory
@@ -43,13 +46,17 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         {
                             'type': 'coverage'
                         }
-                    ]
+                    ],
+                'revisions': commits.expected_build_revisions
             })
 
     def test_PackageRequestForSource(self):
-        helper = TestHelper(self, env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
                 'GERRIT_PROJECT': 'gromacs',
-                'GERRIT_REFSPEC': 'HEAD',
+                'GERRIT_REFSPEC': commits.gromacs.refspec,
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Package')
             })
         factory = helper.factory
@@ -59,13 +66,17 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         {
                             'type': 'source-package'
                         }
-                    ]
+                    ],
+                'revisions': commits.expected_build_revisions
             })
 
     def test_PackageRequestForReleng(self):
-        helper = TestHelper(self, workspace='/ws', env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, workspace='/ws', env={
                 'GERRIT_PROJECT': 'releng',
-                'GERRIT_REFSPEC': 'HEAD',
+                'GERRIT_REFSPEC': commits.releng.refspec,
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Package')
             })
         helper.add_input_file('/ws/gromacs/admin/builds/get-version-info.py',
@@ -82,11 +93,15 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                             'version': '2017',
                             'md5sum': '1234567890abcdef'
                         }
-                    ]
+                    ],
+                'revisions': commits.expected_build_revisions
             })
 
     def test_PostSubmitRequest(self):
-        helper = TestHelper(self, workspace='/ws', env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, workspace='/ws', env={
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Post-submit')
             })
         helper.add_input_file('/ws/gromacs/admin/builds/post-submit-matrix.txt',
@@ -100,7 +115,8 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                             'desc': 'post-submit',
                             'matrix': self._MATRIX_EXPECTED_RESULT
                         }
-                    ]
+                    ],
+                'revisions': commits.expected_build_revisions
             })
 
     def test_ReleaseBranchRequest(self):
@@ -130,12 +146,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         { 'type': 'documentation', 'desc': 'release-2016' },
                         { 'type': 'uncrustify', 'desc': 'release-2016' }
                     ],
-                'env': {
-                        'GROMACS_REFSPEC': 'refs/heads/release-2016',
-                        'GROMACS_HASH': commits.gromacs.sha1,
-                        'REGRESSIONTESTS_REFSPEC': 'refs/heads/release-2016',
-                        'REGRESSIONTESTS_HASH': commits.regressiontests.sha1
-                    }
+                'revisions': commits.expected_build_revisions
             })
 
     def test_CrossVerifyRequest(self):
@@ -165,10 +176,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                             'matrix': self._MATRIX_EXPECTED_RESULT
                         }
                     ],
-                'env': {
-                        'REGRESSIONTESTS_REFSPEC': commits.regressiontests.refspec,
-                        'REGRESSIONTESTS_HASH': commits.regressiontests.sha1
-                    },
+                'revisions': commits.expected_build_revisions,
                 'gerrit_info': {
                         'change': commits.regressiontests.change_number,
                         'patchset': commits.regressiontests.patch_number
@@ -203,10 +211,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                             'matrix': self._MATRIX_EXPECTED_RESULT
                         }
                     ],
-                'env': {
-                        'REGRESSIONTESTS_REFSPEC': commits.regressiontests.refspec,
-                        'REGRESSIONTESTS_HASH': commits.regressiontests.sha1
-                    }
+                'revisions': commits.expected_build_revisions
             })
 
     def test_CrossVerifyRequestOneBuildOnly(self):
@@ -232,10 +237,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                             'type': 'coverage'
                         }
                     ],
-                'env': {
-                        'REGRESSIONTESTS_REFSPEC': commits.regressiontests.refspec,
-                        'REGRESSIONTESTS_HASH': commits.regressiontests.sha1
-                    }
+                'revisions': commits.expected_build_revisions
             })
 
     def test_CrossVerifyRequestReleng(self):
@@ -268,12 +270,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         { 'type': 'documentation', 'desc': 'cross-verify' },
                         { 'type': 'uncrustify', 'desc': 'cross-verify' }
                     ],
-                'env': {
-                        'GROMACS_REFSPEC': commits.gromacs.refspec,
-                        'GROMACS_HASH': commits.gromacs.sha1,
-                        'REGRESSIONTESTS_REFSPEC': 'refs/heads/master',
-                        'REGRESSIONTESTS_HASH': commits.regressiontests.sha1
-                    }
+                'revisions': commits.expected_build_revisions
             })
 
 

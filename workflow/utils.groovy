@@ -205,6 +205,11 @@ def initBuildRevisions(defaultProject)
         releng.get_build_revisions()
         """)
     def revisionList = status.return_value
+    return initFromBuildRevisions(revisionList, defaultProject)
+}
+
+def initFromBuildRevisions(revisionList, defaultProject)
+{
     setRevisionsToEnv(revisionList)
     addBuildRevisionsSummary(revisionList)
     if (params.GERRIT_PROJECT) {
