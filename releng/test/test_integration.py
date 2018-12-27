@@ -63,6 +63,19 @@ class TestRefSpec(unittest.TestCase):
 
 
 class TestProjectsManager(unittest.TestCase):
+    def verifyProjectInfo(self, projects, commits, expect_hashes=False, tarball=None):
+        for project in commits.projects:
+            info = projects.get_project_info(project, expect_checkout=False)
+            if tarball and project == tarball:
+                self.assertTrue(info.is_tarball)
+                continue
+            reference = commits.get_head(project)
+            self.assertEqual(info.refspec.fetch, reference.refspec)
+            if expect_hashes:
+                self.assertEqual(info.refspec.checkout, reference.sha1)
+            else:
+                self.assertEqual(info.refspec.checkout, 'FETCH_HEAD')
+
     def test_ManualTrigger(self):
         commits = RepositoryTestState()
         commits.set_commit(Project.GROMACS, change_number=1234)
@@ -74,9 +87,7 @@ class TestProjectsManager(unittest.TestCase):
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
         projects = helper.factory.projects
-        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, commits.gromacs.refspec)
-        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
-        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        self.verifyProjectInfo(projects, commits)
 
     def test_GerritTrigger(self):
         commits = RepositoryTestState()
@@ -91,9 +102,7 @@ class TestProjectsManager(unittest.TestCase):
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
         projects = helper.factory.projects
-        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, commits.gromacs.refspec)
-        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
-        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        self.verifyProjectInfo(projects, commits)
 
     def test_GerritTriggerInPipeline(self):
         commits = RepositoryTestState()
@@ -106,9 +115,7 @@ class TestProjectsManager(unittest.TestCase):
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
         projects = helper.factory.projects
-        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, commits.gromacs.refspec)
-        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
-        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        self.verifyProjectInfo(projects, commits)
 
     def test_ManualTriggerWithEmptyHash(self):
         commits = RepositoryTestState()
@@ -123,27 +130,28 @@ class TestProjectsManager(unittest.TestCase):
                 'RELENG_HASH': ''
             })
         projects = helper.factory.projects
-        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, commits.gromacs.refspec)
-        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
-        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        self.verifyProjectInfo(projects, commits)
 
     def test_ManualTriggerWithHash(self):
-        helper = TestHelper(self, env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
                 'CHECKOUT_PROJECT': 'gromacs',
                 'CHECKOUT_REFSPEC': 'refs/heads/master',
                 'GROMACS_REFSPEC': 'refs/heads/master',
-                'GROMACS_HASH': '1234abcd',
+                'GROMACS_HASH': commits.gromacs.sha1,
                 'RELENG_REFSPEC': 'refs/heads/master',
-                'RELENG_HASH': '5678abcd'
+                'RELENG_HASH': commits.releng.sha1
             })
         projects = helper.factory.projects
-        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/heads/master')
-        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, '1234abcd')
-        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
-        self.assertEqual(projects._get_refspec(Project.RELENG).checkout, '5678abcd')
+        self.verifyProjectInfo(projects, commits, expect_hashes=True)
 
     def test_TarballsWithManualTrigger(self):
-        helper = TestHelper(self, env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
                 'GROMACS_REFSPEC': 'tarballs/gromacs',
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
@@ -151,11 +159,13 @@ class TestProjectsManager(unittest.TestCase):
                 HEAD_HASH = 1234abcd
                 """)
         projects = helper.factory.projects
-        self.assertTrue(projects._get_refspec(Project.GROMACS).is_tarball)
-        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        self.verifyProjectInfo(projects, commits, tarball=Project.GROMACS)
 
     def test_TarballsWithGerritTrigger(self):
-        helper = TestHelper(self, env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
                 'GERRIT_PROJECT': 'gromacs',
                 'GERRIT_REFSPEC': 'refs/changes/34/1234/5',
                 'GROMACS_REFSPEC': 'tarballs/gromacs',
@@ -165,8 +175,7 @@ class TestProjectsManager(unittest.TestCase):
                 HEAD_HASH = 1234abcd
                 """)
         projects = helper.factory.projects
-        self.assertTrue(projects._get_refspec(Project.GROMACS).is_tarball)
-        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
+        self.verifyProjectInfo(projects, commits, tarball=Project.GROMACS)
 
     def test_Checkout(self):
         commits = RepositoryTestState()
@@ -179,9 +188,7 @@ class TestProjectsManager(unittest.TestCase):
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
         projects = helper.factory.projects
-        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/heads/master')
-        self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
-        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, commits.releng.refspec)
+        self.verifyProjectInfo(projects, commits)
         projects.checkout_project(Project.GROMACS)
         # TODO: Verify some of the results
 

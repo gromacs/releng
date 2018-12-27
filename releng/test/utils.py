@@ -60,6 +60,10 @@ class RepositoryTestState(object):
         self._commits[project] = commit
         self.__dict__[project] = commit
 
+    @property
+    def projects(self):
+        return self._commits.keys()
+
     def has_project(self, project):
         return project in self._commits
 
