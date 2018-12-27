@@ -1,7 +1,6 @@
 utils = load 'releng/workflow/utils.groovy'
-utils.setEnvForReleng('releng')
+utils.initBuildRevisions('releng')
 utils.checkoutDefaultProject()
-utils.readBuildRevisions()
 
 def doBuild()
 {
