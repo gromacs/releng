@@ -70,6 +70,8 @@ class TestProjectsManager(unittest.TestCase):
                 self.assertTrue(info.is_tarball)
                 continue
             reference = commits.get_head(project)
+            if info.branch:
+                self.assertEqual(info.branch, reference.branch)
             self.assertEqual(info.refspec.fetch, reference.refspec)
             if expect_hashes:
                 self.assertEqual(info.refspec.checkout, reference.sha1)
@@ -100,6 +102,17 @@ class TestProjectsManager(unittest.TestCase):
                 'GERRIT_REFSPEC': commits.gromacs.refspec,
                 'GROMACS_REFSPEC': 'refs/heads/master',
                 'RELENG_REFSPEC': 'refs/heads/master'
+            })
+        projects = helper.factory.projects
+        self.verifyProjectInfo(projects, commits)
+
+    def test_ManualTriggerInPipeline(self):
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=1234)
+        commits.set_commit(Project.RELENG, change_number=3456)
+        helper = TestHelper(self, commits=commits, env={
+                'GROMACS_REFSPEC': commits.gromacs.refspec,
+                'RELENG_REFSPEC': commits.releng.refspec
             })
         projects = helper.factory.projects
         self.verifyProjectInfo(projects, commits)
@@ -198,6 +211,34 @@ class TestProjectsManager(unittest.TestCase):
         commits.set_commit(Project.REGRESSIONTESTS)
         commits.set_commit(Project.RELENG)
         helper = TestHelper(self, commits=commits)
+        projects = helper.factory.projects
+        result = projects.get_build_revisions()
+        self.assertEqual(result, commits.expected_build_revisions)
+
+    def test_GetBuildRevisionsWithAutoRefspecs(self):
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS)
+        commits.set_commit(Project.REGRESSIONTESTS)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
+                'GROMACS_REFSPEC': 'auto',
+                'REGRESSIONTESTS_REFSPEC': 'auto'
+            })
+        projects = helper.factory.projects
+        result = projects.get_build_revisions()
+        self.assertEqual(result, commits.expected_build_revisions)
+
+    def test_GetBuildRevisionsWithBranchDetection(self):
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=1234, branch='release-2019')
+        commits.set_commit(Project.REGRESSIONTESTS, branch='release-2019')
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
+                'GERRIT_PROJECT': 'gromacs',
+                'GERRIT_REFSPEC': commits.gromacs.refspec,
+                'GROMACS_REFSPEC': 'auto',
+                'REGRESSIONTESTS_REFSPEC': 'auto'
+            })
         projects = helper.factory.projects
         result = projects.get_build_revisions()
         self.assertEqual(result, commits.expected_build_revisions)

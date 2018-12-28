@@ -279,37 +279,6 @@ def processBuildScriptConfig(script)
     return status.return_value
 }
 
-def processMatrixConfigs(filename)
-{
-    // Information is returned as a list of configurations and as a string
-    // suitable as a dynamic axis in a matrix build:
-    //   {
-    //     configs: [
-    //       {
-    //         opts: [...],
-    //         host: ...,
-    //         labels: ...
-    //       },
-    //       ...
-    //    ],
-    //    as_axis: ...
-    //  }
-    def status = runRelengScriptNoCheckout("""\
-        releng.prepare_multi_configuration_build('${filename}')
-        """)
-    return status.return_value
-}
-
-def processMatrixResults(matrix, bld)
-{
-    def data = [ 'matrix': matrix, 'build_url': bld.absoluteUrl ]
-    writeJsonFile('build/matrix.json', data)
-    def status = runRelengScript("""\
-        releng.process_multi_configuration_build_results('build/matrix.json')
-        """, false)
-    processRelengStatus(status)
-}
-
 def readSourceVersion()
 {
     // Information is returned as:
@@ -333,6 +302,13 @@ def setCombinedBuildResult(results)
     }
     currentBuild.setResult(combinedResult.toString())
     return combinedResult.isBetterOrEqualTo(hudson.model.Result.SUCCESS)
+}
+
+@NonCPS
+def listAsPythonList(list)
+{
+    def items = list.collect { "'${it}'" }.join(', ')
+    return "[ ${items} ]"
 }
 
 def readPropertyFile(path)

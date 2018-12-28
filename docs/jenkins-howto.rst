@@ -73,9 +73,10 @@ repositories; ``releng`` is only using a single branch (``master``)), the
 following steps are needed to have full Jenkins builds running for it:
 
 * Clone all per-branch jobs in Jenkins from those for ``master``.  Currently
-  this includes pre- and post-submit matrix jobs, corresponding triggering
-  pipelines, a nightly documentation build, and a release pipeline including
-  two packaging builds.
+  this includes pre-submit, post-submit, and nightly matrix jobs, triggering
+  pipelines for them, a nightly documentation build, and a release pipeline
+  including two packaging builds. Work is in progress to remove the need for
+  per-branch pre-submit and post-submit triggering pipelines.
 
   Adjust the Gerrit Trigger and/or SCM configuration and/or job parameter
   defaults for the cloned jobs to trigger from the correct branch.  Also adjust
@@ -101,3 +102,6 @@ following steps are needed to have full Jenkins builds running for it:
   TODO: Consider either reducing the number of jobs affected, or consider using
   dynamic triggering configuration to be able to specify the supported branches
   in a single location.
+
+* Adjust the list of branches for which :file:`workflow/releng-presubmit.groovy`
+  verifies the matrix configurations by editing the pipeline script.

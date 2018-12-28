@@ -93,7 +93,7 @@ API for Jenkins
 ---------------
 
 The following functions from the ``releng`` package are intended to be called
-from scripts in Jenkins build configuration or from workflow scripts
+from scripts in Jenkins build configuration or from pipeline scripts
 (see :doc:`jenkins-config`).
 
 .. py:currentmodule:: releng

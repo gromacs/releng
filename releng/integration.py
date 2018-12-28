@@ -216,15 +216,23 @@ class ProjectInfo(object):
         self.head_title = None
         self.remote_hash = None
         self.is_checked_out = False
-        if refspec and refspec.is_tarball:
-            # TODO: Populate more useful information for print_project_info()
-            self.head_hash = refspec.checkout
-            self.head_title = 'From tarball'
-            self.remote_hash = refspec.checkout
+        if refspec:
+            self.set_branch(refspec.branch)
+            if refspec.is_tarball:
+                # TODO: Populate more useful information for print_project_info()
+                self.head_hash = refspec.checkout
+                self.head_title = 'From tarball'
+                self.remote_hash = refspec.checkout
+
+    def set_branch(self, branch):
+        if self.branch is None:
+            self.branch = branch
 
     def override_refspec(self, refspec):
         assert not self.is_checked_out
         self.refspec = refspec
+        if refspec.branch:
+            self.branch = refspec.branch
 
     def set_checked_out(self, workspace, gerrit):
         self.is_checked_out = True
@@ -236,6 +244,10 @@ class ProjectInfo(object):
         else:
             self.remote_hash = self.head_hash
 
+    def ensure_branch_loaded(self, gerrit):
+        if not self.branch:
+            self._load_from_gerrit(gerrit)
+
     def load_missing_info(self, workspace, gerrit):
         if self.is_tarball:
             return
@@ -243,12 +255,14 @@ class ProjectInfo(object):
             self.head_hash = gerrit.get_remote_hash(self.project, self.refspec)
             self.remote_hash = self.head_hash
             self.head_title, dummy = workspace._get_git_commit_info(self.project, self.head_hash, allow_none=True)
-        self.branch = self.refspec.branch
+        self._load_from_gerrit(gerrit)
+
+    def _load_from_gerrit(self, gerrit):
         if self.head_title is None or self.branch is None:
             change = None
             if self.refspec.change_number:
                 change = gerrit.query_change(self.refspec.change_number)
-            else:
+            elif self.head_hash:
                 change = gerrit.query_change('commit:' + self.head_hash, expect_unique=False)
             if change:
                 if self.head_title is None:
@@ -258,7 +272,13 @@ class ProjectInfo(object):
 
     @property
     def is_tarball(self):
-        return self.refspec.is_tarball
+        return self.refspec and self.refspec.is_tarball
+
+    @property
+    def build_branch_label(self):
+        if self.branch is not None and self.branch.startswith('release-'):
+            return self.branch[8:]
+        return self.branch
 
     def has_correct_hash(self):
         assert self.is_checked_out
@@ -268,6 +288,7 @@ class ProjectInfo(object):
         return {
                 'project': self.project,
                 'branch': self.branch,
+                'build_branch_label': self.build_branch_label,
                 'refspec': str(self.refspec),
                 'hash': self.head_hash,
                 'title': self.head_title,
@@ -290,7 +311,9 @@ class ProjectsManager(object):
         self._executor = factory.executor
         self._gerrit = factory.gerrit
         self._workspace = factory.workspace
-        self._projects = self._init_projects()
+        self._projects = dict()
+        self._branch = None
+        self._init_projects()
 
     def _init_projects(self):
         """Determines the refspecs to be used, and initially checked out projects.
@@ -300,50 +323,67 @@ class ProjectsManager(object):
         to check out this project to properly integrate with different plugins.
 
         For other cases, CHECKOUT_PROJECT can also be used.
-
-        Returns:
-          Dict[Project,ProjectInfo]: The refspecs and initial projects.
         """
-        projects = dict()
         # The releng project is always checked out, since we are already
         # executing code from there...
         initial_projects = { Project.RELENG }
         for project in Project._values:
-            refspec = self._parse_refspec(project)
-            if refspec:
-                projects[project] = ProjectInfo(project, refspec)
+            refspec, exists = self._parse_refspec(project)
+            if exists:
+                self._projects[project] = ProjectInfo(project, refspec)
 
         checkout_project = self._parse_checkout_project()
         gerrit_project = self._gerrit.get_triggering_project()
-        if gerrit_project is not None and not projects[gerrit_project].is_tarball:
-            refspec = self._gerrit.get_triggering_refspec()
-            projects[gerrit_project].override_refspec(refspec)
+        if gerrit_project is not None:
+            project_info = self._projects[gerrit_project]
+            gerrit_branch = self._gerrit.get_triggering_branch()
+            project_info.set_branch(gerrit_branch)
+            if gerrit_project != Project.RELENG:
+                self._branch = gerrit_branch
+            if not project_info.is_tarball:
+                refspec = self._gerrit.get_triggering_refspec()
+                project_info.override_refspec(refspec)
         if checkout_project is not None:
             refspec = self._env.get('CHECKOUT_REFSPEC', None)
             if refspec is not None:
                 sha1 = self._env.get('{0}_HASH'.format(checkout_project.upper()), None)
-                projects[checkout_project].override_refspec(RefSpec(refspec, sha1))
+                self._projects[checkout_project].override_refspec(RefSpec(refspec, sha1))
             initial_projects.add(checkout_project)
 
-        for project in initial_projects:
-            projects[project].set_checked_out(self._workspace, self._gerrit)
+        self._resolve_missing_refspecs()
 
-        return projects
+        for project in initial_projects:
+            self._projects[project].set_checked_out(self._workspace, self._gerrit)
 
     def _parse_refspec(self, project):
         env_name = '{0}_REFSPEC'.format(project.upper())
         refspec = self._env.get(env_name, None)
-        if refspec:
+        if refspec and refspec.lower() != 'auto':
             env_name = '{0}_HASH'.format(project.upper())
             sha1 = self._env.get(env_name, None)
-            return RefSpec(refspec, sha1, executor=self._executor)
-        return None
+            return RefSpec(refspec, sha1, executor=self._executor), True
+        return None, refspec is not None
 
     def _parse_checkout_project(self):
         checkout_project = self._env.get('CHECKOUT_PROJECT', None)
         if checkout_project is None:
             return None
         return Project.parse(checkout_project)
+
+    def _resolve_missing_refspecs(self):
+        missing = set([p.project for p in self._projects.itervalues() if not p.refspec])
+        if not missing:
+            return
+        known = list([p for p in self._projects.itervalues() if p.refspec and p.project != Project.RELENG])
+        if not self._branch and known:
+            assert len(known) == 1
+            known[0].ensure_branch_loaded(self._gerrit)
+            self._branch = known[0].branch
+        if not self._branch:
+            self._branch = 'master'
+        refspec = RefSpec('refs/heads/' + self._branch)
+        for project in missing:
+            self._projects[project].override_refspec(refspec)
 
     def _verify_project(self, project, expect_checkout=False):
         if project not in self._projects:

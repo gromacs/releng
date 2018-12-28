@@ -1,8 +1,9 @@
 utils = load 'releng/workflow/utils.groovy'
+matrixbuild = load 'releng/workflow/matrixbuild.groovy'
 packaging = load 'releng/workflow/packaging.groovy'
 buildRevisions = utils.initBuildRevisions('gromacs')
 utils.checkoutDefaultProject()
-testMatrix = utils.processMatrixConfigs('release-matrix.txt')
+testMatrix = matrixbuild.processMatrixConfigs('release-matrix.txt')
 sourceVersionInfo = utils.readSourceVersion()
 
 def doBuild(sourcePackageJob, regressiontestsPackageJob)
@@ -154,7 +155,7 @@ def runSingleTestConfig(tarballBuilds, config)
         getTarball(tarballBuilds.regressiontests)
         def opts = config.opts.clone()
         opts.add('out-of-source')
-        def pythonOpts = listAsPythonList(opts)
+        def pythonOpts = utils.listAsPythonList(opts)
         // TODO: Timeout.
         timestamps {
             config.status = utils.runRelengScript("""\
@@ -172,13 +173,6 @@ def getTarball(buildInfo)
 def getTarballInfo(buildInfo)
 {
     packaging.getPackageArtifacts(buildInfo.dir, buildInfo.jobName, buildInfo.buildNumber, false)
-}
-
-@NonCPS
-def listAsPythonList(list)
-{
-    def items = list.collect { "'${it}'" }.join(', ')
-    return "[ ${items} ]"
 }
 
 def addConfigurationSummary(testConfigs)

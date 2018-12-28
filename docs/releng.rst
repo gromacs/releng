@@ -9,12 +9,26 @@ package in the ``releng`` repository.
 Build overview
 --------------
 
+Folder structure
+^^^^^^^^^^^^^^^^
+
+In all builds, the folder structure in the workspace looks like this::
+
+  $WORKSPACE/
+    releng/
+    gromacs/
+    [regressiontests/]
+    logs/
+      [unsuccessful-reason.log]
+      [<category>/]*
+    [build/]
+
 Python build script
 ^^^^^^^^^^^^^^^^^^^
 
 Builds using the releng Python scripts use the following sequence:
 
-1. Jenkins (or the workflow script) does some preparatory steps (see
+1. Jenkins (or the pipeline script) does some preparatory steps (see
    :doc:`jenkins-config`), including checking out the ``releng`` repo.
 2. Jenkins imports the releng Python package, and calls run_build().
 3. The releng script checks out the ``gromacs`` repo if not yet done by
@@ -53,7 +67,7 @@ Builds using the releng Python scripts use the following sequence:
     from the common log location, and using the unsuccessful reason reported
     from the script as the failure message to report back to Gerrit.
 
-Workflow builds
+Pipeline builds
 ^^^^^^^^^^^^^^^
 
 The subdirectory :file:`workflow/` contains Groovy scripts for use with the
@@ -63,27 +77,42 @@ Jenkins Pipeline plugin.  The general sequence for these builds is as follows:
 2. Jenkins checks out the ``releng`` repo using a shell script.
    We do not use an SCM step here to avoid showing this checkout on the build
    summary page.  The summary page only works reasonably with at most one Git
-   checkout within the workflow, and the workflow script should be in control
+   checkout within the pipeline, and the pipeline script should be in control
    of what this checkout is.
-3. Jenkins loads the desired workflow script.
-4. Typically, the workflow script further loads ``utils.groovy`` as its first
-   statement. Any other statements at the top level of the workflow script are
-   also executed in the context of the node/workspace where the script is being
+3. Jenkins loads the desired pipeline script from :file:`workflow/`.
+4. The pipeline script further loads ``utils.groovy`` as its first statement.
+   Any other statements at the top level of the pipeline script are also
+   executed in the context of the node/workspace where the script is being
    loaded.
-   The workflow script should do a ``return this`` as its last statement.
-5. Depending on the workflow script, Jenkins may also call other functions
-   defined in the workflow script in this node/workspace context.  This is
+   The pipeline script should do a ``return this`` as its last statement.
+5. As part of the statements run in the initial workspace context, the pipeline
+   script typically calls ``utils.initBuildRevisions()`` as the first action,
+   which in turn calls ``releng.get_build_revisions()`` in Python.
+   This will parse the various ``*_REFSPEC`` variables coming from build
+   parameters and accessible as environment variables in the Python script.
+   The Python script returns new values for the project-specific ``*_REFSPEC``
+   and ``*_HASH`` variables, where values like ``GERRIT_REFSPEC`` have been
+   applied.  These are set into the environment for the rest of the build.
+   The returned information is also used to print information on the build
+   summary page about which commits from each repository are built.
+6. In the same context, the pipeline script typically calls
+   ``utils.checkoutDefaultProject()`` next.  This performs the SCM checkout for
+   the build in a way that shows the changes on the front page.
+   TODO: Consider if we would actually want to skip this part, as it is causing
+   issues like JENKINS-19022.
+7. Depending on the type of the build, Jenkins may also call other functions
+   defined in the pipeline script in this node/workspace context.  This is
    necessary if some values need to be passed from Jenkins configuration to the
-   workflow script for code that runs in this context.
-6. Jenkins calls ``doBuild()`` defined by the workflow script outside of any
-   node/workspace context.  Depending on the workflow script, some parameters
+   pipeline script for code that runs in this context.
+8. Jenkins calls ``doBuild()`` defined in the pipeline script outside of any
+   node/workspace context.  Depending on the pipeline script, some parameters
    may be passed.
-7. The workflow script has full control over the build from now on, until the
+9. The pipeline script has full control over the build from now on, until the
    end.
 
 See :doc:`jenkins-config` for more details on the configuration.
 
-See :doc:`workflow` for more details on what kinds of builds the workflow
+See :doc:`workflow` for more details on what kinds of builds the pipeline
 scripts are currently used for.
 
 Matrix builds
@@ -100,7 +129,7 @@ the possible host for building the configuration map to labels (the mapping is
 defined in :file:`options.py`), and the set of labels supported by each build
 agent is defined in :file:`agents.py`.
 
-The building is orchestrated by a workflow build that loads and preprocesses
+The building is orchestrated by a pipeline build that loads and preprocesses
 the configuration matrix, and then triggers a matrix build that takes the
 configuration axis values as a build parameter.  The matrix build uses the
 standard sequence with releng Python scripts.
@@ -113,12 +142,18 @@ Input environment variables
 ---------------------------
 
 The following environment variables are used by the releng Python scripts for
-input from the Jenkins job (or from a workflow build script):
+input from the Jenkins job (or from a pipeline build script):
 
 ``GROMACS_REFSPEC`` ``REGRESSIONTESTS_REFSPEC`` ``RELENG_REFSPEC``
   Refspecs for the repositories used for fetching the change to build.
   Note that they will not always be used for an actual checkout; for example,
   Jenkins always needs to do the checkout for ``releng``.
+  For pipeline builds, the first two can also have an empty value or ``auto``
+  (the latter is needed since Jenkins cannot set environment variables to an
+  empty value), in which case ``get_build_revisions()`` resolves them to
+  actual refspecs for the remainder of the build.
+  The values can also be overridden by ``GERRIT_REFSPEC`` or
+  ``CHECKOUT_REFSPEC``.
 ``GROMACS_HASH`` ``REGRESSIONTESTS_HASH`` ``RELENG_HASH``
   If set, these provide hashes to check out, corresponding to the refspecs.
   Thees can be used to build a fixed commit from a refspec such as
@@ -156,13 +191,16 @@ input from the Jenkins job (or from a workflow build script):
   This is set by Jenkins automatically.
 ``WORKSPACE``
   Path to the root of the Jenkins workspace where the build is running.
-  This is set by Jenkins automatically, except for workflow builds.
+  This is set by Jenkins automatically.
 ``STATUS_FILE``
   Path to the file to write on completion of the build, containing the build
   status and the reason for failed builds.
   Defaults to :file:`logs/unsuccessful-reason.log`.
   If the extension is :file:`.json`, the file is written as JSON, which is
-  useful for further use from a workflow build.
+  used in pipeline builds to allow programmatic processing of the results.
+  For pipeline builds, the :file:`.json` file can also contain a return value
+  that provides structured information for further processing in the pipeline
+  script.
 ``NO_PROPAGATE_FAILURE``
   If set to a non-empty value, the build script will exit with a zero exit code
   even if the build fails because of a BuildError or ConfigurationError.
@@ -173,7 +211,7 @@ input from the Jenkins job (or from a workflow build script):
 Output
 ------
 
-To communicate back to the Jenkins job (or the workflow build script), the
+To communicate back to the Jenkins job (or the pipeline build script), the
 releng scripts use the following mechanisms:
 
 exit code
@@ -184,11 +222,11 @@ status file
   In freestyle jobs, ``STATUS_FILE`` is not specified, and
   :file:`logs/unsuccessful-reason.log` is written if the build fails or is
   unstable.  This is intended to be used as the unsuccessful message for Gerrit
-  Trigger in non-workflow builds.
+  Trigger in non-pipeline builds.
 
-  In workflow builds, ``STATUS_FILE`` is specified as a JSON file, and contains
+  In pipeline builds, ``STATUS_FILE`` is specified as a JSON file, and contains
   additional information about the result of the execution.  This is used to
-  communicate success/failure back to the workflow script, as well as reason
+  communicate success/failure back to the pipeline script, as well as reason
   for failures and in some cases, additional return values in case of success.
 
   A reasonable effort is done to try to delete this file at the start of the
@@ -199,7 +237,7 @@ status file
 
 console outout
   If the build is unstable, it also ensures that the word ``FAILED`` appears in
-  the console log.  This can be used in non-workflow builds to mark the build
+  the console log.  This can be used in non-pipeline builds to mark the build
   unstable.
 other files (specific to build scripts)
   The build script can produce other relevant output in :file:`logs/` folder

@@ -85,12 +85,16 @@ class RepositoryTestState(object):
             if project not in self._commits:
                 continue
             info = self._commits[project]
+            build_branch_label = info.branch
+            if build_branch_label and build_branch_label.startswith('release-'):
+                build_branch_label = info.branch[8:]
             revisions.append({
                     'project': project,
                     'refspec_env': project.upper() + '_REFSPEC',
                     'hash_env': project.upper() + '_HASH',
                     'refspec': info.refspec,
                     'branch': info.branch,
+                    'build_branch_label': build_branch_label,
                     'hash': info.sha1,
                     'title': info.title
                 })

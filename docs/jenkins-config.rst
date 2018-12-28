@@ -1,44 +1,46 @@
 Jenkins configuration
 =====================
 
-Job configuration
------------------
+This page explains common Jenkins configuration used in |Gromacs| builds.
+You may want to first read :doc:`releng` to understand how the actual builds
+are done.
+
+Job configuration for freestyle projects
+----------------------------------------
 
 Configuration for Jenkins projects that use the releng scripts are described here.
+The description in this section applies directly to freestyle (non-pipeline) builds.
+Pipeline builds also apply the same principles, but similarities and
+differences are described in the next section.
 
-General configuration
-^^^^^^^^^^^^^^^^^^^^^
-
-SCM checkout configuration:
+SCM checkout configuration
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * Jenkins SCM configuration should be used to check out the repository from where the
   build is triggered as a subdirectory of the workspace, with the same name as
-  the repository.  This is necessary for the Git Plugin to show reasonable
-  change lists for the builds etc., although the build in reality always starts
-  from the releng repository.  In a workflow build, this checkout can be done
-  in the workflow script.
+  the repository (this creates the layout described in :doc:`releng`).
+  Using the triggering repository is necessary for the Git Plugin to show
+  reasonable change lists for the builds etc., although the build in reality
+  always starts from the :file:`releng` repository.
 * The build script always needs to check out the :file:`releng` repository if it did
   not trigger the build, and start the build from there.
 * The releng script will check out remaining repositories if necessary.
-* Various ``*_REFSPEC`` environment variables (see
-  :ref:`releng-input-env-vars`) need to be set in one way or another (see below
-  for the suggested approach with build parameters).
 
-In SCM poll jobs it is possible to simply set the various environment variables
-to static values using a properties file in "Prepare environment for the run"
-(``CHECKOUT_PROJECT`` and the various ``*_REFSPEC`` variables).  Note that the
-SCM checkout behavior cannot use ``CHECKOUT_PROJECT`` in the git address,
-because the injected variables are not available for SCM polling.
+Build parameters and environment variables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Build parameters
-^^^^^^^^^^^^^^^^
+Various ``*_REFSPEC`` environment variables (see :ref:`releng-input-env-vars`)
+need to be set in one way or another. The suggested approach is to use build
+parameters as below:
 
 To create a build that allows both intuitive parameterized builds with given
 refspecs and Gerrit Trigger builds, the following configuration is recommended:
 
 * Use ``GROMACS_REFSPEC``, ``RELENG_REFSPEC``, and ``REGRESSIONTESTS_REFSPEC``
-  as build parameters, with ``refs/heads/master`` (or another branch ref) as
-  the default.
+  (if needed) as build parameters, with ``refs/heads/master`` (or another
+  branch ref) as the default.
+  With pipeline builds, it is possible to also set ``GROMACS_REFSPEC`` and
+  ``REGRESSIONTESTS_REFSPEC`` to ``auto`` as the default.
 * Use "Prepare environment for the run" and the following Groovy script::
 
     if (!binding.variables.containsKey('GERRIT_PROJECT')) {
@@ -51,7 +53,7 @@ refspecs and Gerrit Trigger builds, the following configuration is recommended:
   ``CHECKOUT_REFSPEC``.
 
 To create a build that works as expected in all corner cases when triggered
-from a workflow job, the following configuration is recommended:
+from a pipeline job, the following configuration is recommended:
 
 * Create additional string parameters ``GROMACS_HASH``, ``RELENG_HASH``, and
   ``REGRESSIONTESTS_HASH`` with empty default values.
@@ -64,10 +66,16 @@ from a workflow job, the following configuration is recommended:
 
   If you also need to support directly triggering the build with Gerrit
   Trigger, you need a slightly more complicated script, but in most cases, it
-  should be the workflow job that is triggered with Gerrit Trigger.
+  should be the pipeline job that is triggered with Gerrit Trigger.
 
-Normal/matrix builds
-^^^^^^^^^^^^^^^^^^^^
+In SCM poll jobs it is possible to simply set the various environment variables
+to static values using a properties file in "Prepare environment for the run"
+(``CHECKOUT_PROJECT`` and the various ``*_REFSPEC`` variables).  Note that the
+SCM checkout behavior cannot use ``CHECKOUT_PROJECT`` in the git address,
+because the injected variables are not available for SCM polling.
+
+Build steps
+^^^^^^^^^^^
 
 Builds that call run_build() should use the following post-build steps:
 
@@ -116,32 +124,52 @@ subdirectory of the workspace if not already checked out, imports the
 :file:`releng` package and runs run_build() with arguments identifying which
 build script to run, and options that affect how the build is done.
 ``shlex.split()`` is necessary to be able to pass quoted arguments with spaces
-to options such as ``gmxtest+``.
+to options (not currently used).
 
-For matrix builds not triggered with a dynamic matrix (see below), the build
-host can be selected with a ``host=`` or a ``label=`` option that is
-automatically ignored by run_build().
+Matrix builds are nowadays triggered through a pipeline build that chooses the
+build hosts dynamically inside the releng Python scripts.
+The scripts still support using with a ``host=`` or a ``label=`` option in the
+options to select the host, and that option is automatically ignored by
+run_build().
 
 run_build() will first check out the :file:`gromacs` repository to a
 :file:`gromacs/` subdirectory of the workspace, and then execute a script from
 :file:`gromacs/admin/builds/`, selected based on the first argument.
-If necessary, it will also check out the regression tests.
+If necessary, it will also check out the regression tests repository.
 If the script exits with a non-zero exit code, the build fails.
 
-The folder structure in the build workspace looks like this::
+Job configuration for pipeline builds
+-------------------------------------
 
-  $WORKSPACE/
-    releng/
-    gromacs/
-    [regressiontests/]
-    logs/
-      [unsuccessful-reason.log]
-      [<category>/]*
+For pipeline job configuration, the same principles apply as for freestyle
+projects, but much more is handled in the pipeline Groovy script instead of in
+job configuration.
 
-Workflow builds
-^^^^^^^^^^^^^^^
+* SCM checkout as described above is handled by ``utils.checkoutDefaultProject()``,
+  called from the beginning of each pipeline script.  Jenkins only needs to
+  checkout the :file:`releng` repository to load the Groovy script (see the
+  bootstrap script below).
+* Build parameters for ``GROMACS_REFSPEC``, ``RELENG_REFSPEC``, and
+  ``REGRESSIONTESTS_REFSPEC`` (if needed) should be added as for freestyle
+  projects.  There is no need to deal with ``CHECKOUT_PROJECT`` or with
+  environment variables explicitly (the environment injection plugin does not
+  work with pipeline builds, either).  All processing of the parameters is done
+  by ``utils.initBuildRevisions()`` at the start of each Groovy script.
 
-Workflow builds should use a bootstrapping script like this::
+  For ``GROMACS_REFSPEC`` and ``REGRESSIONTESTS_REFSPEC``, it is possible to use
+  ``auto`` as the default value to create jobs that can be triggered for
+  multiple branches from Gerrit or manually by specifying only one refspec.
+
+* ``CHECKOUT_PROJECT`` must not be used as a build parameter (would currently
+  confuse the Python scripts launched from Groovy).
+* ``*_HASH`` parameters can be used as with freestyle projects.  If not set,
+  they are computed at the beginning in ``utils.initBuildRevisions()``.
+* In freestyle jobs, build status handling required scanning the console log
+  and using :file:`unsuccessful-reason.log`.  In pipeline builds, this is
+  handled inside ``utils.groovy`` whenever Python scripts are invoked, and uses
+  return status of Python and a :file:`.json` file created by the Python code.
+
+Pipeline builds use a bootstrapping script like this::
 
   def script
   node('pipeline-general') {
@@ -159,17 +187,14 @@ Workflow builds should use a bootstrapping script like this::
           git clean -ffdxq
           git gc
           """.stripIndent()
-      script = load 'releng/workflow/<workflow-name>.groovy'
-      <possible additional calls as needed by the workflow>
+      script = load 'releng/workflow/<pipeline-name>.groovy'
+      <possible additional calls as needed by the pipeline>
   }
   script.doBuild(<possible additional parameters>)
 
-where expressions in angle brackets depend on the workflow.
-For workflows that are never triggered by Gerrit Trigger from releng, the part
+where expressions in angle brackets depend on the pipeline.
+For pipeline that are never triggered by Gerrit Trigger from releng, the part
 referencing ``GERRIT_PROJECT`` and ``GERRIT_REFSPEC`` can be omitted.
-The workflow script will take care of most other tasks; the Jenkins
-configuration may only need to specify some build parameters (typically,
-``GROMACS_REFSPEC`` etc., as for normal builds) and the possible build triggers.
 
 Jenkins plugins
 ---------------
@@ -185,7 +210,7 @@ The following labels on the Jenkins build agents are currently used to allocate
 builds to agents:
 
 pipeline-master
-  Used to run general steps in workflow jobs that do not do any lengthy
+  Used to run general steps in pipeline jobs that do not do any lengthy
   processing (except for source code checkouts).  These could in principle run
   anywhere, but limiting them to a subset of the nodes reduces the number of
   workspaces used.  This reduces disk space use, and each time a new workspace
@@ -206,7 +231,7 @@ linux
   Used for regression test packaging builds to get a uniform enough environment.
 windows
   Should not be currently used, but has been used to restrict Unix-specific
-  things in workflows to not run on Windows agents.
+  things in pipelines to not run on Windows agents.
 
 In other cases, agents are explicitly assigned to a node.  Multi-configuration
 builds are currently assigned to nodes based on information in
