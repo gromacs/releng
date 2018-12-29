@@ -5,9 +5,6 @@ utils.checkoutDefaultProject()
 testMatrix = utils.processMatrixConfigs('release-matrix.txt')
 sourceVersionInfo = utils.readSourceVersion()
 
-RELEASE = (params.RELEASE == 'true')
-FORCE_REPACKAGING = (params.FORCE_REPACKAGING == 'true')
-
 def doBuild(sourcePackageJob, regressiontestsPackageJob)
 {
     def tarballBuilds = [
@@ -33,7 +30,7 @@ def getOrGenerateTarballs(builds)
         echo "Regressiontests MD5 mismatch:\n" +
              "source:  ${sourceMd5}\n" +
              "tarball: ${builds.regressiontests.md5sum}"
-        if (RELEASE) {
+        if (params.RELEASE) {
             // TODO: Currently, there is no easy way to pass back failure message
             // from on-demand builds.
             // setGerritReview unsuccessfulReason: "Regression test MD5 in source code is incorrect"
@@ -67,7 +64,7 @@ def getExistingBuild(buildInfo)
 
 def getOrTriggerTarballBuild(buildInfo, version = null)
 {
-    if (!FORCE_REPACKAGING && existingBuildIsValid(buildInfo, version)) {
+    if (!params.FORCE_REPACKAGING && existingBuildIsValid(buildInfo, version)) {
         addTarballSummary(buildInfo, false)
         return buildInfo
     }
@@ -75,7 +72,7 @@ def getOrTriggerTarballBuild(buildInfo, version = null)
     if (version) {
         parameters += [$class: 'StringParameterValue', name: 'PACKAGE_VERSION_STRING', value: version]
     }
-    parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: RELEASE]
+    parameters += [$class: 'BooleanParameterValue', name: 'RELEASE', value: params.RELEASE]
     def packagingBuild = build job: buildInfo.jobName, parameters: parameters
     buildInfo.buildNumber = packagingBuild.number.toString()
     node('pipeline-general') {
@@ -92,10 +89,10 @@ def existingBuildIsValid(buildInfo, version)
     if (version) {
         infoMessage += "  Needed: ${version}"
     }
-    infoMessage += "\n  Release: ${buildInfo.isRelease}  Needed: ${RELEASE}"
+    infoMessage += "\n  Release: ${buildInfo.isRelease}  Needed: ${params.RELEASE}"
     infoMessage += "\n  HEAD:    ${buildInfo.props.HEAD_HASH}  Needed: ${buildInfo.revision.hash}"
     echo infoMessage
-    def versionMatches = (buildInfo.isRelease == RELEASE)
+    def versionMatches = (buildInfo.isRelease == params.RELEASE)
     if (versionMatches && version) {
         versionMatches = (version == buildInfo.version)
     }
@@ -238,13 +235,13 @@ def createWebsitePackage(tarballBuilds)
                 releng.run_build('documentation', releng.JobType.RELEASE, ['source-md5=${tarballBuilds.gromacs.md5sum}'])
                 """)
             publishHTML(target: [allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'build/docs/html', reportFiles: 'index.html', reportName: 'Website'])
-            if (RELEASE) {
+            if (params.RELEASE) {
                 archive 'gromacs/build/website-*.tar.gz'
             }
         }
     }
     def text = "Documentation for website was built"
-    if (RELEASE) {
+    if (params.RELEASE) {
         text += " and archived as an artifact"
     }
     text += ".\n"
