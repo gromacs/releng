@@ -285,6 +285,7 @@ class BuildContext(object):
             cmd.extend(['-9', 'HEAD'])
             self.run_cmd(cmd)
         else:
+            path = self._cwd.to_abs_path(path)
             # TODO: Check that root_dir is a subdirectory of the workspace
             # (this all does not work if it is the workspace itself).
             if not os.path.isabs(root_dir):

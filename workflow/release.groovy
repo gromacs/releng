@@ -236,7 +236,7 @@ def createWebsitePackage(tarballBuilds)
                 """)
             publishHTML(target: [allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'build/docs/html', reportFiles: 'index.html', reportName: 'Website'])
             if (params.RELEASE) {
-                archive 'gromacs/build/website-*.tar.gz'
+                archiveArtifacts 'build/website-*.tar.gz'
             }
         }
     }
