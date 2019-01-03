@@ -11,7 +11,7 @@ from releng.test.utils import TestHelper
 
 class TestRunBuild(unittest.TestCase):
     def setUp(self):
-        self.helper = TestHelper(self, workspace='/ws')
+        self.helper = TestHelper(self)
 
     def test_NoOptions(self):
         self.helper.add_input_file('script/build.py',
@@ -68,7 +68,7 @@ class TestRunBuild(unittest.TestCase):
 
 class TestReadBuildScriptConfig(unittest.TestCase):
     def setUp(self):
-        self.helper = TestHelper(self, workspace='/ws')
+        self.helper = TestHelper(self)
 
     def test_ClangAnalyzer(self):
         self.helper.add_input_file('script/build.py',
@@ -104,7 +104,7 @@ class TestReadBuildScriptConfig(unittest.TestCase):
 
 class TestReadCmakeVariableFile(unittest.TestCase):
     def setUp(self):
-        self.helper = TestHelper(self, workspace='/ws')
+        self.helper = TestHelper(self)
 
     def test_ReadFile(self):
         self.helper.add_input_file('Test.cmake',

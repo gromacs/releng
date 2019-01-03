@@ -7,7 +7,7 @@ import mock
 
 from releng.common import AbortError, BuildError, Project
 from releng.integration import BuildParameters, ParameterTypes, RefSpec
-from releng.test.utils import TestHelper
+from releng.test.utils import RepositoryTestState, TestHelper
 
 class TestRefSpec(unittest.TestCase):
     def test_NoOpRef(self):
@@ -24,6 +24,7 @@ class TestRefSpec(unittest.TestCase):
         self.assertTrue(refspec.is_static)
         self.assertEqual(refspec.fetch, value)
         self.assertEqual(refspec.checkout, 'FETCH_HEAD')
+        self.assertEqual(refspec.change_number, '1234')
         self.assertEqual(str(refspec), value)
 
     def test_BranchRef(self):
@@ -34,6 +35,7 @@ class TestRefSpec(unittest.TestCase):
         self.assertFalse(refspec.is_static)
         self.assertEqual(refspec.fetch, value)
         self.assertEqual(refspec.checkout, 'FETCH_HEAD')
+        self.assertEqual(refspec.branch, 'master')
         self.assertEqual(str(refspec), value)
 
     def test_BranchRefWithHash(self):
@@ -62,56 +64,66 @@ class TestRefSpec(unittest.TestCase):
 
 class TestProjectsManager(unittest.TestCase):
     def test_ManualTrigger(self):
-        helper = TestHelper(self, env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=1234)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
                 'CHECKOUT_PROJECT': 'gromacs',
-                'CHECKOUT_REFSPEC': 'refs/changes/34/1234/5',
-                'GROMACS_REFSPEC': 'refs/changes/34/1234/5',
+                'CHECKOUT_REFSPEC': commits.gromacs.refspec,
+                'GROMACS_REFSPEC': commits.gromacs.refspec,
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
         projects = helper.factory.projects
-        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, commits.gromacs.refspec)
         self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
         self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_GerritTrigger(self):
-        helper = TestHelper(self, env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=1234)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
                 'CHECKOUT_PROJECT': 'gromacs',
-                'CHECKOUT_REFSPEC': 'refs/changes/34/1234/5',
+                'CHECKOUT_REFSPEC': commits.gromacs.refspec,
                 'GERRIT_PROJECT': 'gromacs',
-                'GERRIT_REFSPEC': 'refs/changes/34/1234/5',
+                'GERRIT_REFSPEC': commits.gromacs.refspec,
                 'GROMACS_REFSPEC': 'refs/heads/master',
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
         projects = helper.factory.projects
-        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, commits.gromacs.refspec)
         self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
         self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
-    def test_GerritTriggerInWorkflowSecondaryCheckout(self):
-        helper = TestHelper(self, env={
-                'CHECKOUT_PROJECT': 'releng',
-                'CHECKOUT_REFSPEC': 'refs/heads/master',
+    def test_GerritTriggerInPipeline(self):
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=1234)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
                 'GERRIT_PROJECT': 'gromacs',
-                'GERRIT_REFSPEC': 'refs/changes/34/1234/5',
+                'GERRIT_REFSPEC': commits.gromacs.refspec,
                 'GROMACS_REFSPEC': 'refs/heads/master',
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
         projects = helper.factory.projects
-        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, commits.gromacs.refspec)
         self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
         self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_ManualTriggerWithEmptyHash(self):
-        helper = TestHelper(self, env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=1234)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
                 'CHECKOUT_PROJECT': 'gromacs',
-                'CHECKOUT_REFSPEC': 'refs/changes/34/1234/5',
-                'GROMACS_REFSPEC': 'refs/changes/34/1234/5',
+                'CHECKOUT_REFSPEC': commits.gromacs.refspec,
+                'GROMACS_REFSPEC': commits.gromacs.refspec,
                 'GROMACS_HASH': '',
                 'RELENG_REFSPEC': 'refs/heads/master',
                 'RELENG_HASH': ''
             })
         projects = helper.factory.projects
-        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, commits.gromacs.refspec)
         self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
         self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
@@ -132,8 +144,6 @@ class TestProjectsManager(unittest.TestCase):
 
     def test_TarballsWithManualTrigger(self):
         helper = TestHelper(self, env={
-                'CHECKOUT_PROJECT': 'releng',
-                'CHECKOUT_REFSPEC': 'refs/heads/master',
                 'GROMACS_REFSPEC': 'tarballs/gromacs',
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
@@ -146,8 +156,6 @@ class TestProjectsManager(unittest.TestCase):
 
     def test_TarballsWithGerritTrigger(self):
         helper = TestHelper(self, env={
-                'CHECKOUT_PROJECT': 'releng',
-                'CHECKOUT_REFSPEC': 'refs/heads/master',
                 'GERRIT_PROJECT': 'gromacs',
                 'GERRIT_REFSPEC': 'refs/changes/34/1234/5',
                 'GROMACS_REFSPEC': 'tarballs/gromacs',
@@ -161,101 +169,47 @@ class TestProjectsManager(unittest.TestCase):
         self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/heads/master')
 
     def test_Checkout(self):
-        helper = TestHelper(self, env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS)
+        commits.set_commit(Project.RELENG, change_number=1234)
+        helper = TestHelper(self, commits=commits, env={
                 'CHECKOUT_PROJECT': 'releng',
-                'CHECKOUT_REFSPEC': 'refs/changes/34/1234/5',
+                'CHECKOUT_REFSPEC': commits.releng.refspec,
                 'GROMACS_REFSPEC': 'refs/heads/master',
                 'RELENG_REFSPEC': 'refs/heads/master'
             })
         projects = helper.factory.projects
         self.assertEqual(projects._get_refspec(Project.GROMACS).fetch, 'refs/heads/master')
         self.assertEqual(projects._get_refspec(Project.GROMACS).checkout, 'FETCH_HEAD')
-        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, 'refs/changes/34/1234/5')
+        self.assertEqual(projects._get_refspec(Project.RELENG).fetch, commits.releng.refspec)
         projects.checkout_project(Project.GROMACS)
         # TODO: Verify some of the results
 
     def test_GetBuildRevisions(self):
-        helper = TestHelper(self, env={
-                'WORKSPACE': 'ws',
-                'CHECKOUT_PROJECT': 'gromacs',
-                'CHECKOUT_REFSPEC': 'refs/changes/34/1234/5',
-                'GROMACS_REFSPEC': 'refs/changes/34/1234/5',
-                'REGRESSIONTESTS_REFSPEC': 'refs/heads/master',
-                'RELENG_REFSPEC': 'refs/heads/master'
-            })
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=1234)
+        commits.set_commit(Project.REGRESSIONTESTS)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits)
         projects = helper.factory.projects
         result = projects.get_build_revisions()
-        self.assertEqual(result, [
-                {
-                    'project': 'gromacs',
-                    'branch': 'master',
-                    'hash_env': 'GROMACS_HASH',
-                    'refspec_env': 'GROMACS_REFSPEC',
-                    'refspec': 'refs/changes/34/1234/5',
-                    'hash': '1234567890abcdef0123456789abcdef01234567',
-                    'title': 'Mock title'
-                },
-                {
-                    'project': 'regressiontests',
-                    'branch': 'master',
-                    'hash_env': 'REGRESSIONTESTS_HASH',
-                    'refspec_env': 'REGRESSIONTESTS_REFSPEC',
-                    'refspec': 'refs/heads/master',
-                    'hash': '1234567890abcdef0123456789abcdef01234567',
-                    'title': 'Mock title'
-                },
-                {
-                    'project': 'releng',
-                    'branch': 'master',
-                    'hash_env': 'RELENG_HASH',
-                    'refspec_env': 'RELENG_REFSPEC',
-                    'refspec': 'refs/heads/master',
-                    'hash': '1234567890abcdef0123456789abcdef01234567',
-                    'title': 'Mock title'
-                }
-            ])
+        self.assertEqual(result, commits.expected_build_revisions)
 
     def test_GetBuildRevisionsNoRegressionTests(self):
-        helper = TestHelper(self, env={
-                'WORKSPACE': 'ws',
-                'CHECKOUT_PROJECT': 'gromacs',
-                'CHECKOUT_REFSPEC': 'refs/changes/34/1234/5',
-                'GROMACS_REFSPEC': 'refs/changes/34/1234/5',
-                'RELENG_REFSPEC': 'refs/heads/master'
-            })
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=1234)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits)
         projects = helper.factory.projects
         result = projects.get_build_revisions()
-        self.assertEqual(result, [
-                {
-                    'project': 'gromacs',
-                    'branch': 'master',
-                    'hash_env': 'GROMACS_HASH',
-                    'refspec_env': 'GROMACS_REFSPEC',
-                    'refspec': 'refs/changes/34/1234/5',
-                    'hash': '1234567890abcdef0123456789abcdef01234567',
-                    'title': 'Mock title'
-                },
-                {
-                    'project': 'releng',
-                    'branch': 'master',
-                    'hash_env': 'RELENG_HASH',
-                    'refspec_env': 'RELENG_REFSPEC',
-                    'refspec': 'refs/heads/master',
-                    'hash': '1234567890abcdef0123456789abcdef01234567',
-                    'title': 'Mock title'
-                }
-            ])
+        self.assertEqual(result, commits.expected_build_revisions)
 
 
 class TestGerritIntegration(unittest.TestCase):
     def test_SimpleTriggeringComment(self):
         helper = TestHelper(self, env={
-                'CHECKOUT_PROJECT': 'releng',
-                'CHECKOUT_REFSPEC': 'refs/heads/master',
                 'GERRIT_PROJECT': 'gromacs',
                 'GERRIT_REFSPEC': 'refs/heads/master',
-                'GROMACS_REFSPEC': 'refs/heads/master',
-                'RELENG_REFSPEC': 'refs/heads/master',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Coverage')
             })
         gerrit = helper.factory.gerrit
@@ -263,12 +217,8 @@ class TestGerritIntegration(unittest.TestCase):
 
     def test_SimpleTriggeringCommentWithNewline(self):
         helper = TestHelper(self, env={
-                'CHECKOUT_PROJECT': 'releng',
-                'CHECKOUT_REFSPEC': 'refs/heads/master',
                 'GERRIT_PROJECT': 'gromacs',
                 'GERRIT_REFSPEC': 'refs/heads/master',
-                'GROMACS_REFSPEC': 'refs/heads/master',
-                'RELENG_REFSPEC': 'refs/heads/master',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Coverage\n')
             })
         gerrit = helper.factory.gerrit
@@ -276,12 +226,8 @@ class TestGerritIntegration(unittest.TestCase):
 
     def test_TriggeringCommentWithLeadingText(self):
         helper = TestHelper(self, env={
-                'CHECKOUT_PROJECT': 'releng',
-                'CHECKOUT_REFSPEC': 'refs/heads/master',
                 'GERRIT_PROJECT': 'gromacs',
                 'GERRIT_REFSPEC': 'refs/heads/master',
-                'GROMACS_REFSPEC': 'refs/heads/master',
-                'RELENG_REFSPEC': 'refs/heads/master',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('Text\n\n[JENKINS] Coverage')
             })
         gerrit = helper.factory.gerrit
@@ -289,12 +235,8 @@ class TestGerritIntegration(unittest.TestCase):
 
     def test_TriggeringCommentWithTrailingText(self):
         helper = TestHelper(self, env={
-                'CHECKOUT_PROJECT': 'releng',
-                'CHECKOUT_REFSPEC': 'refs/heads/master',
                 'GERRIT_PROJECT': 'gromacs',
                 'GERRIT_REFSPEC': 'refs/heads/master',
-                'GROMACS_REFSPEC': 'refs/heads/master',
-                'RELENG_REFSPEC': 'refs/heads/master',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Coverage\n\nText')
             })
         gerrit = helper.factory.gerrit
@@ -302,12 +244,8 @@ class TestGerritIntegration(unittest.TestCase):
 
     def test_MultilineTriggeringComment(self):
         helper = TestHelper(self, env={
-                'CHECKOUT_PROJECT': 'releng',
-                'CHECKOUT_REFSPEC': 'refs/heads/master',
                 'GERRIT_PROJECT': 'gromacs',
                 'GERRIT_REFSPEC': 'refs/heads/master',
-                'GROMACS_REFSPEC': 'refs/heads/master',
-                'RELENG_REFSPEC': 'refs/heads/master',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS]\nCoverage\nMore')
             })
         gerrit = helper.factory.gerrit

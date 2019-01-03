@@ -9,7 +9,7 @@ from releng.common import Project
 from releng.ondemand import get_actions_from_triggering_comment
 from releng.ondemand import do_post_build
 
-from releng.test.utils import TestHelper
+from releng.test.utils import RepositoryTestState, TestHelper
 
 class TestGetActionsFromTriggeringComment(unittest.TestCase):
     _MATRIX_INPUT_LINES = [
@@ -33,7 +33,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
         }
 
     def test_CoverageRequest(self):
-        helper = TestHelper(self, workspace='ws', env={
+        helper = TestHelper(self, env={
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Coverage')
             })
         factory = helper.factory
@@ -45,10 +45,9 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         }
                     ]
             })
-        self.assertEqual(factory.executor.method_calls, [])
 
     def test_PackageRequestForSource(self):
-        helper = TestHelper(self, workspace='ws', env={
+        helper = TestHelper(self, env={
                 'GERRIT_PROJECT': 'gromacs',
                 'GERRIT_REFSPEC': 'HEAD',
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Package')
@@ -62,7 +61,6 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         }
                     ]
             })
-        self.assertEqual(factory.executor.method_calls, [])
 
     def test_PackageRequestForReleng(self):
         helper = TestHelper(self, workspace='/ws', env={
@@ -88,10 +86,10 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
             })
 
     def test_PostSubmitRequest(self):
-        helper = TestHelper(self, workspace='ws', env={
+        helper = TestHelper(self, workspace='/ws', env={
                 'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Post-submit')
             })
-        helper.add_input_file('ws/gromacs/admin/builds/post-submit-matrix.txt',
+        helper.add_input_file('/ws/gromacs/admin/builds/post-submit-matrix.txt',
                 '\n'.join(self._MATRIX_INPUT_LINES) + '\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
@@ -106,10 +104,18 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
             })
 
     def test_ReleaseBranchRequest(self):
-        helper = TestHelper(self, workspace='ws', env={
-                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] release-2016')
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, branch='release-2016')
+        commits.set_commit(Project.REGRESSIONTESTS, branch='release-2016')
+        commits.set_commit(Project.RELENG, change_number=1234)
+        helper = TestHelper(self, commits=commits, workspace='/ws', env={
+                'GERRIT_PROJECT': 'releng',
+                'GERRIT_REFSPEC': commits.releng.refspec,
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] release-2016'),
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'REGRESSIONTESTS_REFSPEC': 'refs/heads/master'
             })
-        helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
+        helper.add_input_file('/ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(self._MATRIX_INPUT_LINES) + '\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
@@ -126,22 +132,28 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                     ],
                 'env': {
                         'GROMACS_REFSPEC': 'refs/heads/release-2016',
-                        'GROMACS_HASH': '1234567890abcdef0123456789abcdef01234567',
+                        'GROMACS_HASH': commits.gromacs.sha1,
                         'REGRESSIONTESTS_REFSPEC': 'refs/heads/release-2016',
-                        'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
+                        'REGRESSIONTESTS_HASH': commits.regressiontests.sha1
                     }
             })
 
     def test_CrossVerifyRequest(self):
-        helper = TestHelper(self, workspace='ws', env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=3456, patch_number=3)
+        commits.set_commit(Project.REGRESSIONTESTS, change_number=1234, patch_number=5)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, workspace='/ws', env={
                 'BUILD_URL': 'http://build',
                 'GERRIT_PROJECT': 'gromacs',
-                'GERRIT_REFSPEC': 'refs/changes/12/3546/3',
+                'GERRIT_REFSPEC': commits.gromacs.refspec,
                 'GERRIT_CHANGE_URL': 'http://gerrit',
-                'GERRIT_PATCHSET_NUMBER': '3',
-                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234')
+                'GERRIT_PATCHSET_NUMBER': commits.gromacs.patch_number,
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234'),
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'REGRESSIONTESTS_REFSPEC': 'refs/heads/master'
             })
-        helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
+        helper.add_input_file('/ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(self._MATRIX_INPUT_LINES) + '\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
@@ -154,26 +166,32 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         }
                     ],
                 'env': {
-                        'REGRESSIONTESTS_REFSPEC': 'refs/changes/34/1234/5',
-                        'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
+                        'REGRESSIONTESTS_REFSPEC': commits.regressiontests.refspec,
+                        'REGRESSIONTESTS_HASH': commits.regressiontests.sha1
                     },
                 'gerrit_info': {
-                        'change': 1234,
-                        'patchset': 5
+                        'change': commits.regressiontests.change_number,
+                        'patchset': commits.regressiontests.patch_number
                     }
             })
         helper.assertCommandInvoked(['ssh', '-p', '29418', 'jenkins@gerrit.gromacs.org', 'gerrit', 'review', '1234,5', '-m', '"Cross-verify with http://gerrit (patch set 3) running at http://build"'])
 
     def test_CrossVerifyRequestQuiet(self):
-        helper = TestHelper(self, workspace='ws', env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=3456)
+        commits.set_commit(Project.REGRESSIONTESTS, change_number=1234)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, workspace='/ws', env={
                 'BUILD_URL': 'http://build',
                 'GERRIT_PROJECT': 'gromacs',
-                'GERRIT_REFSPEC': 'refs/changes/12/3546/3',
+                'GERRIT_REFSPEC': commits.gromacs.refspec,
                 'GERRIT_CHANGE_URL': 'http://gerrit',
-                'GERRIT_PATCHSET_NUMBER': '3',
-                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet')
+                'GERRIT_PATCHSET_NUMBER': commits.gromacs.patch_number,
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet'),
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'REGRESSIONTESTS_REFSPEC': 'refs/heads/master'
             })
-        helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
+        helper.add_input_file('/ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(self._MATRIX_INPUT_LINES) + '\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
@@ -186,44 +204,56 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         }
                     ],
                 'env': {
-                        'REGRESSIONTESTS_REFSPEC': 'refs/changes/34/1234/5',
-                        'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
+                        'REGRESSIONTESTS_REFSPEC': commits.regressiontests.refspec,
+                        'REGRESSIONTESTS_HASH': commits.regressiontests.sha1
                     }
             })
 
     def test_CrossVerifyRequestOneBuildOnly(self):
-        helper = TestHelper(self, workspace='ws', env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=3456)
+        commits.set_commit(Project.REGRESSIONTESTS, change_number=1234)
+        commits.set_commit(Project.RELENG)
+        helper = TestHelper(self, commits=commits, env={
                 'BUILD_URL': 'http://build',
                 'GERRIT_PROJECT': 'gromacs',
-                'GERRIT_REFSPEC': 'refs/changes/12/3546/3',
+                'GERRIT_REFSPEC': commits.gromacs.refspec,
                 'GERRIT_CHANGE_URL': 'http://gerrit',
-                'GERRIT_PATCHSET_NUMBER': '3',
-                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet clang-analyzer')
+                'GERRIT_PATCHSET_NUMBER': commits.gromacs.patch_number,
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet coverage'),
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'REGRESSIONTESTS_REFSPEC': 'refs/heads/master'
             })
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
         self.assertEqual(result, {
                 'builds': [
                         {
-                            'type': 'clang-analyzer'
+                            'type': 'coverage'
                         }
                     ],
                 'env': {
-                        'REGRESSIONTESTS_REFSPEC': 'refs/changes/34/1234/5',
-                        'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
+                        'REGRESSIONTESTS_REFSPEC': commits.regressiontests.refspec,
+                        'REGRESSIONTESTS_HASH': commits.regressiontests.sha1
                     }
             })
 
     def test_CrossVerifyRequestReleng(self):
-        helper = TestHelper(self, workspace='ws', env={
+        commits = RepositoryTestState()
+        commits.set_commit(Project.GROMACS, change_number=1234)
+        commits.set_commit(Project.REGRESSIONTESTS)
+        commits.set_commit(Project.RELENG, change_number=3456)
+        helper = TestHelper(self, commits=commits, workspace='/ws', env={
                 'BUILD_URL': 'http://build',
                 'GERRIT_PROJECT': 'releng',
-                'GERRIT_REFSPEC': 'refs/changes/12/3456/3',
+                'GERRIT_REFSPEC': commits.releng.refspec,
                 'GERRIT_CHANGE_URL': 'http://gerrit',
-                'GERRIT_PATCHSET_NUMBER': '3',
-                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet')
+                'GERRIT_PATCHSET_NUMBER': commits.releng.patch_number,
+                'GERRIT_EVENT_COMMENT_TEXT': base64.b64encode('[JENKINS] Cross-verify 1234 quiet'),
+                'GROMACS_REFSPEC': 'refs/heads/master',
+                'REGRESSIONTESTS_REFSPEC': 'refs/heads/master'
             })
-        helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
+        helper.add_input_file('/ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(self._MATRIX_INPUT_LINES) + '\n')
         factory = helper.factory
         result = get_actions_from_triggering_comment(factory)
@@ -239,17 +269,17 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         { 'type': 'uncrustify', 'desc': 'cross-verify' }
                     ],
                 'env': {
-                        'GROMACS_REFSPEC': 'refs/heads/master',
-                        'GROMACS_HASH': '1234567890abcdef0123456789abcdef01234567',
-                        'REGRESSIONTESTS_REFSPEC': 'refs/changes/34/1234/5',
-                        'REGRESSIONTESTS_HASH': '1234567890abcdef0123456789abcdef01234567'
+                        'GROMACS_REFSPEC': commits.gromacs.refspec,
+                        'GROMACS_HASH': commits.gromacs.sha1,
+                        'REGRESSIONTESTS_REFSPEC': 'refs/heads/master',
+                        'REGRESSIONTESTS_HASH': commits.regressiontests.sha1
                     }
             })
 
 
 class TestDoPostBuild(unittest.TestCase):
     def test_NoBuild(self):
-        helper = TestHelper(self, workspace='ws')
+        helper = TestHelper(self)
         factory = helper.factory
         helper.add_input_json_file('actions.json', {
                 'builds': []
@@ -261,7 +291,7 @@ class TestDoPostBuild(unittest.TestCase):
             })
 
     def test_SingleBuild(self):
-        helper = TestHelper(self, workspace='ws')
+        helper = TestHelper(self)
         factory = helper.factory
         helper.add_input_json_file('actions.json', {
                 'builds': [
@@ -279,7 +309,7 @@ class TestDoPostBuild(unittest.TestCase):
             })
 
     def test_FailedSingleBuild(self):
-        helper = TestHelper(self, workspace='ws')
+        helper = TestHelper(self)
         factory = helper.factory
         helper.add_input_json_file('actions.json', {
                 'builds': [
@@ -298,7 +328,7 @@ class TestDoPostBuild(unittest.TestCase):
             })
 
     def test_SingleBuildWithoutUrl(self):
-        helper = TestHelper(self, workspace='ws')
+        helper = TestHelper(self)
         factory = helper.factory
         helper.add_input_json_file('actions.json', {
                 'builds': [
@@ -317,7 +347,7 @@ class TestDoPostBuild(unittest.TestCase):
             })
 
     def test_FailedSingleBuildWithoutUrl(self):
-        helper = TestHelper(self, workspace='ws')
+        helper = TestHelper(self)
         factory = helper.factory
         helper.add_input_json_file('actions.json', {
                 'builds': [
@@ -337,7 +367,7 @@ class TestDoPostBuild(unittest.TestCase):
             })
 
     def test_SingleBuildWithCrossVerify(self):
-        helper = TestHelper(self, workspace='ws', env={
+        helper = TestHelper(self, env={
                 'GERRIT_CHANGE_URL': 'http://gerrit',
                 'GERRIT_PATCHSET_NUMBER': '3',
             })
@@ -363,7 +393,7 @@ class TestDoPostBuild(unittest.TestCase):
         helper.assertCommandInvoked(['ssh', '-p', '29418', 'jenkins@gerrit.gromacs.org', 'gerrit', 'review', '1234,5', '-m', '"Cross-verify with http://gerrit (patch set 3) finished\n\nhttp://my_build: SUCCESS"'])
 
     def test_SingleBuildWithDescription(self):
-        helper = TestHelper(self, workspace='ws')
+        helper = TestHelper(self)
         factory = helper.factory
         helper.add_input_json_file('actions.json', {
                 'builds': [
@@ -381,7 +411,7 @@ class TestDoPostBuild(unittest.TestCase):
             })
 
     def test_TwoBuilds(self):
-        helper = TestHelper(self, workspace='ws')
+        helper = TestHelper(self)
         factory = helper.factory
         helper.add_input_json_file('actions.json', {
                 'builds': [
@@ -404,7 +434,7 @@ class TestDoPostBuild(unittest.TestCase):
             })
 
     def test_TwoBuildsWithFailure(self):
-        helper = TestHelper(self, workspace='ws')
+        helper = TestHelper(self)
         factory = helper.factory
         helper.add_input_json_file('actions.json', {
                 'builds': [
@@ -428,7 +458,7 @@ class TestDoPostBuild(unittest.TestCase):
             })
 
     def test_TwoBuildsWithoutUrl(self):
-        helper = TestHelper(self, workspace='ws')
+        helper = TestHelper(self)
         factory = helper.factory
         helper.add_input_json_file('actions.json', {
                 'builds': [

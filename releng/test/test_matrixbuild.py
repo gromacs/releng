@@ -11,7 +11,7 @@ from releng.test.utils import TestHelper
 
 class TestPrepareBuildMatrix(unittest.TestCase):
     def setUp(self):
-        self.helper = TestHelper(self, workspace='ws')
+        self.helper = TestHelper(self, workspace='/ws')
 
     def test_PrepareBuildMatrix(self):
         factory = self.helper.factory
@@ -20,7 +20,7 @@ class TestPrepareBuildMatrix(unittest.TestCase):
                 'gcc-4.6 gpu cuda-5.0',
                 'msvc-2013'
             ]
-        self.helper.add_input_file('ws/gromacs/admin/builds/pre-submit-matrix.txt',
+        self.helper.add_input_file('/ws/gromacs/admin/builds/pre-submit-matrix.txt',
                 '\n'.join(input_lines) + '\n')
         result = prepare_build_matrix(factory, 'pre-submit-matrix')
         self.assertEqual(result, {

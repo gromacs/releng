@@ -8,7 +8,7 @@ from releng.options import process_build_options
 
 class TestProcessBuildOptions(unittest.TestCase):
     def setUp(self):
-        self.helper = TestHelper(self, workspace='ws')
+        self.helper = TestHelper(self)
 
     def test_NoOptions(self):
         e, o = process_build_options(self.helper.factory, None, None)

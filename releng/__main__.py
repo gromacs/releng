@@ -44,8 +44,6 @@ if args.project is not None:
 
 env = dict(os.environ)
 env.update({
-        'CHECKOUT_PROJECT': Project.RELENG,
-        'CHECKOUT_REFSPEC': 'HEAD',
         'GROMACS_REFSPEC': 'HEAD',
         'RELENG_REFSPEC': 'HEAD',
         'REGRESSIONTESTS_REFSPEC': 'HEAD',
