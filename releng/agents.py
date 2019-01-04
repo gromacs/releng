@@ -81,16 +81,12 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
                               'valgrind', 'tsan' },
-            BS_NIX1404:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-7',
-                              'clang-3.5', 'clang-3.6', 'clang-3.7', 'clang-3.8', 'clang-3.9',
-                              # These CUDA versions are installed, but aren't useful to use
-                              # 'cuda-6.0', 'cuda-6.5', 'cuda-7.0',
-                              'cmake-2.8.12.2', 'cmake-3.0.2', 'cmake-3.4.3',
+            BS_NIX1404:     { 'gcc-7', 'gcc-8',
+                              'clang-7',
+                              'cmake-3.4.3', 'cmake-3.9.6', 'cmake-3.13.2',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi',
-                              # TSAN works here with gcc-7, but is too slow on a VM, so this is disabled
-                              # 'tsan',
-                              'valgrind', 'msan'
+                              'valgrind'
                             },
             BS_NIX_AMD_GPU: { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-8',
                               'amdappsdk-3.0',
