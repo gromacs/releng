@@ -304,6 +304,13 @@ def setCombinedBuildResult(results)
     return combinedResult.isBetterOrEqualTo(hudson.model.Result.SUCCESS)
 }
 
+def combineResults(result1, result2)
+{
+    def res1 = hudson.model.Result.fromString(result1)
+    def res2 = hudson.model.Result.fromString(result2)
+    return res1.combine(res2).toString()
+}
+
 @NonCPS
 def listAsPythonList(list)
 {

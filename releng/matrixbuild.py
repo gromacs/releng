@@ -29,15 +29,24 @@ def process_matrix_results(factory, inputfile):
     data = json.loads(''.join(factory.executor.read_file(inputfile)))
     configs = data['matrix']['configs']
     build_url = data['build_url']
-    reason = get_matrix_failure_reason(factory, configs, build_url)
-    if reason:
-        factory.status_reporter.mark_failed(reason)
+    return process_matrix_failures(factory, configs, build_url)
 
-def get_matrix_failure_reason(factory, configs, build_url):
+def process_matrix_failures(factory, configs, build_url):
+    status = factory.status_reporter
+    configs = [BuildConfig.from_dict(x) for x in configs]
     build_info = factory.jenkins.query_matrix_build(build_url)
-    if len(configs) != len(build_info['runs']):
-        return 'Some matrix configurations were not built (likely matrix axis is missing build agents)'
-    return None
+    build_info.merge_known_configs(configs)
+    for run in build_info.runs:
+        if run.is_success:
+            continue
+        reason = '{0} ({1}): {2}'.format(' '.join(run.opts), run.host, run.result)
+        if run.is_unstable:
+            status.mark_unstable(reason)
+        else:
+            status.mark_failed(reason)
+    if not build_info.is_aborted and any([x.is_not_built for x in build_info.runs]):
+        status.mark_failed("Some matrix configurations were not built (likely matrix axis is missing build agents)")
+    return [x.to_dict() for x in build_info.runs]
 
 def _get_build_configs(factory, configfile):
     executor = factory.executor

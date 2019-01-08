@@ -25,10 +25,13 @@ following steps:
    parameter.
 3. After the matrix build finishes, the pipeline calls
    ``releng.process_multi_configuration_build_results()``, which uses the
-   Jenkins REST API to verify that all configurations were actually built.
-   If not, the build is marked failed.
+   Jenkins REST API to get information about the results of the individual
+   configurations.  The information is used to construct a failure message to
+   Gerrit, as well as checking that all configurations were actually built.
 4. The pipeline adds a link to the matrix build to the build summary page
    (while the build is running, the link can be found from the console log).
+   The summary also includes the result of each configuration, and direct
+   links to the build summary pages of each configuration.
    The build status of the matrix build is also propagated to the status of the
    pipeline job.
 5. As the last step in the build, the pipeline sets the URL to post back to

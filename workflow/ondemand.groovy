@@ -8,6 +8,7 @@ releaseJobName = 'Release_workflow_master'
 uncrustifyJobName = 'uncrustify_PreSubmit'
 
 utils = load 'releng/workflow/utils.groovy'
+matrixbuild = load 'releng/workflow/matrixbuild.groovy'
 packaging = load 'releng/workflow/packaging.groovy'
 actions = processTriggeringCommentAndGetActions()
 utils.initFromBuildRevisions(actions.revisions, 'gromacs')
@@ -88,9 +89,11 @@ def doDocumentation(bld)
 
 def doMatrix(bld)
 {
-    def parameters = utils.currentBuildParametersForJenkins()
-    parameters += [$class: 'StringParameterValue', name: 'OPTIONS', value: bld.matrix.as_axis]
-    doChildBuild(bld, matrixJobName, parameters)
+    def result = utils.doMatrixBuild(matrixJobName, bld.matrix)
+    bld.title = result.jobName
+    bld.url = result.build.absoluteUrl
+    bld.number = result.build.number
+    bld.status = result.status
 }
 
 def doRegressionTestsPackage(bld)

@@ -17,9 +17,9 @@ from environment import BuildEnvironment
 import agents
 
 class BuildConfig(object):
-    def __init__(self, opts):
+    def __init__(self, opts, host=None):
         self.opts = opts
-        self.host = None
+        self.host = host
         self.labels = None
 
     def to_dict(self):
@@ -28,6 +28,11 @@ class BuildConfig(object):
                 'host': self.host,
                 'labels': ' && '.join(sorted(self.labels))
             }
+
+    @staticmethod
+    def from_dict(data):
+        return BuildConfig(data['opts'], data['host'])
+
 
 class BuildOptions(object):
     """Values for all build options.

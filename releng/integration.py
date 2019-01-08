@@ -499,6 +499,72 @@ class ParameterTypes(object):
         return value
 
 
+class MatrixRunInfo(object):
+    """Information retrieved from Jenkins about a single matrix configuration
+    run results."""
+
+    def __init__(self, opts, host, result, url):
+        self.opts = opts
+        self.host = host
+        self.result = result
+        self.url = url
+
+    @property
+    def is_success(self):
+        return self.result == 'SUCCESS'
+
+    @property
+    def is_unstable(self):
+        return self.result == 'UNSTABLE'
+
+    @property
+    def is_not_built(self):
+        return self.result == 'NOT_BUILT'
+
+    def to_dict(self):
+        return {
+                'opts': self.opts,
+                'host': self.host,
+                'result': self.result,
+                'url': self.url
+            }
+
+class MatrixBuildInfo(object):
+    """Information retrieved from Jenkins about matrix build results."""
+
+    def __init__(self, result, json_runs_data):
+        self.result = result
+        self.runs = []
+        for run_data in json_runs_data:
+            result = run_data['result']
+            url = run_data['url']
+            options_parts = [x for x in url.split('/') if x.startswith("OPTIONS=")]
+            assert len(options_parts) == 1
+            opts = urllib.unquote(options_parts[0][8:]).split()
+            host = opts[-1].split(',')[0][5:]
+            opts = opts[:-1]
+            self.runs.append(MatrixRunInfo(opts, host, result, url))
+
+    def merge_known_configs(self, configs):
+        new_runs = []
+        for config in configs:
+            found = [x for x in self.runs if x.opts == config.opts]
+            if not found:
+                new_runs.append(MatrixRunInfo(config.opts, config.host, 'NOT_BUILT', None))
+            else:
+                assert len(found) == 1
+                new_runs.append(found[0])
+        self.runs = new_runs
+
+    @property
+    def is_success(self):
+        return self.result == 'SUCCESS'
+
+    @property
+    def is_aborted(self):
+        return self.result == 'ABORTED'
+
+
 class JenkinsIntegration(object):
     """Access to Jenkins specifics such as build parameters."""
 
@@ -515,13 +581,16 @@ class JenkinsIntegration(object):
         Args:
             url (str): Base absolute URL of the Jenkins build to query.
         """
-        result = self._query_build(url, 'number,runs[number,url]')
+        data = self._query_build(url, 'result,number,runs[number,url]')
         # For some reason, Jenkins returns runs also for previous builds in case
         # those are no longer part of the current matrix.  Those that actually
         # belong to the queried run can be identified by matching build numbers.
-        filtered_runs = [x for x in result['runs'] if x['number'] == result['number']]
-        result['runs'] = filtered_runs
-        return result
+        run_urls = [x['url'] for x in data['runs'] if x['number'] == data['number']]
+        runs_data = []
+        for url in run_urls:
+            result = self._query_build(url, 'url,result')
+            runs_data.append(result)
+        return MatrixBuildInfo(data['result'], runs_data)
 
     def _query_build(self, url, tree):
         query_url = '{0}/api/python?tree={1}'.format(url, tree)

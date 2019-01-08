@@ -11,10 +11,9 @@ def loadMatrixConfigs(filename)
 def doBuild(matrixJobName)
 {
     def result = matrixbuild.doMatrixBuild(matrixJobName, matrix)
-    utils.combineResultToCurrentBuild(result.build.result)
-    utils.processRelengStatus(result.status)
+    utils.combineResultToCurrentBuild(result.status.result)
     matrixbuild.addSummaryForMatrix(result)
-    setGerritReview customUrl: result.build.absoluteUrl
+    setGerritReview customUrl: result.build.absoluteUrl, unsuccessfulMessage: result.status.reason
 }
 
 return this

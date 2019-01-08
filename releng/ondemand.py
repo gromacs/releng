@@ -7,7 +7,7 @@ import re
 
 from common import BuildError, JobType, Project
 from integration import RefSpec
-from matrixbuild import get_matrix_info, get_matrix_failure_reason
+from matrixbuild import get_matrix_info
 from script import BuildScript
 
 def get_actions_from_triggering_comment(factory):
@@ -216,11 +216,6 @@ def _get_reasons(factory, data):
     return [_get_reason(factory, x) for x in builds]
 
 def _get_reason(factory, build):
-    if build.has_key('matrix') and build['matrix']:
-        reason = get_matrix_failure_reason(factory, build['matrix']['configs'], build['url'])
-        if reason:
-            factory.status_reporter.mark_failed(reason)
-            return reason
     if build.has_key('reason') and build['reason']:
         return build['reason'].rstrip()
     return None

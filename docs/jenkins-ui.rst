@@ -273,6 +273,7 @@ Matrix builds
 * If the build was aborted, there is no visual cue in the configuration matrix
   for the configurations that were not yet finished by the time the build was
   aborted.  They look exactly like configurations that were not run at all.
+  The summary of the triggering pipeline shows the links more clearly.
 * If the set of configurations has changed (in particular, if you are building
   a change in Gerrit that changes the configurations), the configuration matrix
   on the build summary page may not reflect the actual configurations used
