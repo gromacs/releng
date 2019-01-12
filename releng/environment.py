@@ -346,8 +346,7 @@ class BuildEnvironment(object):
         self.libcxx_version = version
         if self.compiler_version != self.libcxx_version:
             raise ConfigurationError('libcxx version must match clang version')
-        self.extra_cmake_options['GMX_STDLIB_CXX_FLAGS'] = '-stdlib=libc++'
-        self.extra_cmake_options['GMX_STDLIB_LIBRARIES'] = '-lc++abi -lc++'
+        self.append_to_env_var('CXXFLAGS', '-stdlib=libc++')
 
     def _init_icc(self, version):
         if self.system == System.WINDOWS:
@@ -422,8 +421,7 @@ class BuildEnvironment(object):
                 '-o', html_output_dir]
         # TODO Now that we have libcxx option, use that for the static
         # analyzer configurations.
-        self.extra_cmake_options['GMX_STDLIB_CXX_FLAGS'] = '-stdlib=libc++'
-        self.extra_cmake_options['GMX_STDLIB_LIBRARIES'] = '-lc++abi -lc++'
+        self.append_to_env_var('CXXFLAGS', '-stdlib=libc++')
 
     def _init_doxygen(self, version):
         self.doxygen_command = os.path.expanduser('~/tools/doxygen-{0}/bin/doxygen'.format(version))
