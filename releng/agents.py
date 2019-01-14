@@ -45,7 +45,7 @@ _HOST_LABELS = {
                               'phi',
                               'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1', 'cmake-3.8.1', 'cmake-3.9.6', 'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'mic',
-                              'tsan'
+                              'tsan', 'x11'
                             },
             BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6', 'gcc-8',
                               'clang-4', 'clang-6',
@@ -53,7 +53,8 @@ _HOST_LABELS = {
                               'icc-12.1', 'icc-13.0', 'icc-15.0', 'icc-16.0', 'icc-16',
                               'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.12.1',
                               'sse2', 'sse4.1',
-                              'x11' },
+                              # 'x11',
+                              },
             BS_NIX1204:     { 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-5', 'gcc-7',
                               # These gcc are installed, but we don't want to use them if we can avoid it.
                               # 'gcc-6',
@@ -67,7 +68,7 @@ _HOST_LABELS = {
                               'nvidia', # GPU vendor
                               'cmake-2.8.8', 'cmake-3.6.1', 'cmake-3.10.0', # 'cmake-3.8.1', 'cmake-3.9.6',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
-                              'mpi', 'x11',
+                              'mpi', # 'x11',
                               'valgrind' },
             BS_NIX1310:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6',
                               # These clang are installed, but we don't want to use them if we can avoid it.
@@ -79,7 +80,7 @@ _HOST_LABELS = {
                               'nvidia', # GPU vendor
                               'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1',  'cmake-3.9.6', #'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
-                              'mpi', 'x11',
+                              'mpi', # 'x11',
                               'valgrind', 'tsan' },
             BS_NIX1404:     { 'gcc-7', 'gcc-8',
                               'clang-7',
