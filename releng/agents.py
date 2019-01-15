@@ -65,7 +65,7 @@ _HOST_LABELS = {
                               # These are installed, but we prefer to target such jobs to bs_nix1310
                               # 'cuda-9.0',
                               'nvidia', # GPU vendor
-                              'cmake-2.8.8', 'cmake-3.6.1',# 'cmake-3.8.1', 'cmake-3.9.6', 'cmake-3.10.0',
+                              'cmake-2.8.8', 'cmake-3.6.1', 'cmake-3.10.0', # 'cmake-3.8.1', 'cmake-3.9.6',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
                               'valgrind' },
@@ -77,7 +77,7 @@ _HOST_LABELS = {
                               'opencl-1.1', 'opencl-1.2',
                               'clFFT-2.14',
                               'nvidia', # GPU vendor
-                              'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1', # 'cmake-3.9.6', 'cmake-3.10.0',
+                              'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1',  'cmake-3.9.6', #'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', 'x11',
                               'valgrind', 'tsan' },
@@ -111,13 +111,14 @@ _HOST_LABELS = {
                               'tidy', 'tsan',
                               'amdappsdk-3.0', # TODO: remove
                             },
-            BS_NIX_DOCS:    { 'cmake-3.6.1', 'doxygen-1.8.5', 'sphinx-1.6.1'
+            BS_NIX_DOCS:    { 'cmake-3.6.1', 'cmake-3.13.3',
+                              'doxygen-1.8.5', 'sphinx-1.6.1'
                             },
             BS_NIX_STATIC_ANALYZER: {
                               'clang-3.8', 'clang-4', 'clang-5', 'clang-6', 'clang-7',
                               'clang-static-analyzer-3.8', 'clang-static-analyzer-4', 'clang-static-analyzer-5',
                               'clang-static-analyzer-6', 'clang-static-analyzer-7',
-                              'cmake-3.5.1', 'cmake-3.7.2'
+                              'cmake-3.5.1', 'cmake-3.7.2', 'cmake-3.12.4'
                             },
             BS_WIN2008:     { 'msvc-2010',
                               'icc-12.1' },
@@ -129,14 +130,14 @@ _HOST_LABELS = {
             BS_JETSON_TK1:  { 'gcc-4.8', 'gcc-4.9', 'gcc-5',
                               'clang-3.9',
                               'arm_neon',
-                              'cmake-3.8.1',
+                              'cmake-3.8.1', 'cmake-3.13.3',
                               'cuda-6.5',
                               'nvidia', # GPU vendor
                              },
             BS_JETSON_TX1:  { 'gcc-4.8', 'gcc-4.9', 'gcc-5',
                               'clang-3.9',
                               'arm_neon_asimd',
-                              'cmake-3.5.1',
+                              'cmake-3.5.1', 'cmake-3.13.3',
                               'cuda-8.0'
                               'nvidia', # GPU vendor
                               },
