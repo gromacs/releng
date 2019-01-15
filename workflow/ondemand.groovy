@@ -89,7 +89,7 @@ def doDocumentation(bld)
 
 def doMatrix(bld)
 {
-    def result = utils.doMatrixBuild(matrixJobName, bld.matrix)
+    def result = matrixbuild.doMatrixBuild(matrixJobName, bld.matrix)
     bld.title = result.jobName
     bld.url = result.build.absoluteUrl
     bld.number = result.build.number
