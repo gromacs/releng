@@ -40,26 +40,36 @@ following steps:
    itself fails before reaching this step, you actually see a link to the
    launcher job in Gerrit.
 
-Gromacs presubmit pipeline
---------------------------
+Gromacs pre-submit pipeline
+---------------------------
 
 For now, the :file:`gromacs-presubmit.groovy` is essentially the same as the
 matrix launcher script, except that it supports multiple branches.  This is
 done by receiving a prefix of the matrix jobs in ``doBuild()``, and appending
 the name of the branch (deduced from the refspecs) in the pipeline.
 
-The intention is for this pipeline to expand to cover also other presubmit
+The intention is for this pipeline to expand to cover also other pre-submit
 verification, adding flexibility and reducing the need for separate builds for
 different purposes.
 
-releng presubmit pipeline
--------------------------
+Gromacs post-submit pipeline
+----------------------------
+
+For now, the :file:`gromacs-postsubmit.groovy` is essentially the same as the
+matrix launcher script, except that it supports multiple branches like the
+presubmit pipeline.
+
+The intention is for this pipeline to expand to cover also other post-submit
+verification if needed and add flexibility.
+
+releng pre-submit pipeline
+--------------------------
 
 :file:`releng-presubmit.groovy` speficies steps to run to verify changes to
 :file:`releng` repository in Gerrit.
 
 As with :file:`gromacs-presubmit.groovy`, the intention is for this to assume
-more responsibility for presubmit verification.
+more responsibility for pre-submit verification.
 
 Clang static analysis
 ---------------------
