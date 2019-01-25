@@ -70,9 +70,10 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', # 'x11',
                               'valgrind' },
-            BS_NIX1310:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6',
+            BS_NIX1310:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-6',
+                              'clang-6',
                               # These clang are installed, but we don't want to use them if we can avoid it.
-                              # 'clang-3.4', 'clang-4', 'clang-5', 'clang-6',
+                              # 'clang-3.4', 'clang-4', 'clang-5',
                               'icc-18', 'icc-19',
                               'cuda-5.0', 'cuda-7.0', 'cuda-7.5', 'cuda-8.0', 'cuda-9.0',
                               'opencl-1.1', 'opencl-1.2',
