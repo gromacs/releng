@@ -159,16 +159,16 @@ _HOST_LABELS = {
 _DEFAULT_GCC_FOR_LIBSTDCXX = {
             # This agent uses macports clang that does not need a gcc
             # BS_MAC: 'gcc-6',
-            BS_MIC: 'gcc-4.9',
+            BS_MIC: 'gcc-5',
             BS_NIX1204: 'gcc-5',
-            BS_NIX1310: 'gcc-4.8',
+            BS_NIX1310: 'gcc-5',
             BS_NIX1404: 'gcc-7',
             BS_NIX_AMD_GPU: 'gcc-5',
             BS_GPU01: 'gcc-5',
             BS_NIX_AMD: 'gcc-5',
             BS_JETSON_TK1: 'gcc-5',
             BS_JETSON_TX1: 'gcc-5',
-            BS_OVERDRIVE_1000: 'gcc-4.8'
+            BS_OVERDRIVE_1000: 'gcc-7'
     }
 
 def get_default_gcc_for_libstdcxx(host):
