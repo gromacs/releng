@@ -28,18 +28,24 @@ class BuildScriptSettings(object):
         extra_projects (List[Project]): Additional projects that the build
             script requires to be checked out (in addition to releng and
             gromacs).  Currently only useful for regression tests.
+        use_stdlib_through_env_vars (bool): Whether to use CFLAGS/CXXFLAGS
+            environment variables to set the C++ standard library for
+            compilation.
+            Defaults to True, which is used by branches prior to GROMACS 2020.
     """
     def __init__(self):
         self.build_opts = []
         self.build_out_of_source = False
         self.extra_options = dict()
         self.extra_projects = []
+        self.use_stdlib_through_env_vars = True
 
     def init_from_script_globals(self, script_globals):
         self.build_opts = script_globals.get('build_options', [])
         self.build_out_of_source = script_globals.get('build_out_of_source', False)
         self.extra_options = script_globals.get('extra_options', dict())
         self.extra_projects = script_globals.get('extra_projects', [])
+        self.use_stdlib_through_env_vars = script_globals.get('use_stdlib_through_env_vars', True)
 
 class BuildScript(object):
     """

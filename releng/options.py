@@ -334,9 +334,13 @@ def gpuhw_label(opt, value):
 def _define_handlers(e, extra_options):
     """Defines the list of recognized build options."""
     # The options are processed in the order they are in the tuple, to support
-    # cross-dependencies between the options (there are a few).
+    # cross-dependencies between the options (there are a few). Complex
+    # cross-dependencies may be managed better from functions called by
+    # the finalize_ method of BuildEnvironment.
+    #
     # If you add options here, please also update the documentation for the
     # options in docs/releng.rst.
+    #
     # Labels need to be specified for options that require specific features
     # from the build host (e.g., required software versions or special
     # hardware support).  They need to match with the labels defined in
@@ -418,6 +422,7 @@ def process_build_options(factory, opts, script_settings):
     if opts:
         opts = _remove_host_option(opts)
     o = BuildOptions(handlers, opts)
+    e._finalize(script_settings.use_stdlib_through_env_vars)
     return (e, o)
 
 def _remove_host_option(opts):

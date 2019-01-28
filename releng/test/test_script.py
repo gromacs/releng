@@ -32,6 +32,7 @@ class TestBuildScript(unittest.TestCase):
                 build_options = ['foo', 'bar']
                 build_out_of_source = True
                 extra_projects = [Project.REGRESSIONTESTS]
+                use_stdlib_through_env_vars = False
                 def do_build(context):
                     pass
                 """);
@@ -39,6 +40,7 @@ class TestBuildScript(unittest.TestCase):
         self.assertEqual(script.settings.build_opts, ['foo', 'bar'])
         self.assertTrue(script.settings.build_out_of_source)
         self.assertEqual(script.settings.extra_projects, [Project.REGRESSIONTESTS])
+        self.assertFalse(script.settings.use_stdlib_through_env_vars)
 
 if __name__ == '__main__':
     unittest.main()

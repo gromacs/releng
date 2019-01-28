@@ -87,6 +87,7 @@ class BuildEnvironment(object):
         self.clang_analyzer_output_dir = None
         self.libcxx_version = None
         self.extra_cmake_options = dict()
+        self.gcc_exe = None
 
         self._build_prefix_cmd = None
         self._cmd_runner = factory.cmd_runner
@@ -242,19 +243,32 @@ class BuildEnvironment(object):
         self.c_compiler = 'gcc-' + version
         self.cxx_compiler = 'g++-' + version
         self.gcov_command = 'gcov-' + version
-        # Newer gcc needs to be linked against compatible standard
-        # libraries, so arrange to link to one from the compiler
-        # installation.
-        self._manage_stdlib_from_gcc(None)
 
-    def _manage_stdlib_from_gcc(self, format_for_stdlib_flag):
-        """Manages using a C++ standard library from a particular gcc toolchain
+    # TODO relocate this function to just above _manage_stdlib declaration.
+    def _locate_gcc(self, format_for_stdlib_flag, use_stdlib_through_env_vars):
+        """Locates a gcc toolchain to use with this build
 
-        Use this function to configure compilers (gcc, icc or clang) to
-        use the standard library from a particular gcc installation on the
-        particular host in use, since the system gcc may be too old.
+        Use this function to prepare compilers (gcc, icc or clang) to
+        use the standard library from a particular gcc installation on
+        the particular agent in use, since the default system gcc may
+        be too old.
 
-        Requires that self.compiler describe the actual compiler to use.
+        Requires that self.compiler describes the actual compiler to use.
+
+        Once the oldest supported version is GROMACS 2020, the
+        format_for_stdlib_flag and use_stdlib_through_env_vars
+        arguments will no longer be required.
+
+        Args:
+        format_for_stdlib_flag(str): A format string expecting a named
+           gcctoolchain parameter containing the base part of the path
+           to an installed gcc (e.g. '/usr/local' for '/usr/local/bin/gcc')
+           to pass to the compiler so that it finds the matching libstdc++
+           to use when compiling.
+        use_stdlib_through_env_vars(bool): Whether to use CFLAGS/CXXFLAGS
+           environment variables to set the C++ standard library for
+           compilation, as used before GROMACS 2020
+
         """
 
         # Artefacts built by all C++ compilers require link-time
@@ -273,14 +287,17 @@ class BuildEnvironment(object):
         gcc_toolchain_path=None
         if gcc_name:
             gcc_exe = self._cmd_runner.find_executable(gcc_name)
+            if self.compiler != Compiler.GCC:
+                self.gcc_exe = gcc_exe
             gcc_exe_dirname = os.path.dirname(gcc_exe)
             gcc_toolchain_path = os.path.join(gcc_exe_dirname, '..')
 
         if gcc_toolchain_path:
-            if format_for_stdlib_flag:
+            if format_for_stdlib_flag and use_stdlib_through_env_vars:
                 stdlibflag=format_for_stdlib_flag.format(gcctoolchain=gcc_toolchain_path)
                 self.append_to_env_var('CFLAGS', stdlibflag)
                 self.append_to_env_var('CXXFLAGS', stdlibflag)
+            # Linker flag needed for all (#2846)
             format_for_linker_flags="-Wl,-rpath,{gcctoolchain}/lib64 -L{gcctoolchain}/lib64"
             self.extra_cmake_options['CMAKE_CXX_LINK_FLAGS'] = format_for_linker_flags.format(gcctoolchain=gcc_toolchain_path)
 
@@ -298,9 +315,6 @@ class BuildEnvironment(object):
         self.compiler_version = version
         self.c_compiler = 'clang-' + version
         self.cxx_compiler = 'clang++-' + version
-        # Need a suitable standard library for C++11 support, so get
-        # one from a specified gcc on the host.
-        self._manage_stdlib_from_gcc('--gcc-toolchain={gcctoolchain}')
         # Symbolizer is only required for ASAN builds, but should not do any
         # harm to always set it (and that is much simpler).
         clang_path = self._cmd_runner.find_executable(self.c_compiler)
@@ -341,12 +355,7 @@ class BuildEnvironment(object):
         Args:
             version (str): libcxx version number (major.minor) to use.
         """
-        if not self.compiler is Compiler.CLANG:
-            raise ConfigurationError('libcxx only supported with clang')
         self.libcxx_version = version
-        if self.compiler_version != self.libcxx_version:
-            raise ConfigurationError('libcxx version must match clang version')
-        self.append_to_env_var('CXXFLAGS', '-stdlib=libc++')
 
     def _init_icc(self, version):
         if self.system == System.WINDOWS:
@@ -385,13 +394,6 @@ class BuildEnvironment(object):
             else:
                 raise ConfigurationError('invalid icc version: got icc-{0}. Try a version with two digits, e.g. 18 for 2018 release.'.format(version))
 
-            # Need a suitable standard library for C++11 support.  icc
-            # on Linux is required to use the C++ headers and standard
-            # libraries from a gcc installation, and defaults to that
-            # of the gcc it finds in the path, which is not always
-            # suitable. Instead we organize to use a specified gcc on
-            # each agent.
-            self._manage_stdlib_from_gcc('-gcc-name={gcctoolchain}/bin/gcc')
         self.compiler_version = version
 
     def _init_msvc(self, version):
@@ -419,9 +421,6 @@ class BuildEnvironment(object):
         self.cxx_compiler = cxx_analyzer
         self._build_prefix_cmd = [scan_build,
                 '-o', html_output_dir]
-        # TODO Now that we have libcxx option, use that for the static
-        # analyzer configurations.
-        self.append_to_env_var('CXXFLAGS', '-stdlib=libc++')
 
     def _init_doxygen(self, version):
         self.doxygen_command = os.path.expanduser('~/tools/doxygen-{0}/bin/doxygen'.format(version))
@@ -474,7 +473,73 @@ class BuildEnvironment(object):
         self.set_env_var('CMAKE_LIBRARY_PATH', '/usr/lib/atlas-base')
 
     def _init_mpi(self):
-        self.set_env_var('OMPI_CC', self.c_compiler)
-        self.set_env_var('OMPI_CXX', self.cxx_compiler)
-        self.c_compiler = 'mpicc'
-        self.cxx_compiler = 'mpic++'
+        pass
+
+    def _manage_stdlib(self, use_stdlib_through_env_vars):
+        """Coordinates the C++ standard library to use in the build
+
+        Artefacts built by all C++ compilers require link-time access
+        to a C++ standard library. This works differently for each
+        compiler, and can be influenced by build options or the
+        operating system.
+
+        Often the standard library comes from an installation of gcc,
+        and it is generally necessary to avoid the main compiler
+        finding the system default gcc, which may be too old to be
+        useful. A particular gcc installation is pre-specified for
+        each agent to cater for this.
+
+        Requires that self.compiler and self.system are specified
+        accurately.
+
+        Args:
+        use_stdlib_through_env_vars(bool): Whether to use CFLAGS/CXXFLAGS
+           environment variables to set the C++ standard library for
+           compilation, as used before GROMACS 2020
+
+        """
+        if self.compiler == Compiler.CLANG:
+            # The clang compiler can use either libstdc++ or libc++.
+            if self.libcxx_version is None:
+                # Use libstdc++ from the pre-specified gcc for this
+                # agent.
+                self._locate_gcc('--gcc-toolchain={gcctoolchain}', use_stdlib_through_env_vars)
+                return
+            else:
+                # Use libc++ from this clang installation
+                if self.compiler_version != self.libcxx_version:
+                    raise ConfigurationError('libcxx version must match clang version')
+                self.append_to_env_var('CXXFLAGS', '-stdlib=libc++')
+                return
+        else:
+            if self.libcxx_version is not None:
+                raise ConfigurationError('libcxx only supported with clang')
+
+        if self.compiler == Compiler.INTEL and self.system != System.WINDOWS:
+            # The Intel compiler on Linux must use a libstdc++ from
+            # the pre-specified gcc for this agent.
+            self._locate_gcc('-gcc-name={gcctoolchain}/bin/gcc', use_stdlib_through_env_vars)
+            return
+
+        if self.compiler == Compiler.GCC:
+            # Newer gcc needs to be linked against compatible standard
+            # libraries from the pre-specified gcc for this agent.
+            self._locate_gcc(None, use_stdlib_through_env_vars)
+            return
+
+        # The remaining compilers run on Windows and organize these
+        # details themselves.
+
+    def _finalize(self, use_stdlib_through_env_vars):
+        """Manages handling that has complex dependencies between inputs
+
+        Args:
+        use_stdlib_through_env_vars(bool): Whether to use CFLAGS/CXXFLAGS
+           environment variables to set the C++ standard library for
+           compilation.
+           Defaults to True, which is used by branches prior to GROMACS 2020.
+
+        """
+        if use_stdlib_through_env_vars is None:
+            use_stdlib_through_env_vars = True
+        self._manage_stdlib(use_stdlib_through_env_vars)
