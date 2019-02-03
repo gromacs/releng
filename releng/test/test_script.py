@@ -21,9 +21,9 @@ class TestBuildScript(unittest.TestCase):
                     pass
                 """);
         script = BuildScript(executor, 'build.py')
-        self.assertEqual(script.build_opts, [])
-        self.assertFalse(script.build_out_of_source)
-        self.assertEqual(script.extra_projects, [])
+        self.assertEqual(script.settings.build_opts, [])
+        self.assertFalse(script.settings.build_out_of_source)
+        self.assertEqual(script.settings.extra_projects, [])
 
     def test_SetGlobals(self):
         executor = self.helper.executor
@@ -36,9 +36,9 @@ class TestBuildScript(unittest.TestCase):
                     pass
                 """);
         script = BuildScript(executor, 'build.py')
-        self.assertEqual(script.build_opts, ['foo', 'bar'])
-        self.assertTrue(script.build_out_of_source)
-        self.assertEqual(script.extra_projects, [Project.REGRESSIONTESTS])
+        self.assertEqual(script.settings.build_opts, ['foo', 'bar'])
+        self.assertTrue(script.settings.build_out_of_source)
+        self.assertEqual(script.settings.extra_projects, [Project.REGRESSIONTESTS])
 
 if __name__ == '__main__':
     unittest.main()

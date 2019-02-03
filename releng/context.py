@@ -11,7 +11,7 @@ import subprocess
 from common import BuildError, CommandError, ConfigurationError
 from common import JobType, Project
 from options import BuildConfig, process_build_options, select_build_hosts
-from script import BuildScript
+from script import BuildScript, BuildScriptSettings
 import cmake
 import utils
 
@@ -33,9 +33,11 @@ class BuildContext(object):
             changing directories and for producing log files.
     """
 
-    def __init__(self, factory, job_type, opts, extra_options):
+    def __init__(self, factory, job_type, opts, script_settings):
         if job_type is not None:
             JobType.validate(job_type)
+        if script_settings is None:
+            script_settings = BuildScriptSettings()
         self.job_type = job_type
         self._status_reporter = factory.status_reporter
         self._cwd = factory.cwd
@@ -44,7 +46,7 @@ class BuildContext(object):
         self._projects = factory.projects
         self._version = None
         self.workspace = factory.workspace
-        self.env, self.opts = process_build_options(factory, opts, extra_options)
+        self.env, self.opts = process_build_options(factory, opts, script_settings)
         self.params = factory.jenkins.params
 
     # TODO: Consider if these would be better set in the build script, and
@@ -442,16 +444,12 @@ class BuildContext(object):
         projects.checkout_project(factory.default_project)
         build_script_path = workspace._resolve_build_input_file(build, '.py')
         script = BuildScript(factory.executor, build_script_path)
-        if script.build_opts:
-            if opts is None:
-                opts = []
-            opts.extend(script.build_opts)
-        context = factory.create_context(job_type, opts, script.extra_options)
-        for project in script.extra_projects:
+        context = factory.create_context(job_type, opts, script.settings)
+        for project in script.settings.extra_projects:
             projects.checkout_project(project)
         projects.print_project_info()
         projects.check_projects()
-        out_of_source = script.build_out_of_source or context.opts.out_of_source
+        out_of_source = script.settings.build_out_of_source or context.opts.out_of_source
         workspace._init_build_dir(out_of_source)
         if factory.default_project == Project.GROMACS:
             gromacs_dir = workspace.get_project_dir(Project.GROMACS)
@@ -468,6 +466,6 @@ class BuildContext(object):
         projects.checkout_project(factory.default_project)
         build_script_path = workspace._resolve_build_input_file(script_name, '.py')
         script = BuildScript(factory.executor, build_script_path)
-        config = BuildConfig(script.build_opts)
+        config = BuildConfig(script.settings.build_opts)
         config = select_build_hosts(factory, [config])[0]
         return config.to_dict()

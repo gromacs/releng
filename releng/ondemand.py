@@ -173,10 +173,10 @@ class RequestParser(object):
                 build_script_path = self._workspace._resolve_build_input_file('get-version-info', '.py')
                 script = BuildScript(self._factory.executor, build_script_path)
                 context = self._factory.create_context(JobType.GERRIT, None, None)
-                assert not script.build_opts
-                assert not script.build_out_of_source
-                assert not script.extra_options
-                assert not script.extra_projects
+                assert not script.settings.build_opts
+                assert not script.settings.build_out_of_source
+                assert not script.settings.extra_options
+                assert not script.settings.extra_projects
                 self._workspace._init_build_dir(False)
                 script.do_build(context, self._factory.cwd)
                 version, md5sum = context._get_version_info()

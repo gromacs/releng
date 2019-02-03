@@ -393,7 +393,7 @@ def _define_handlers(e, extra_options):
             handlers.append(new_handler)
     return handlers
 
-def process_build_options(factory, opts, extra_options):
+def process_build_options(factory, opts, script_settings):
     """Initializes build environment and parameters from OS and build options.
 
     Creates the environment and options objects, and adjusts them
@@ -402,14 +402,19 @@ def process_build_options(factory, opts, extra_options):
     Args:
         factory (ContextFactory): Factory to access other objects.
         opts (List[str]): List of build options.
-        extra_options (Dict[str, function]): Extra build options to accept.
+        script_settings (BuildScriptSettings): Additional settings from the
+            build script.
 
     Returns:
         Tuple[BuildEnvironment, BuildParameters, BuildOptions]: Build
             environment and options initialized from the options.
     """
     e = BuildEnvironment(factory)
-    handlers = _define_handlers(e, extra_options)
+    handlers = _define_handlers(e, script_settings.extra_options)
+    if script_settings.build_opts:
+        if opts is None:
+            opts = []
+        opts.extend(script_settings.build_opts)
     if opts:
         opts = _remove_host_option(opts)
     o = BuildOptions(handlers, opts)
