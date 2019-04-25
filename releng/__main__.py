@@ -10,6 +10,7 @@ instead.
 
 import argparse
 import os
+import six
 
 from common import Project
 from context import BuildContext
