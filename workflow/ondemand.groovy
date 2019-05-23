@@ -181,7 +181,7 @@ def doUpdateRegressionTestsHash(bld)
 def doRegressiontestsUpdate(bld)
 {
     bld.title = 'Regressiontests update'
-    node('bs_nix-amd')
+    node('bs_mic')
     {
         timestamps {
             timeout(45) {
