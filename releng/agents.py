@@ -40,7 +40,7 @@ _HOST_LABELS = {
                               # 'cuda-6.5', 'cuda-7.5',
                               # CUDA is made available on this agent only so that we
                               # can test that a CUDA build on a agent with no GPU works.
-                              'cuda-7.0', 'cuda-10.0',
+                              'cuda-7.0', 'cuda-10.0', 'cuda-10.1',
                               'icc-16.0', 'icc-16', 'icc-17', 'icc-18', 'icc-19',
                               'phi',
                               'cmake-2.8.12.2', 'cmake-3.3.2', 'cmake-3.6.1', 'cmake-3.8.1', 'cmake-3.9.6', 'cmake-3.10.0',
@@ -61,7 +61,7 @@ _HOST_LABELS = {
                               'clang-4', 'clang-5',
                               # These clang are installed, but we don't want to use them if we can avoid it.
                               # 'clang-6',
-                              'cuda-5.0', 'cuda-5.5', 'cuda-6.0', 'cuda-6.5', 'cuda-7.0', 'cuda-8.0', 'cuda-9.1', 'cuda-9.2', 'cuda-10.0',
+                              'cuda-6.5', 'cuda-7.0', 'cuda-8.0', 'cuda-9.1', 'cuda-9.2', 'cuda-10.0', 'cuda-10.1',
                               'opencl-1.1', 'opencl-1.2',
                               # These are installed, but we prefer to target such jobs to bs_nix1310
                               # 'cuda-9.0',
