@@ -13,15 +13,15 @@ from releng.test.utils import RepositoryTestState, TestHelper
 
 class TestGetActionsFromTriggeringComment(unittest.TestCase):
     _MATRIX_INPUT_LINES = [
-            'gcc-4.6 gpu cuda-5.0',
+            'gcc-6 gpu cuda-9.0',
             'msvc-2013'
         ]
     _MATRIX_EXPECTED_RESULT = {
             'configs': [
                 {
                     'host': 'bs_nix1310',
-                    'labels': 'cuda-5.0 && gcc-4.6',
-                    'opts': ['gcc-4.6', 'gpu', 'cuda-5.0']
+                    'labels': 'cuda-9.0 && gcc-6',
+                    'opts': ['gcc-6', 'gpu', 'cuda-9.0']
                 },
                 {
                     'host': 'bs-win2012r2',

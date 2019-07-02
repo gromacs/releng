@@ -35,7 +35,7 @@ ALL_LABELS = (DOCKER_DEFAULT,)
 # Versions that are commented out are installed and working, but are not
 # part of the description, as a crude form of load balancing.
 _HOST_LABELS = {
-            BS_MIC:         { 'gcc-4.4', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-7', 'gcc-8',
+            BS_MIC:         { 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-7', 'gcc-8', 'gcc-9',
                               # These CUDA versions are installed, but aren't useful to use
                               # 'cuda-6.5', 'cuda-7.5',
                               # CUDA is made available on this agent only so that we
@@ -47,15 +47,16 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1', 'avx_256', 'mic',
                               'tsan', 'x11'
                             },
-            BS_MAC:         { 'gcc-4.2', 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-6', 'gcc-8',
-                              'clang-4', 'clang-6',
+            BS_MAC:         { 'gcc-4.8', 'gcc-4.9', 'gcc-6', 'gcc-8',
+                              'clang-4', 'clang-6', 'clang-7', 'clang-8',
                               'gcov-4.6', 'gcov-6.1', 'gcov-6',
                               'icc-12.1', 'icc-13.0', 'icc-15.0', 'icc-16.0', 'icc-16',
                               'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.12.1',
                               'sse2', 'sse4.1',
+                              'tidy',
                               # 'x11',
                               },
-            BS_NIX1204:     { 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-5', 'gcc-7', 'gcc-8',
+            BS_NIX1204:     { 'gcc-4.8', 'gcc-5', 'gcc-7', 'gcc-8',
                               # These gcc are installed, but we don't want to use them if we can avoid it.
                               # 'gcc-6',
                               'clang-4', 'clang-5',
@@ -68,9 +69,10 @@ _HOST_LABELS = {
                               'nvidia', # GPU vendor
                               'cmake-2.8.8', 'cmake-3.6.1', 'cmake-3.10.0', # 'cmake-3.8.1', 'cmake-3.9.6',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
+                              'libhwloc-1.8', 'libhwloc-2.0.4',
                               'mpi', # 'x11',
                               'valgrind' },
-            BS_NIX1310:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-6',
+            BS_NIX1310:     { 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-6',
                               'clang-6',
                               # These clang are installed, but we don't want to use them if we can avoid it.
                               # 'clang-3.4', 'clang-4', 'clang-5',
@@ -82,7 +84,9 @@ _HOST_LABELS = {
                               'cmake-2.8.11.2', 'cmake-3.4.3', 'cmake-3.5.2', 'cmake-3.8.1',  'cmake-3.9.6', #'cmake-3.10.0',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi', # 'x11',
-                              'valgrind', 'tsan' },
+                              'valgrind', 'tsan',
+                              'libhwloc-1.7',
+                            },
             BS_NIX1404:     { 'gcc-7', 'gcc-8',
                               'clang-7',
                               'cmake-3.4.3', 'cmake-3.9.6', 'cmake-3.13.2',
@@ -90,28 +94,31 @@ _HOST_LABELS = {
                               'mpi',
                               'valgrind'
                             },
-            BS_NIX_AMD_GPU: { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-8',
+            BS_NIX_AMD_GPU: { 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'gcc-8',
                               'amdappsdk-3.0',
                               'opencl-1.1', 'opencl-1.2', 'opencl-2.0',
                               'cmake-2.8.12.2', 'cmake-3.5.2',
                               'sse2', 'sse4.1', 'avx_128_fma',
-                              'mpi' },
-            BS_NIX_AMD:     { 'gcc-4.4', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-4.9', 'gcc-5',
+                              'mpi',
+                            },
+            BS_NIX_AMD:     { 'gcc-4.8', 'gcc-4.9', 'gcc-5',
                               'clang-3.4', 'clang-3.6', 'clang-4', 'clang-5', 'clang-6', 'clang-7',
                               'cmake-2.8.12.2', 'cmake-3.4.3', 'cmake-3.11.4',
                               'sse2', 'sse4.1', 'avx_128_fma',
-                              'mpi', 'tidy' },
-            BS_GPU01:       { 'gcc-5', 'gcc-7', 'gcc-8',
+                              'mpi',
+                            },
+            BS_GPU01:       { 'gcc-5', 'gcc-7', 'gcc-8', 'gcc-9',
                               'clang-4', 'clang-5', 'clang-6', 'clang-7',
                               'libcxx-7',
-                              'cmake-3.4.3', 'cmake-3.12.1',
+                              'cmake-3.4.3', 'cmake-3.12.1', 'cmake-3.14.5',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'mpi',
                               'opencl-1.1', 'opencl-1.2', 'opencl-2.0',
                               'clFFT-2.14',
                               'amd', # GPU vendor
-                              'tidy', 'tsan',
+                              'tsan',
                               'amdappsdk-3.0', # TODO: remove
+                              'libhwloc-1.11.2',
                             },
             BS_NIX_DOCS:    { 'cmake-3.6.1', 'cmake-3.13.3',
                               'doxygen-1.8.5', 'sphinx-1.6.1'

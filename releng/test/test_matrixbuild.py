@@ -17,7 +17,7 @@ class TestPrepareBuildMatrix(unittest.TestCase):
         factory = self.helper.factory
         executor = self.helper.executor
         input_lines = [
-                'gcc-4.6 gpu cuda-5.0',
+                'gcc-6 gpu cuda-9.0',
                 'msvc-2013'
             ]
         self.helper.add_input_file('/ws/gromacs/admin/builds/pre-submit-matrix.txt',
@@ -27,8 +27,8 @@ class TestPrepareBuildMatrix(unittest.TestCase):
                 "configs": [
                     {
                         "host": "bs_nix1310",
-                        "labels": "cuda-5.0 && gcc-4.6",
-                        "opts": ["gcc-4.6", "gpu", "cuda-5.0"]
+                        "labels": "cuda-9.0 && gcc-6",
+                        "opts": ["gcc-6", "gpu", "cuda-9.0"]
                     },
                     {
                         "host": "bs-win2012r2",

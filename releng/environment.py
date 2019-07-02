@@ -57,6 +57,8 @@ class BuildEnvironment(object):
        armpl_dir (str or None): the ARM Perf Libraries directory
        cuda_root (str or None): Root of the CUDA toolkit being used
            (for passing to CUDA_TOOLKIT_ROOT_DIR CMake option).
+       libhwloc_root (str or None): Root of the hwloc library being used
+           (for adding to CMake search path).
        opencl_version (str or None): OpenCL API version expected to be detected.
        cuda_host_compiler (str or None): Full path to the host compiler used
            with CUDA (for passing to CUDA_HOST_COMPILER CMake option).
@@ -451,6 +453,10 @@ class BuildEnvironment(object):
 
     def _init_cuda(self, version):
         self.cuda_root = '/opt/cuda_' + version
+
+    def _init_libhwloc(self, version):
+        self.libhwloc_root = '/opt/hwloc/' + version
+        self._cmd_runner.prepend_to_env_var('HWLOC_DIR', self.libhwloc_root)
 
     # TODO: remove when no longer supporting legacy matrix formats
     def _init_opencl_legacy(self, version):

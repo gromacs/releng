@@ -371,7 +371,8 @@ def _define_handlers(e, extra_options):
             _EnumOptionHandler('gpuhw', Gpuhw, label=gpuhw_label),
             _SimpleOptionHandler('mpi', e._init_mpi, label=OPT),
             _SimpleOptionHandler('armpl', e._init_armpl, label=OPT),
-            _SimpleOptionHandler('tidy', label=OPT)
+            _SimpleOptionHandler('tidy', label=OPT),
+            _VersionOptionHandler('libhwloc', e._init_libhwloc, label=OPT),
         ]
     if extra_options and "opencl" in extra_options:
         # This build is running an old script where opencl was a bool,
