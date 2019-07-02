@@ -55,7 +55,7 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1',
                               # 'x11',
                               },
-            BS_NIX1204:     { 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-5', 'gcc-7',
+            BS_NIX1204:     { 'gcc-4.4', 'gcc-4.5', 'gcc-4.6', 'gcc-4.7', 'gcc-4.8', 'gcc-5', 'gcc-7', 'gcc-8',
                               # These gcc are installed, but we don't want to use them if we can avoid it.
                               # 'gcc-6',
                               'clang-4', 'clang-5',
