@@ -59,7 +59,7 @@ _HOST_LABELS = {
             BS_NIX1204:     { 'gcc-4.8', 'gcc-5', 'gcc-7', 'gcc-8',
                               # These gcc are installed, but we don't want to use them if we can avoid it.
                               # 'gcc-6',
-                              'clang-4', 'clang-5',
+                              'clang-4', 'clang-5', 'clang-8',
                               # These clang are installed, but we don't want to use them if we can avoid it.
                               # 'clang-6',
                               'cuda-6.5', 'cuda-7.0', 'cuda-8.0', 'cuda-9.1', 'cuda-9.2', 'cuda-10.0', 'cuda-10.1',
