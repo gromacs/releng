@@ -96,7 +96,10 @@ class Executor(object):
         including resolving symlinks."""
         # If we at some point require Python 3.3, shutil.which() would be
         # more obvious.
-        return os.path.realpath(find_executable(name, environment_path))
+        executable = find_executable(name, environment_path)
+        if executable is None:
+            raise ConfigurationError('can not find the executable: "' + name + '"')
+        return os.path.realpath(executable)
 
 class DryRunExecutor(object):
     """Executor replacement for manual testing dry runs."""
