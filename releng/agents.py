@@ -67,7 +67,7 @@ _HOST_LABELS = {
                               # These are installed, but we prefer to target such jobs to bs_nix1310
                               # 'cuda-9.0',
                               'nvidia', # GPU vendor
-                              'cmake-2.8.8', 'cmake-3.6.1', 'cmake-3.10.0', # 'cmake-3.8.1', 'cmake-3.9.6',
+                              'cmake-2.8.8', 'cmake-3.6.1', 'cmake-3.10.0', 'cmake-3.15.1', # 'cmake-3.8.1', 'cmake-3.9.6',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
                               'libhwloc-1.8', 'libhwloc-2.0.4',
                               'mpi', # 'x11',
