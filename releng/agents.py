@@ -101,14 +101,14 @@ _HOST_LABELS = {
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi',
                             },
-            BS_NIX_AMD:     { 'gcc-4.8', 'gcc-4.9', 'gcc-5',
+            BS_NIX_AMD:     { 'gcc-4.8', 'gcc-4.9', 'gcc-5', 'clang-8',
                               'clang-3.4', 'clang-3.6', 'clang-4', 'clang-5', 'clang-6', 'clang-7',
                               'cmake-2.8.12.2', 'cmake-3.4.3', 'cmake-3.11.4',
                               'sse2', 'sse4.1', 'avx_128_fma',
                               'mpi',
                             },
             BS_GPU01:       { 'gcc-5', 'gcc-7', 'gcc-8', 'gcc-9',
-                              'clang-4', 'clang-5', 'clang-6', 'clang-7',
+                              'clang-4', 'clang-5', 'clang-6', 'clang-7', 'clang-8',
                               'libcxx-7',
                               'cmake-3.4.3', 'cmake-3.12.1', 'cmake-3.14.5',
                               'sse2', 'sse4.1', 'avx_256', 'avx2_256',
@@ -124,9 +124,9 @@ _HOST_LABELS = {
                               'doxygen-1.8.5', 'sphinx-1.6.1'
                             },
             BS_NIX_STATIC_ANALYZER: {
-                              'clang-3.8', 'clang-4', 'clang-5', 'clang-6', 'clang-7',
+                              'clang-3.8', 'clang-4', 'clang-5', 'clang-6', 'clang-7', 'clang-8',
                               'clang-static-analyzer-3.8', 'clang-static-analyzer-4', 'clang-static-analyzer-5',
-                              'clang-static-analyzer-6', 'clang-static-analyzer-7',
+                              'clang-static-analyzer-6', 'clang-static-analyzer-7', 'clang-static-analyzer-8',
                               'cmake-3.5.1', 'cmake-3.7.2', 'cmake-3.12.4'
                             },
             BS_WIN2008:     { 'msvc-2010',
