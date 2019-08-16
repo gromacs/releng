@@ -430,10 +430,10 @@ class BuildEnvironment(object):
     def _init_armhpc(self, version):
         self.armhpc_version = version
         module_load = '. /usr/share/modules/init/sh && module load '
-        if version == '18.3' or version == '18.4':
+        if version == '18.3' or version == '18.4' or version == '19.2':
             self.run_env_script(module_load + 'Generic-AArch64/Ubuntu/16.04/arm-hpc-compiler/' + version)
         else:
-            raise ConfigurationError('Only the ARM HPC compiler 18.3 and 18.4 are supported, was passed ' + version)
+            raise ConfigurationError('Only the ARM HPC compiler 18.3, 18.4, 19.2 are supported, was passed ' + version)
 
     def _init_armpl(self):
         if not self.armhpc_version:

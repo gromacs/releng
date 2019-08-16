@@ -151,12 +151,12 @@ _HOST_LABELS = {
                               'nvidia', # GPU vendor
                               },
             BS_OVERDRIVE_1000: {
-                                 'armclang-18.3', 'armclang-18.4',  'gcc-7',
+                                 'armclang-18.3', 'armclang-18.4', 'armclang-19.2', 'gcc-7',
                                  # ARMPL comes with the ARM HPC stack, so no separate versioning
                                  'armpl',
                                  'arm_neon_asimd',
                                  'cmake-3.10.2',
-                                 'armhpc-18.3', 'armhpc-18.4' },
+                                 'armhpc-18.3', 'armhpc-18.4', 'armhpc-19.2'},
             DOCKER_DEFAULT: {} # TODO
         }
 
