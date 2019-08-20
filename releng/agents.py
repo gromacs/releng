@@ -246,8 +246,8 @@ _DEFAULT_BUILD_PARALLELISM = {
             BS_NIX_AMD_GPU: 4,
             # 8 physical cores without HT, 2 executors
             BS_MAC: 4,
-            # 8 VM cores
-            BS_NIX_STATIC_ANALYZER: 8,
+            # 12 VM cores, 1 executor
+            BS_NIX_STATIC_ANALYZER: 12,
             # 8 cores with HT, 2 executors
             BS_GPU01: 8,
             # 4 physical cores, each with 2 hyperthreads
