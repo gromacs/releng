@@ -117,6 +117,7 @@ _HOST_LABELS = {
                               'clFFT-2.14',
                               'amd', # GPU vendor
                               'tsan',
+                              'tidy',
                               'amdappsdk-3.0', # TODO: remove
                               'libhwloc-1.11.2',
                             },
