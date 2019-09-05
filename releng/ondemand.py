@@ -83,11 +83,23 @@ class RequestParser(object):
                         'desc': 'pre-submit',
                         'matrix-file': 'pre-submit-matrix'
                     })
-            elif token == 'gpubufferops' or token == 'gpuupdate' or token == 'gpucomm':
+            elif token == 'gpubufferops':
                 self._builds.append({
                         'type': 'matrix',
-                        'desc': 'gpudev',
+                        'desc': 'gpubufferops',
                         'matrix-file': 'gpubufferops-matrix'
+                    })
+            elif token == 'gpuupdate':
+                self._builds.append({
+                        'type': 'matrix',
+                        'desc': 'gpuupdate',
+                        'matrix-file': 'gpuupdate-matrix'
+                    })
+            elif token == 'gpucomm':
+                self._builds.append({
+                        'type': 'matrix',
+                        'desc': 'gpucomm',
+                        'matrix-file': 'gpucomm-matrix'
                     })
             elif token == 'regtest-package':
                 self._builds.append({ 'type': 'regtest-package' })
