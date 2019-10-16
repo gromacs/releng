@@ -127,6 +127,11 @@ class BuildEnvironment(object):
         """Returns path to the uncrustify executable."""
         return os.path.expanduser('~/bin/uncrustify')
 
+    def get_clang_format_command(self, version):
+        """Returns path to clang-format executable."""
+        clang_format_name = 'clang-format-{0}'.format(version)
+        return self._cmd_runner.find_executable(clang_format_name)
+
     def _get_build_cmd(self, target=None, parallel=True, keep_going=False):
         cmd = []
         if self._build_prefix_cmd is not None:
