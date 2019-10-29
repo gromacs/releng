@@ -20,6 +20,7 @@ def doBuild()
         failureReason = ''
         node ('pipeline-general') {
             verifyAllMatrixContents('master')
+            verifyAllMatrixContents('release-2020')
             verifyAllMatrixContents('release-2019')
             verifyAllMatrixContents('release-2018')
         }
