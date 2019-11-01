@@ -101,6 +101,12 @@ class RequestParser(object):
                         'desc': 'gpucomm',
                         'matrix-file': 'gpucomm-matrix'
                     })
+            elif token == 'gpucomm_pppme':
+                self._builds.append({
+                        'type': 'matrix',
+                        'desc': 'gpucomm_pppme',
+                        'matrix-file': 'gpucomm_pppme-matrix'
+                    })
             elif token == 'regtest-package':
                 self._builds.append({ 'type': 'regtest-package' })
             elif token == 'release':
