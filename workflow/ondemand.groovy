@@ -6,6 +6,7 @@ documentationJobName = 'Documentation_PreSubmit'
 matrixJobName = 'Matrix_OnDemand'
 releaseJobName = 'Release_workflow_master'
 uncrustifyJobName = 'uncrustify_PreSubmit'
+clangformatJobName = 'clang-format_PreSubmit'
 
 utils = load 'releng/workflow/utils.groovy'
 matrixbuild = load 'releng/workflow/matrixbuild.groovy'
@@ -64,6 +65,7 @@ def getBuildersMap()
             'release': this.&doReleaseWorkflow,
             'source-package': this.&doSourcePackage,
             'uncrustify': this.&doUncrustify,
+            'clang-format': this.&doClangFormat,
             'update-regtest-hash': this.&doUpdateRegressionTestsHash,
             'regressiontests-update': this.&doRegressiontestsUpdate
         ]
@@ -156,6 +158,12 @@ def doUncrustify(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
     doChildBuild(bld, uncrustifyJobName, parameters)
+}
+
+def doClangFormat(bld)
+{
+    def parameters = utils.currentBuildParametersForJenkins()
+    doChildBuild(bld, clangformatJobName, parameters)
 }
 
 def doUpdateRegressionTestsHash(bld)

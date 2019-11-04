@@ -111,6 +111,8 @@ class RequestParser(object):
                 self._builds.append(build)
             elif token == 'uncrustify':
                 self._builds.append({ 'type': 'uncrustify' })
+            elif token == 'clang-format':
+                self._builds.append({ 'type': 'clang-format' })
             elif token == 'update':
                 project = self._gerrit.get_triggering_project()
                 # It can be useful to trigger these from releng for testing,
@@ -147,7 +149,7 @@ class RequestParser(object):
             self._default_builds.extend([
                     { 'type': 'clang-analyzer', 'desc': 'cross-verify' },
                     { 'type': 'documentation', 'desc': 'cross-verify' },
-                    { 'type': 'uncrustify', 'desc': 'cross-verify' }
+                    { 'type': 'clang-format', 'desc': 'cross-verify' }
                 ])
         if triggering_project and change.is_open:
             self._cross_verify_info = {
@@ -169,7 +171,7 @@ class RequestParser(object):
                 },
                 { 'type': 'clang-analyzer', 'desc': branch },
                 { 'type': 'documentation', 'desc': branch },
-                { 'type': 'uncrustify', 'desc': branch }
+                { 'type': 'clang-format', 'desc': branch }
             ]
 
     def get_actions(self):

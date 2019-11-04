@@ -144,7 +144,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         },
                         { 'type': 'clang-analyzer', 'desc': 'release-2016' },
                         { 'type': 'documentation', 'desc': 'release-2016' },
-                        { 'type': 'uncrustify', 'desc': 'release-2016' }
+                        { 'type': 'clang-format', 'desc': 'release-2016' }
                     ],
                 'revisions': commits.expected_build_revisions
             })
@@ -268,7 +268,7 @@ class TestGetActionsFromTriggeringComment(unittest.TestCase):
                         },
                         { 'type': 'clang-analyzer', 'desc': 'cross-verify' },
                         { 'type': 'documentation', 'desc': 'cross-verify' },
-                        { 'type': 'uncrustify', 'desc': 'cross-verify' }
+                        { 'type': 'clang-format', 'desc': 'cross-verify' }
                     ],
                 'revisions': commits.expected_build_revisions
             })
