@@ -119,6 +119,8 @@ class RequestParser(object):
                 self._builds.append({ 'type': 'uncrustify' })
             elif token == 'clang-format':
                 self._builds.append({ 'type': 'clang-format' })
+            elif token == 'clang-format-update':
+                self._builds.append({ 'type': 'clang-format-update' })
             elif token == 'update':
                 project = self._gerrit.get_triggering_project()
                 # It can be useful to trigger these from releng for testing,

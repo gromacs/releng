@@ -66,6 +66,7 @@ def getBuildersMap()
             'source-package': this.&doSourcePackage,
             'uncrustify': this.&doUncrustify,
             'clang-format': this.&doClangFormat,
+            'clang-format-update': this.&doClangFormatUpdate,
             'update-regtest-hash': this.&doUpdateRegressionTestsHash,
             'regressiontests-update': this.&doRegressiontestsUpdate
         ]
@@ -164,6 +165,22 @@ def doClangFormat(bld)
 {
     def parameters = utils.currentBuildParametersForJenkins()
     doChildBuild(bld, clangformatJobName, parameters)
+}
+
+def doClangFormatUpdate(bld)
+{
+    def parameters = utils.currentBuildParametersForJenkins()
+    bld.title = 'clang-format'
+    node('bs_gpu01')
+    {
+        timestamps {
+            timeout(5) {
+                bld.status = utils.runRelengScript("""\
+                    releng.run_build('clang-format-update', releng.JobType.GERRIT, None)
+                    """, false)
+            }
+        }
+    }
 }
 
 def doUpdateRegressionTestsHash(bld)

@@ -120,6 +120,9 @@ With any of the above variants, possible builds are:
   pipeline builds the tarballs without -dev suffixes for actually doing a
   release.
 * ``Uncrustify``: Triggers the per-patchset uncrustify code style checker build.
+* ``clang-format``: Triggers the per-patchset clang-format code style checker build.
+* ``clang-format-update``: Triggers Jenkins to perform a clang-format build that
+  updates the current patch set with correct code formatting.
 * ``Update``: When triggered from a regressiontests change, generates reference
   data for tests that are missing it, and uploads those back to Gerrit.
 * ``Update-regtest-hash``: When triggered from a source change, generates the
