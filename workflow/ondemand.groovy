@@ -6,7 +6,7 @@ documentationJobName = 'Documentation_PreSubmit'
 matrixJobName = 'Matrix_OnDemand'
 releaseJobName = 'Release_workflow_master'
 uncrustifyJobName = 'uncrustify_PreSubmit'
-clangformatJobName = 'clang-format_PreSubmit'
+clangformatJobName = 'clang_format_PreSubmit'
 
 utils = load 'releng/workflow/utils.groovy'
 matrixbuild = load 'releng/workflow/matrixbuild.groovy'
