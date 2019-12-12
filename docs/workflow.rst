@@ -113,7 +113,7 @@ The general sequence is:
 3. The pipeline checks the latest successful builds in the packaging builds,
    and if these are not built from the correct commit, it triggers new builds
    for them.  The regressiontests tarball is built first, and its MD5 sum is
-   checked against the one specified in the source tarball.  For a `RELEASE`
+   checked against the one specified in the source tarball.  For a ``RELEASE``
    build, a mismatch fails the build, otherwise it only produces a note in the
    console output.
    The packaging builds also compute MD5 sums for the tarballs, and these are
@@ -130,7 +130,7 @@ The general sequence is:
    the source tarball, which will produce the HTML pages for the documentation
    website.  The generated pages are available from the Jenkins project page,
    as well as from a link on the build summary page.
-   If the `RELEASE` build parameter is set, a tarball containing all the
+   If the ``RELEASE`` build parameter is set, a tarball containing all the
    documentation is also archived as an artifact.
 
 In addition to the refspecs to build, the pipeline uses two additional build

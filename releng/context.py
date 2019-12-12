@@ -421,7 +421,7 @@ class BuildContext(object):
     def set_version_info(self, version, regtest_md5sum):
         """Provides source version information from a build script.
 
-        This method supports the `get-version-info.py` build script and allows
+        This method supports the ``get-version-info.py`` build script and allows
         that script to pass out the version information without writing it into
         a file that would then be read back.
         """
